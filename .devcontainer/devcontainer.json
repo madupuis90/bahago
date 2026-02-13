@@ -1,0 +1,33 @@
+{
+  "name": "bahago",
+  "dockerComposeFile": "docker-compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": false,
+  "features": {
+    "ghcr.io/devcontainers-extra/features/go-task:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg",
+        "task.vscode-task"
+      ],
+      "settings": {
+        "sqltools.connections": [
+          {
+            "name": "Container PostgreSQL DB",
+            "driver": "PostgreSQL",
+            "server": "db", // From docker-compose.yaml
+            "port": 5432,
+            "database": "appdb",
+            "username": "postgres",
+            "password": "postgres"
+          }
+        ]
+      }
+    }
+  }
+}

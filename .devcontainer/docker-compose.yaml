@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces # Mount current workspace
+      - vscode-cache:/home/vscode/.cache # Cache VS Code extension data
+      - go-pkg-cache:/go/pkg/ # Cache GO deps
+      - ${SSH_AUTH_SOCK}:/ssh-agent # SSH agent to push to github using host's ssh configs
+    security_opt:
+      - label=disable # Disable SELinux inside container (no need for :z)
+    command: sleep infinity
+    userns_mode: "keep-id"
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/appdb?sslmode=disable
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=appdb
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  vscode-cache:
+  go-pkg-cache:

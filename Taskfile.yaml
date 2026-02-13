@@ -1,0 +1,92 @@
+version: '3'
+
+vars:
+  # --- Go Tool Aliases ---
+  AIR: go tool air
+  GOOSE: go tool goose
+  SQLC: go tool sqlc
+  
+  # --- Vars ---
+  APP_NAME: 'bahago'
+  DB_URL: '{{.DATABASE_URL}}'
+  MIGRATIONS_DIR: ./internal/database/migrations
+  QUERIES_DIR: './internal/database/queries'
+  SQLC_DIR: './internal/database/sqlc'
+
+tasks:
+  # --- Development & Build (go) ---
+  dev:
+    desc: Start the live-reload development server
+    cmds:
+      - '{{.AIR}} -c .air.toml'
+
+  build:
+    desc: Build the production binary
+    deps: [gen, test]
+    cmds:
+      - 'go build -o bin/{{.APP_NAME}} ./cmd/server/main.go'
+
+  test:
+    desc: Run all project tests
+    cmds:
+      - go test -v ./...
+
+  lint:
+    desc: Run go vet to check for potential issues
+    cmds:
+      - go vet ./...
+
+  tidy:
+    desc: Install dependencies and tidy modules
+    cmds:
+      - go mod tidy
+      - go mod verify
+
+  # --- Code Generation (sqlc) ---
+  gen:
+    desc: Generate Go code from SQL queries
+    sources:
+      - '{{.QUERIES_DIR}}/*.sql'
+      - '{{.MIGRATIONS_DIR}}/*.sql'
+      - 'sqlc.yaml'
+    generates:
+      - '{{.SQLC_DIR}}/*.go'
+    cmds:
+      - '{{.SQLC}} generate'
+
+  # --- Database Migrations (Goose) ---
+  db:up:
+    desc: Run all pending migrations
+    cmds:
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} up'
+
+  db:down:
+    desc: Roll back the most recent migration
+    cmds:
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} down'
+
+  db:status:
+    desc: Check the migration status of the database
+    cmds:
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} status'
+
+  db:create:
+    desc: Create a new migration file (e.g., task db:create -- add_users_table)
+    cmds:
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} create {{.CLI_ARGS}} sql'
+
+  # --- Tool Aliases ---
+  air:
+    desc: Alias for air
+    cmds:
+      - '{{.AIR}} {{.CLI_ARGS}}'
+
+  goose:
+    desc: Alias for goose
+    cmds:
+      - '{{.GOOSE}} {{.CLI_ARGS}}'
+
+  sqlc:
+    desc: Alias for sqlc
+    cmds:
+      - '{{.SQLC}} {{.CLI_ARGS}}'
