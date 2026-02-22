@@ -1,7 +1,8 @@
 package pages
 
 import (
-	. "github.com/mad/bahago/internal/ui/layouts"
+	. "bahago/internal/ui/layouts"
+
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
 )

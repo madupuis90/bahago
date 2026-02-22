@@ -1,15 +1,30 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
-	"github.com/mad/bahago/internal/server"
+	"bahago/internal/server"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 
-	app := server.New()
+	ctx := context.Background()
+
+	dbURL := os.Getenv("DATABASE_URL")
+
+	db, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		log.Fatalf("Expected new pgxpool created: %v", err)
+	}
+	defer db.Close()
+
+	app := server.New(db)
 
 	// start server
 	fmt.Println("Server running at http://localhost:8080")

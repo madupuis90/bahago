@@ -1,4 +1,4 @@
-module github.com/mad/bahago
+module bahago
 
 go 1.25
 

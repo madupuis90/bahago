@@ -1,15 +1,20 @@
 package server
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 type Server struct {
 	router *http.ServeMux
-	// db
+	db     *pgxpool.Pool
 }
 
-func New() *Server {
+func New(db *pgxpool.Pool) *Server {
 	s := &Server{
 		router: http.NewServeMux(),
+		db:     db,
 	}
 
 	s.RegisterRoutes()

@@ -28,7 +28,6 @@ tmp/
 .task/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo

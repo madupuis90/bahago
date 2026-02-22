@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	. "github.com/mad/bahago/internal/ui/layouts"
+	. "bahago/internal/ui/layouts"
+
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
