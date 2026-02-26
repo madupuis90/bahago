@@ -1,0 +1,14 @@
+{
+  "Gomponents Imports": {
+    "prefix": "gomp",
+    "body": [
+      "\"bahago/internal/database/db\"",
+      ". \"bahago/internal/ui\"",
+      ". \"maragu.dev/gomponents\"",
+      ". \"maragu.dev/gomponents/html\"",
+      "ds \"maragu.dev/gomponents-datastar\"",
+      "\"github.com/starfederation/datastar-go/datastar\"",
+    ],
+    "description": "Import UI libraries"
+  }
+}

@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: resources.sql
 
-package database
+package db
 
 import (
 	"context"
@@ -16,13 +16,31 @@ RETURNING id, wood, stone, food
 `
 
 type CreateResourceParams struct {
-	Wood  int32
-	Stone int32
-	Food  int32
+	Wood  int `json:"wood"`
+	Stone int `json:"stone"`
+	Food  int `json:"food"`
 }
 
 func (q *Queries) CreateResource(ctx context.Context, arg CreateResourceParams) (Resource, error) {
 	row := q.db.QueryRow(ctx, createResource, arg.Wood, arg.Stone, arg.Food)
+	var i Resource
+	err := row.Scan(
+		&i.ID,
+		&i.Wood,
+		&i.Stone,
+		&i.Food,
+	)
+	return i, err
+}
+
+const getResource = `-- name: GetResource :one
+SELECT id, wood, stone, food
+FROM resources
+WHERE id = $1
+`
+
+func (q *Queries) GetResource(ctx context.Context, id int64) (Resource, error) {
+	row := q.db.QueryRow(ctx, getResource, id)
 	var i Resource
 	err := row.Scan(
 		&i.ID,

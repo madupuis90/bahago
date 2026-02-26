@@ -1,4 +1,4 @@
-package layouts
+package ui
 
 import (
 	. "maragu.dev/gomponents"
@@ -16,22 +16,18 @@ func Layout(args LayoutArgs, body ...Node) Node {
 			Head(
 				TitleEl(Text(args.Title)),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
-				Script(Type("module"), Src("https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js")),
+				Script(Type("module"), Src("static/datastar.js")),
 			),
 			Body(
 				Nav(
 					A(Text("Home"), Href("/")),
 					A(Text("Login"), Href("/login")),
-					A(Text("About"), Href("/about")),
-					A(Text("Test"), Href("/test")),
+					A(Text("Resources"), Href("/resources")),
+					A(Text("Chat"), Href("/chat")),
 				),
 				Main(body...), // Inject the content here
 				Footer(),
 			),
 		),
 	)
-}
-
-func Layout2(args LayoutArgs) {
-
 }

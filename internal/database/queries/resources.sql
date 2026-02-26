@@ -9,3 +9,7 @@ SELECT id,
   food
 FROM resources
 ORDER BY id ASC;
+-- name: GetResource :one
+SELECT *
+FROM resources
+WHERE id = $1;
