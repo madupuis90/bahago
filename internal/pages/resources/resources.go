@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"bahago/internal/database/db"
+	"bahago/internal/router"
 	. "bahago/internal/ui"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -12,7 +13,7 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-func RegisterRoutes(router *http.ServeMux, queries *db.Queries) {
+func RegisterRoutes(router router.Router, queries *db.Queries) {
 
 	h := newHandler(queries)
 

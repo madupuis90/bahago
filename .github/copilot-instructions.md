@@ -1,7 +1,6 @@
 # GitHub Copilot Instructions for Project MAD
 
 ## Communication & Approach
-- Act as a senior developer
 - Explain concepts clearly and provide context for decisions
 - Never make up information - if uncertain, research or ask for clarification
 - Always verify best practices for the specific version of tools/frameworks being used
@@ -84,9 +83,13 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 
 ### Directory Organization
 - `cmd/server/` - Application entry point (main.go)
+- `internal/contextkeys/` - Shared context key constants (avoids import cycles)
 - `internal/database/` - Database code (sqlc generated + migrations)
-- `internal/handlers/` - HTTP handlers
-- `internal/ui/` - Gomponents templates (components, layouts, pages)
+- `internal/middleware/` - HTTP middleware (auth, and future: logging, CSRF, etc.)
+- `internal/pages/` - Feature packages: each contains its HTTP handlers and page templates
+- `internal/router/` - Router interface used to inject middleware without circular imports
+- `internal/server/` - Application wiring (routes, middleware, static files)
+- `internal/ui/` - Shared gomponents (layout shell, and components used by 2+ pages)
 - Keep main.go minimal - just wiring and server setup
 
 ### Internal Packages
@@ -106,9 +109,9 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 ### Gomponents
 - Import with dot notation for cleaner syntax: `import . "maragu.dev/gomponents/html"`
 - This allows components to look like HTML: `Div()`, `H1()`, `P()` instead of `html.Div()`
-- Reuse components - keep them in `internal/ui/components/`
-- Create layouts for common page structure in `internal/ui/layouts/`
-- Keep page-specific templates in `internal/ui/pages/`
+- Templates are co-located with their feature package in `internal/pages/<feature>/`
+- Only extract a template or component to `internal/ui/` when it is used by 2 or more pages
+- `internal/ui/layout.go` holds the shared HTML shell (`Layout()`) used by all pages
 - Components should be pure functions returning `gomponents.Node`
 
 ## Configuration

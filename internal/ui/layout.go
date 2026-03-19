@@ -16,7 +16,7 @@ func Layout(args LayoutArgs, body ...Node) Node {
 			Head(
 				TitleEl(Text(args.Title)),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
-				Script(Type("module"), Src("static/datastar.js")),
+				Script(Type("module"), Src("/static/datastar.js")),
 			),
 			Body(
 				Nav(
@@ -24,6 +24,7 @@ func Layout(args LayoutArgs, body ...Node) Node {
 					A(Text("Login"), Href("/login")),
 					A(Text("Resources"), Href("/resources")),
 					A(Text("Chat"), Href("/chat")),
+					A(Text("Realm"), Href("/realm")),
 				),
 				Main(body...), // Inject the content here
 				Footer(),

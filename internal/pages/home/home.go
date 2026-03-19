@@ -1,6 +1,7 @@
 package home
 
 import (
+	"bahago/internal/router"
 	. "bahago/internal/ui"
 	"net/http"
 
@@ -8,9 +9,9 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-func RegisterRoutes(router *http.ServeMux) {
+func RegisterRoutes(router router.Router) {
 	h := newHandler()
-	router.HandleFunc("GET /", h.handleHomePage())
+	router.HandleFunc("GET /home", h.handleHomePage())
 }
 
 type handler struct {

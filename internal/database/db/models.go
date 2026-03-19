@@ -5,20 +5,28 @@
 package db
 
 import (
+	"net/netip"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Resource struct {
-	ID    int64 `json:"id"`
-	Wood  int   `json:"wood"`
-	Stone int   `json:"stone"`
-	Food  int   `json:"food"`
+type Session struct {
+	ID        string
+	UserID    int64
+	IpAddress netip.Addr
+	UserAgent string
+	ExpiresAt time.Time
+	CreatedAt time.Time
 }
 
 type User struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	IsActive  bool               `json:"is_active"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID          int64
+	Email       string
+	PwHash      string
+	IsActive    bool
+	IsVerified  bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	LastLoginAt pgtype.Timestamptz
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"bahago/internal/router"
 	. "bahago/internal/ui"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -13,7 +14,7 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-func RegisterRoutes(router *http.ServeMux) {
+func RegisterRoutes(router router.Router) {
 	h := newHandler()
 	router.HandleFunc("GET /chat", h.handleChatPage())
 	router.HandleFunc("GET /chat/read", h.handleRead())

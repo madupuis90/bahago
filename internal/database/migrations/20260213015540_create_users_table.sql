@@ -1,12 +1,17 @@
 -- +goose Up
+CREATE EXTENSION IF NOT EXISTS "citext";
 CREATE TABLE users (
+
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL CHECK (
-    email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-  ),
+  email CITEXT UNIQUE NOT NULL,
+  pw_hash TEXT NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_at TIMESTAMPTZ 
+  
+  CONSTRAINT check_email_format CHECK (email ~* '^.+@.+\..+$') --loose check
 );
 -- +goose Down
 DROP TABLE IF EXISTS users;

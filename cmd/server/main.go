@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"bahago/internal/server"
 
@@ -17,6 +18,9 @@ func main() {
 	ctx := context.Background()
 
 	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
 
 	db, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
@@ -24,9 +28,20 @@ func main() {
 	}
 	defer db.Close()
 
-	app := server.New(db)
+	srv := server.New(db)
 
-	// start server
+	httpServer := &http.Server{
+		Addr:    ":8080",
+		Handler: srv,
+		// Time to read the full request including body.
+		ReadTimeout: 5 * time.Second,
+		// WriteTimeout is 0 (no timeout) because SSE endpoints hold open
+		// long-lived connections and would be cut off by a finite timeout.
+		WriteTimeout: 0,
+		// Time to wait for the next request on a keep-alive connection.
+		IdleTimeout: 120 * time.Second,
+	}
+
 	fmt.Println("Server running at http://localhost:8080")
-	http.ListenAndServe(":8080", app)
+	log.Fatal(httpServer.ListenAndServe())
 }

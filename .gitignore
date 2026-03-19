@@ -36,3 +36,6 @@ tmp/
 # OS
 .DS_Store
 Thumbs.db
+
+# Sql extension queries
+*.session.sql
