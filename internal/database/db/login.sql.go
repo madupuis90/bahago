@@ -11,6 +11,36 @@ import (
 	"time"
 )
 
+const consumeEmailVerification = `-- name: ConsumeEmailVerification :one
+DELETE FROM email_verifications
+WHERE token = $1
+  AND expires_at > NOW()
+RETURNING user_id
+`
+
+func (q *Queries) ConsumeEmailVerification(ctx context.Context, token string) (int64, error) {
+	row := q.db.QueryRow(ctx, consumeEmailVerification, token)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
+const createEmailVerification = `-- name: CreateEmailVerification :exec
+INSERT INTO email_verifications (token, user_id, expires_at)
+VALUES ($1, $2, $3)
+`
+
+type CreateEmailVerificationParams struct {
+	Token     string
+	UserID    int64
+	ExpiresAt time.Time
+}
+
+func (q *Queries) CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) error {
+	_, err := q.db.Exec(ctx, createEmailVerification, arg.Token, arg.UserID, arg.ExpiresAt)
+	return err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
     id, user_id, ip_address, user_agent, expires_at
@@ -133,5 +163,16 @@ WHERE id = $1
 
 func (q *Queries) UpdateLastLogin(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, updateLastLogin, id)
+	return err
+}
+
+const verifyUser = `-- name: VerifyUser :exec
+UPDATE users
+SET is_verified = true
+WHERE id = $1
+`
+
+func (q *Queries) VerifyUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, verifyUser, id)
 	return err
 }

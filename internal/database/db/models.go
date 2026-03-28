@@ -11,6 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type EmailVerification struct {
+	Token     string
+	UserID    int64
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
 type Session struct {
 	ID        string
 	UserID    int64

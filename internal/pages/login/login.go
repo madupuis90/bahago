@@ -1,10 +1,12 @@
 package login
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/mail"
@@ -13,9 +15,11 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	"bahago/internal/email"
 	"bahago/internal/router"
 	. "bahago/internal/ui"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
@@ -23,35 +27,44 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-func RegisterRoutes(router router.Router, queries *db.Queries) {
-	h := newHandler(queries)
-	router.HandleFunc("GET /login", h.loginPage())
-	router.HandleFunc("POST /register", h.register())
-	router.HandleFunc("POST /login", h.login())
+func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, appURL string) {
+	h := newHandler(queries, pool, sender, appURL)
+	r.HandleFunc("GET /login", h.loginPage())
+	r.HandleFunc("POST /register", h.register())
+	r.HandleFunc("POST /login", h.login())
+	r.HandleFunc("GET /verify", h.verify())
 }
 
 type handler struct {
 	queries *db.Queries
+	pool    *pgxpool.Pool
+	sender  *email.Sender
+	appURL  string
 }
 
-func newHandler(queries *db.Queries) *handler {
+func newHandler(queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, appURL string) *handler {
 	return &handler{
 		queries: queries,
+		pool:    pool,
+		sender:  sender,
+		appURL:  appURL,
 	}
 }
 
 func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		loginPage().Render(w)
+		verified := r.URL.Query().Get("verified") == "true"
+		loginPage(verified).Render(w)
 	}
 }
 
-func loginPage() Node {
+func loginPage(verified bool) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Login",
 		},
 		H1(Text("Login Page")),
+		If(verified, P(Text("Your email has been verified. You can now log in."))),
 		Div(
 			Label(
 				Text("email"),
@@ -85,6 +98,31 @@ func errorComponent(errors []error) Node {
 	)
 }
 
+// verificationEmail renders an HTML email containing a verification link.
+func verificationEmail(verifyURL string) Node {
+	return HTML(
+		Head(
+			Meta(Charset("utf-8")),
+		),
+		Body(
+			H1(Text("Verify your email address")),
+			P(Text("Thanks for signing up! Click the link below to verify your email address. The link expires in 24 hours.")),
+			P(
+				A(Href(verifyURL), Text("Verify my email")),
+			),
+			P(Text("If you didn't create an account, you can safely ignore this email.")),
+		),
+	)
+}
+
+// Token not found, already used, or expired — show a friendly page.
+func invalidToken() Node {
+	return Layout(LayoutArgs{Title: "Verification Failed"},
+		H1(Text("Verification link invalid or expired")),
+		P(Text("Please register again to receive a new link.")),
+	)
+}
+
 type LoginForm struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -92,7 +130,7 @@ type LoginForm struct {
 
 func (h *handler) register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// --- Phase 1: parse + validate (accumulate all errors) ---
+
 		var errs []error
 
 		data := &LoginForm{}
@@ -113,31 +151,97 @@ func (h *handler) register() http.HandlerFunc {
 			return
 		}
 
-		// --- Phase 2: execute (fail fast) ---
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
+			log.Printf("register: bcrypt hash: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
 			return
 		}
 
-		user := db.CreateUserParams{
+		tx, err := h.pool.Begin(r.Context())
+		if err != nil {
+			log.Printf("register: begin transaction: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			return
+		}
+		defer tx.Rollback(r.Context()) // no-op after Commit
+
+		qtx := h.queries.WithTx(tx)
+
+		userID, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
 			Email:  data.Email,
 			PwHash: string(hashedPassword),
-		}
-
-		if _, err := h.queries.CreateUser(r.Context(), user); err != nil {
+		})
+		if err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("email already in use")}))
 			return
 		}
 
-		datastar.NewSSE(w, r).PatchElementGostar(errorComponent(nil))
+		token := generateToken()
+
+		if err := qtx.CreateEmailVerification(r.Context(), db.CreateEmailVerificationParams{
+			Token:     token,
+			UserID:    userID,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
+		}); err != nil {
+			log.Printf("register: create email verification: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			return
+		}
+
+		verifyURL := h.appURL + "/verify?token=" + token
+		var buf bytes.Buffer
+		if err := verificationEmail(verifyURL).Render(&buf); err != nil {
+			log.Printf("register: render verification email: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			return
+		}
+
+		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", buf.String()); err != nil {
+			log.Printf("send verification email: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to send verification email — please try again")}))
+			return
+		}
+
+		if err := tx.Commit(r.Context()); err != nil {
+			log.Printf("register: commit transaction: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			return
+		}
+
+		datastar.NewSSE(w, r).PatchElementGostar(
+			Div(ID("errors"), P(Text("Account created! Check your email to verify your account."))),
+		)
+	}
+}
+
+func (h *handler) verify() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.URL.Query().Get("token")
+		if token == "" {
+			invalidToken().Render(w)
+			return
+		}
+
+		userID, err := h.queries.ConsumeEmailVerification(r.Context(), token)
+		if err != nil {
+			invalidToken().Render(w)
+			return
+		}
+
+		if err := h.queries.VerifyUser(r.Context(), userID); err != nil {
+			log.Printf("verify: update user verified: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/login?verified=true", http.StatusSeeOther)
 	}
 }
 
 func (h *handler) login() http.HandlerFunc {
-	// Computed once when the handler is registered, captured by the closure.
-	// Used to perform a constant-time dummy bcrypt comparison when an email is
-	// not found, preventing user-enumeration via timing side-channel.
+
+	// Sentinel password to compare when doing dummy comparaison
 	sentinelHash, err := bcrypt.GenerateFromPassword([]byte("sentinel-password"), bcrypt.DefaultCost)
 	if err != nil {
 		panic(fmt.Sprintf("failed to generate sentinel hash: %v", err))
@@ -161,8 +265,6 @@ func (h *handler) login() http.HandlerFunc {
 			return
 		}
 
-		// --- Phase 2: execute (fail fast) ---
-
 		// Look up user. If not found, run a dummy bcrypt comparison against the
 		// sentinel hash to prevent user-enumeration via timing side-channel.
 		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email)
@@ -176,15 +278,20 @@ func (h *handler) login() http.HandlerFunc {
 			return
 		}
 
-		// TODO: check user.IsActive and user.IsVerified once email verification
-		// and account management flows are implemented.
+		if !user.IsVerified {
+			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("please verify your email before logging in")}))
+			return
+		}
 
+		// TODO: behind a reverse proxy, r.RemoteAddr will be the proxy's address.
+		// Read X-Forwarded-For or X-Real-IP instead when deploying with a proxy.
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			host = r.RemoteAddr // fallback if no port present
 		}
 		ip, err := netip.ParseAddr(host)
 		if err != nil {
+			log.Printf("login: parse remote addr %q: %v", host, err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("could not process request")}))
 			return
 		}
@@ -192,7 +299,7 @@ func (h *handler) login() http.HandlerFunc {
 		const sessionDuration = 90 * 24 * time.Hour // 3 months
 
 		s := db.CreateSessionParams{
-			ID:        generateSessionID(),
+			ID:        generateToken(),
 			UserID:    user.ID,
 			IpAddress: ip,
 			UserAgent: r.UserAgent(),
@@ -200,6 +307,7 @@ func (h *handler) login() http.HandlerFunc {
 		}
 
 		if _, err := h.queries.CreateSession(r.Context(), s); err != nil {
+			log.Printf("login: create session: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
 			return
 		}
@@ -221,16 +329,13 @@ func (h *handler) login() http.HandlerFunc {
 
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect("/realm"); err != nil {
-			// Headers already sent at this point; best effort patch.
 			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
 		}
 	}
 }
 
-// generateSessionID returns a cryptographically random 256-bit hex string.
-// It panics if the system CSPRNG is unavailable, since a broken random source
-// makes it impossible to generate secure session tokens safely.
-func generateSessionID() string {
+// generateToken returns a cryptographically random 256-bit hex string.
+func generateToken() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		panic(fmt.Sprintf("crypto/rand unavailable: %v", err))

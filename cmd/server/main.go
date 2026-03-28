@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"bahago/internal/email"
 	"bahago/internal/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,13 +23,30 @@ func main() {
 		log.Fatal("DATABASE_URL environment variable is not set")
 	}
 
+	resendAPIKey := os.Getenv("RESEND_API_KEY")
+	if resendAPIKey == "" {
+		log.Fatal("RESEND_API_KEY environment variable is not set")
+	}
+
+	emailFrom := os.Getenv("EMAIL_FROM")
+	if emailFrom == "" {
+		log.Fatal("EMAIL_FROM environment variable is not set")
+	}
+
+	appURL := os.Getenv("APP_URL")
+	if appURL == "" {
+		log.Fatal("APP_URL environment variable is not set")
+	}
+
 	db, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatalf("Expected new pgxpool created: %v", err)
 	}
 	defer db.Close()
 
-	srv := server.New(db)
+	sender := email.NewSender(resendAPIKey, emailFrom)
+
+	srv := server.New(db, sender, appURL)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",

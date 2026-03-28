@@ -2,6 +2,7 @@ package server
 
 import (
 	"bahago/internal/database/db"
+	"bahago/internal/email"
 	"bahago/internal/middleware"
 	"bahago/internal/pages/chat"
 	"bahago/internal/pages/home"
@@ -17,15 +18,19 @@ import (
 
 type Server struct {
 	router  *http.ServeMux
-	db      *pgxpool.Pool
+	pool    *pgxpool.Pool
 	queries *db.Queries
+	sender  *email.Sender
+	appURL  string
 }
 
-func New(pool *pgxpool.Pool) *Server {
+func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
 	s := &Server{
 		router:  http.NewServeMux(),
-		db:      pool,
+		pool:    pool,
 		queries: db.New(pool),
+		sender:  sender,
+		appURL:  appURL,
 	}
 
 	s.registerRoutes()
@@ -40,7 +45,7 @@ func (s *Server) registerRoutes() {
 
 	// public pages
 	home.RegisterRoutes(s.router)
-	login.RegisterRoutes(s.router, s.queries)
+	login.RegisterRoutes(s.router, s.queries, s.pool, s.sender, s.appURL)
 
 	// protected pages
 	protectedRouter := &router.MiddlewareRouter{

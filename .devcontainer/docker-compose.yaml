@@ -12,6 +12,8 @@ services:
       - label=disable # Disable SELinux inside container (no need for :z)
     command: sleep infinity
     userns_mode: "keep-id"
+    env_file:
+      - ../.env # When making changes, it seems container need to be rebuilt
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
       - DATABASE_URL=postgres://postgres:postgres@db:5432/appdb?sslmode=disable

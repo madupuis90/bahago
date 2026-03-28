@@ -33,3 +33,18 @@ FROM sessions s
 JOIN users u ON s.user_id = u.id
 WHERE s.id = $1 
   AND s.expires_at > CURRENT_TIMESTAMP;
+
+-- name: CreateEmailVerification :exec
+INSERT INTO email_verifications (token, user_id, expires_at)
+VALUES ($1, $2, $3);
+
+-- name: ConsumeEmailVerification :one
+DELETE FROM email_verifications
+WHERE token = $1
+  AND expires_at > NOW()
+RETURNING user_id;
+
+-- name: VerifyUser :exec
+UPDATE users
+SET is_verified = true
+WHERE id = $1;
