@@ -4,7 +4,6 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/router"
-	"fmt"
 	"net/http"
 
 	. "bahago/internal/ui"
@@ -30,15 +29,16 @@ func newHandler(queries *db.Queries) *handler {
 
 func (h *handler) handleRealmPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("userid: %v\n", r.Context().Value(contextkeys.UserID))
-		realmPage().Render(w)
+		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		realmPage(user).Render(w)
 	}
 }
 
-func realmPage() Node {
+func realmPage(user *contextkeys.SessionUser) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Realm",
+			User:  user,
 		},
 		Div(Text("bob")),
 	)

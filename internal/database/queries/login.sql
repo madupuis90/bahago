@@ -48,3 +48,6 @@ RETURNING user_id;
 UPDATE users
 SET is_verified = true
 WHERE id = $1;
+
+-- name: DeleteSession :exec
+DELETE FROM sessions WHERE id = $1;

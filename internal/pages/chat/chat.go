@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"bahago/internal/contextkeys"
 	"bahago/internal/router"
 	. "bahago/internal/ui"
 
@@ -30,7 +31,8 @@ func newHandler() *handler {
 
 func (h *handler) handleChatPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		chatPage().Render(w)
+		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		chatPage(user).Render(w)
 	}
 }
 
@@ -112,10 +114,11 @@ func (h *hub) publish(msg string) {
 
 var containerId = "messages-container"
 
-func chatPage() Node {
+func chatPage(user *contextkeys.SessionUser) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Chat Page",
+			User:  user,
 		},
 		H1(Text("Let's chat!")),
 		Div(ID(containerId), ds.Init(datastar.GetSSE("/chat/read")),

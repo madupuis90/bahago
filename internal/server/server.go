@@ -17,7 +17,7 @@ import (
 )
 
 type Server struct {
-	router  *http.ServeMux
+	mux     *http.ServeMux
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	sender  *email.Sender
@@ -26,7 +26,7 @@ type Server struct {
 
 func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
 	s := &Server{
-		router:  http.NewServeMux(),
+		mux:     http.NewServeMux(),
 		pool:    pool,
 		queries: db.New(pool),
 		sender:  sender,
@@ -39,31 +39,31 @@ func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
 }
 
 func (s *Server) registerRoutes() {
-
-	// middleware
-	authMiddleware := middleware.AuthMiddleware(s.queries)
+	// globalRouter applies LoadUser to every route — public or protected —
+	// so all handlers can read the current user from context.
+	globalRouter := &router.MiddlewareRouter{
+		Router:     s.mux,
+		Middleware: middleware.LoadUser(s.queries),
+	}
 
 	// public pages
-	home.RegisterRoutes(s.router)
-	login.RegisterRoutes(s.router, s.queries, s.pool, s.sender, s.appURL)
+	home.RegisterRoutes(globalRouter)
+	login.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
 
-	// protected pages
-	protectedRouter := &router.MiddlewareRouter{
-		Router:     s.router,
-		Middleware: authMiddleware,
-	}
+	// protected pages also require an authenticated user.
+	protectedRouter := globalRouter.Chain(middleware.RequireAuth)
 	realm.RegisterRoutes(protectedRouter, s.queries)
 	chat.RegisterRoutes(protectedRouter)
 	resources.RegisterRoutes(protectedRouter, s.queries)
 
 	// static assets — embedded into the binary at compile time
-	s.router.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
+	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
 
 	// redirect to home
-	s.router.Handle("/", http.RedirectHandler("/home", http.StatusMovedPermanently))
+	s.mux.Handle("/", http.RedirectHandler("/home", http.StatusMovedPermanently))
 }
 
 // implements http.Handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+	s.mux.ServeHTTP(w, r)
 }

@@ -32,6 +32,7 @@ func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, se
 	r.HandleFunc("GET /login", h.loginPage())
 	r.HandleFunc("POST /register", h.register())
 	r.HandleFunc("POST /login", h.login())
+	r.HandleFunc("POST /logout", h.logout())
 	r.HandleFunc("GET /verify", h.verify())
 }
 
@@ -62,6 +63,7 @@ func loginPage(verified bool) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Login",
+			User:  nil,
 		},
 		H1(Text("Login Page")),
 		If(verified, P(Text("Your email has been verified. You can now log in."))),
@@ -117,7 +119,7 @@ func verificationEmail(verifyURL string) Node {
 
 // Token not found, already used, or expired — show a friendly page.
 func invalidToken() Node {
-	return Layout(LayoutArgs{Title: "Verification Failed"},
+	return Layout(LayoutArgs{Title: "Verification Failed", User: nil},
 		H1(Text("Verification link invalid or expired")),
 		P(Text("Please register again to receive a new link.")),
 	)
@@ -318,7 +320,7 @@ func (h *handler) login() http.HandlerFunc {
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:     string(contextkeys.SessionID),
+			Name:     string(contextkeys.SessionCookieName),
 			Value:    s.ID,
 			Path:     "/",
 			MaxAge:   int(sessionDuration.Seconds()),
@@ -331,6 +333,31 @@ func (h *handler) login() http.HandlerFunc {
 		if err := sse.Redirect("/realm"); err != nil {
 			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
 		}
+	}
+}
+
+func (h *handler) logout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(string(contextkeys.SessionCookieName))
+		if err != nil {
+			// No session cookie — already logged out.
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		if err := h.queries.DeleteSession(r.Context(), cookie.Value); err != nil {
+			log.Printf("logout: delete session: %v", err)
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     string(contextkeys.SessionCookieName),
+			MaxAge:   -1,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
+		})
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	}
 }
 

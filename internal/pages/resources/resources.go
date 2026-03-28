@@ -3,6 +3,7 @@ package resources
 import (
 	"net/http"
 
+	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/router"
 	. "bahago/internal/ui"
@@ -32,7 +33,8 @@ func newHandler(queries *db.Queries) *handler {
 
 func (h *handler) handleResourcePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resourcePage().Render(w)
+		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		resourcePage(user).Render(w)
 	}
 }
 
@@ -48,10 +50,11 @@ func (h *handler) handleLoadResource() http.HandlerFunc {
 	}
 }
 
-func resourcePage() Node {
+func resourcePage(user *contextkeys.SessionUser) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Resources",
+			User:  user,
 		},
 		ds.Init(datastar.GetSSE("/resources/load")),
 		Div(Class("flex"),

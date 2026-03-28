@@ -1,6 +1,7 @@
 package home
 
 import (
+	"bahago/internal/contextkeys"
 	"bahago/internal/router"
 	. "bahago/internal/ui"
 	"net/http"
@@ -23,14 +24,16 @@ func newHandler() *handler {
 
 func (h *handler) handleHomePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		homePage().Render(w)
+		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		homePage(user).Render(w)
 	}
 }
 
-func homePage() Node {
+func homePage(user *contextkeys.SessionUser) Node {
 	return Layout(
 		LayoutArgs{
 			Title: "Home",
+			User:  user,
 		},
 		H1(Text("Home Page")),
 	)
