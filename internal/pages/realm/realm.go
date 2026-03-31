@@ -12,11 +12,15 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
+const (
+	RealmPath = "/realm"
+)
+
 func RegisterRoutes(router router.Router, queries *db.Queries) {
 
 	h := newHandler(queries)
 
-	router.HandleFunc("GET /realm", h.handleRealmPage())
+	router.HandleFunc("GET "+RealmPath, h.handleRealmPage())
 }
 
 type handler struct {

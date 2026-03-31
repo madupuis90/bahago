@@ -12,7 +12,7 @@ import (
 )
 
 const consumeEmailVerification = `-- name: ConsumeEmailVerification :one
-DELETE FROM email_verifications
+DELETE FROM email_verification_tokens
 WHERE token = $1
   AND expires_at > NOW()
 RETURNING user_id
@@ -25,8 +25,22 @@ func (q *Queries) ConsumeEmailVerification(ctx context.Context, token string) (i
 	return user_id, err
 }
 
+const consumePasswordResetToken = `-- name: ConsumePasswordResetToken :one
+DELETE FROM password_reset_tokens
+WHERE token = $1
+  AND expires_at > NOW()
+RETURNING user_id
+`
+
+func (q *Queries) ConsumePasswordResetToken(ctx context.Context, token string) (int64, error) {
+	row := q.db.QueryRow(ctx, consumePasswordResetToken, token)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const createEmailVerification = `-- name: CreateEmailVerification :exec
-INSERT INTO email_verifications (token, user_id, expires_at)
+INSERT INTO email_verification_tokens (token, user_id, expires_at)
 VALUES ($1, $2, $3)
 `
 
@@ -38,6 +52,22 @@ type CreateEmailVerificationParams struct {
 
 func (q *Queries) CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) error {
 	_, err := q.db.Exec(ctx, createEmailVerification, arg.Token, arg.UserID, arg.ExpiresAt)
+	return err
+}
+
+const createPasswordResetToken = `-- name: CreatePasswordResetToken :exec
+INSERT INTO password_reset_tokens (token, user_id, expires_at)
+VALUES ($1, $2, $3)
+`
+
+type CreatePasswordResetTokenParams struct {
+	Token     string
+	UserID    int64
+	ExpiresAt time.Time
+}
+
+func (q *Queries) CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) error {
+	_, err := q.db.Exec(ctx, createPasswordResetToken, arg.Token, arg.UserID, arg.ExpiresAt)
 	return err
 }
 
@@ -96,12 +126,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return id, err
 }
 
+const deletePasswordResetTokensByUserID = `-- name: DeletePasswordResetTokensByUserID :exec
+DELETE FROM password_reset_tokens WHERE user_id = $1
+`
+
+func (q *Queries) DeletePasswordResetTokensByUserID(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deletePasswordResetTokensByUserID, userID)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM sessions WHERE id = $1
 `
 
 func (q *Queries) DeleteSession(ctx context.Context, id string) error {
 	_, err := q.db.Exec(ctx, deleteSession, id)
+	return err
+}
+
+const deleteSessionsByUserID = `-- name: DeleteSessionsByUserID :exec
+DELETE FROM sessions WHERE user_id = $1
+`
+
+func (q *Queries) DeleteSessionsByUserID(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteSessionsByUserID, userID)
 	return err
 }
 
@@ -172,6 +220,22 @@ WHERE id = $1
 
 func (q *Queries) UpdateLastLogin(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, updateLastLogin, id)
+	return err
+}
+
+const updatePassword = `-- name: UpdatePassword :exec
+UPDATE users
+SET pw_hash = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdatePasswordParams struct {
+	ID     int64
+	PwHash string
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
+	_, err := q.db.Exec(ctx, updatePassword, arg.ID, arg.PwHash)
 	return err
 }
 

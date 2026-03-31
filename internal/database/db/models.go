@@ -11,7 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type EmailVerification struct {
+type EmailVerificationToken struct {
+	Token     string
+	UserID    int64
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+type PasswordResetToken struct {
 	Token     string
 	UserID    int64
 	ExpiresAt time.Time

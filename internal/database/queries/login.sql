@@ -35,11 +35,11 @@ WHERE s.id = $1
   AND s.expires_at > CURRENT_TIMESTAMP;
 
 -- name: CreateEmailVerification :exec
-INSERT INTO email_verifications (token, user_id, expires_at)
+INSERT INTO email_verification_tokens (token, user_id, expires_at)
 VALUES ($1, $2, $3);
 
 -- name: ConsumeEmailVerification :one
-DELETE FROM email_verifications
+DELETE FROM email_verification_tokens
 WHERE token = $1
   AND expires_at > NOW()
 RETURNING user_id;
@@ -51,3 +51,24 @@ WHERE id = $1;
 
 -- name: DeleteSession :exec
 DELETE FROM sessions WHERE id = $1;
+
+-- name: DeleteSessionsByUserID :exec
+DELETE FROM sessions WHERE user_id = $1;
+
+-- name: DeletePasswordResetTokensByUserID :exec
+DELETE FROM password_reset_tokens WHERE user_id = $1;
+
+-- name: CreatePasswordResetToken :exec
+INSERT INTO password_reset_tokens (token, user_id, expires_at)
+VALUES ($1, $2, $3);
+
+-- name: ConsumePasswordResetToken :one
+DELETE FROM password_reset_tokens
+WHERE token = $1
+  AND expires_at > NOW()
+RETURNING user_id;
+
+-- name: UpdatePassword :exec
+UPDATE users
+SET pw_hash = $2, updated_at = NOW()
+WHERE id = $1;

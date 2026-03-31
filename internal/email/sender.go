@@ -1,10 +1,12 @@
 package email
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	resend "github.com/resend/resend-go/v2"
+	"maragu.dev/gomponents"
 )
 
 type Sender struct {
@@ -19,13 +21,19 @@ func NewSender(apiKey, from string) *Sender {
 	}
 }
 
-func (s *Sender) Send(ctx context.Context, to, subject, htmlBody string) error {
+func (s *Sender) Send(ctx context.Context, to, subject string, body gomponents.Node) error {
 	to = "madupuis90+resend@gmail.com" // TODO: remove when we get a domain
+
+	var buf bytes.Buffer
+	if err := body.Render(&buf); err != nil {
+		return fmt.Errorf("render email: %w", err)
+	}
+
 	params := &resend.SendEmailRequest{
 		From:    s.from,
 		To:      []string{to},
 		Subject: subject,
-		Html:    htmlBody,
+		Html:    buf.String(),
 	}
 
 	_, err := s.client.Emails.SendWithContext(ctx, params)
