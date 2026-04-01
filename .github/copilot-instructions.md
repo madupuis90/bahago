@@ -1,18 +1,18 @@
-# GitHub Copilot Instructions for Project MAD
+# GitHub Copilot Instructions for Bahago
 
 ## Communication & Approach
-- Explain concepts clearly and provide context for decisions
 - Never make up information - if uncertain, research or ask for clarification
-- Always verify best practices for the specific version of tools/frameworks being used
+- Always use project instruction if present or research best practices when no instruction provided
+- Always give answers based on the specific version of tools/frameworks being used in the project
 - Research current recommendations before suggesting patterns or approaches
+- Provide context for decisions
 - Provide reasoning behind suggestions to help build understanding
+- Use file reading tools to read files directly — do not use terminal commands like `cat` or `echo` to read file contents. If a file cannot be accessed, ask the user to open it in the editor
 
 ## Project Overview
-This is a Go web application using pgx/v5 for PostgreSQL 18, sqlc for type-safe queries, goose for migrations, and gomponents for HTML templating.
+This is a Go web application using pgx/v5 for PostgreSQL 18, sqlc for type-safe queries, goose for migrations, gomponents for HTML templating and datastar for interactivity.
 
-The development environment runs on Bazzite Linux using Podman as the default container runtime. Bazzite is a Fedora-based immutable/atomic desktop OS that is container-native. As an immutable system, development work should be done inside containers rather than installing tools on the host system.
-
-The project runs in a dev container and uses Task (Taskfile.yml) for all development commands. Never suggest running tools directly (like `goose`, `sqlc`, etc.) - always use the corresponding `task` command instead. When suggesting container commands, use Podman (not Docker) unless Docker is explicitly requested. Podman is rootless by default and uses a daemonless architecture, making it the preferred container runtime for Bazzite.
+The project runs in a dev container and uses Task (Taskfile.yml) for all development commands. Never suggest running tools directly (like `goose`, `sqlc`, `air`, etc.) - always use the corresponding `task` command instead. When suggesting container commands, use Podman (not Docker) unless Docker is explicitly requested. Podman is rootless by default and uses a daemonless architecture, making it the preferred container runtime for Bazzite.
 
 ## PostgreSQL 18 Best Practices
 - Use PostgreSQL 18 features and syntax
@@ -26,33 +26,7 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 
 ## Go Best Practices
 
-### Code Style
-- Follow standard Go formatting (use `gofmt`)
-- Use tabs for indentation
-- Keep lines under 100 characters when reasonable
-- Use meaningful variable names (avoid single letters except in short scopes like loops)
-- Group imports: stdlib, external packages, internal packages
-- Add comments for exported functions, types, and packages
-
-### Error Handling
-- Always handle errors explicitly - never ignore them
-- Wrap errors with context using `fmt.Errorf("context: %w", err)`
-- Return errors rather than panicking (except in init or unrecoverable situations)
-- Use `errors.Is()` and `errors.As()` for error checking
-- Check errors immediately after the function call
-
-### Functions and Methods
-- Keep functions small and focused on a single responsibility
-- Prefer returning errors over panic
-- Use named return values sparingly (only when it improves clarity)
-- Accept interfaces, return concrete types when possible
-- Use context.Context as the first parameter for functions that might block or need cancellation
-
-### Concurrency
-- Always pass context to goroutines that might need cancellation
-- Use channels for communication, mutexes for state protection
-- Close channels from the sender side only
-- Always handle goroutine cleanup to prevent leaks
+See `.github/instructions/go.instructions.md` — auto-loaded for all `.go` files.
 
 ## Database Practices
 
@@ -67,7 +41,7 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 - Use sqlc naming conventions: `-- name: GetUser :one`, `-- name: ListUsers :many`
 - Keep queries simple and readable
 - Use parameterized queries (never string concatenation)
-- Generated code goes in `internal/database/` - never edit it manually
+- Generated code goes in `internal/database/db/` - never edit it manually
 
 ### Migrations with goose
 - All migrations in `internal/database/migrations/`
@@ -82,48 +56,58 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 ## Project Structure
 
 ### Directory Organization
-- `cmd/server/` - Application entry point (main.go)
-- `internal/contextkeys/` - Shared context key constants (avoids import cycles)
-- `internal/database/` - Database code (sqlc generated + migrations)
-- `internal/middleware/` - HTTP middleware (auth, and future: logging, CSRF, etc.)
-- `internal/pages/` - Feature packages: each contains its HTTP handlers and page templates
-- `internal/router/` - Router interface used to inject middleware without circular imports
-- `internal/server/` - Application wiring (routes, middleware, static files)
-- `internal/ui/` - Shared gomponents (layout shell, and components used by 2+ pages)
-- Keep main.go minimal - just wiring and server setup
 
-### Internal Packages
-- Code in `internal/` cannot be imported by external projects
-- Organize by feature/domain when the project grows
-- Avoid circular dependencies between internal packages
+All code lives under `internal/` — nothing is intended to be imported externally.
 
-## Web/HTTP Practices
+- `cmd/server/main.go` — entry point; minimal wiring only (routes, middleware, server start)
+- `internal/contextkeys/` — shared context key constants (avoids import cycles)
+- `internal/database/db/` — sqlc-generated code (never edit manually)
+- `internal/database/migrations/` — goose migration files
+- `internal/database/queries/` — SQL query files for sqlc
+- `internal/email/` — email sending
+- `internal/middleware/` — HTTP middleware (auth, and future: logging, CSRF, etc.)
+- `internal/pages/<feature>/` — one package per feature; contains HTTP handlers, page functions, and components specific to that feature
+- `internal/router/` — router interface (avoids circular imports when injecting middleware)
+- `internal/server/` — application wiring: routes, middleware registration, static file serving
+- `internal/ui/` — shared gomponents: layout shell and components used by 2+ feature packages
+- `web/static/` — static assets (CSS, JS)
+
+### Feature Package Structure
+
+Each feature in `internal/pages/<feature>/` follows this pattern:
+- One file (typically `<feature>.go`) exports route constants, registers routes, and defines the `handler` struct
+- Handler methods return `http.HandlerFunc` and are kept thin — they read input, call queries, and render responses
+- Page functions are pure functions returning `Node`, co-located with their handlers
+- Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
 
 ### Handlers
-- Handlers should be thin - delegate to service layer for business logic
-- Return appropriate HTTP status codes
-- Always set Content-Type headers
-- Use http.Error() for error responses
-- Log errors before returning them to clients
 
-### Gomponents
-- Import with dot notation for cleaner syntax: `import . "maragu.dev/gomponents/html"`
-- This allows components to look like HTML: `Div()`, `H1()`, `P()` instead of `html.Div()`
-- Templates are co-located with their feature package in `internal/pages/<feature>/`
-- Only extract a template or component to `internal/ui/` when it is used by 2 or more pages
-- `internal/ui/layout.go` holds the shared HTML shell (`Layout()`) used by all pages
-- Components should be pure functions returning `gomponents.Node`
+Handlers return `http.HandlerFunc` closures, which allows pre-computation outside the request loop (e.g., generating sentinel hashes, preparing queries):
+
+```go
+func (h *handler) loginPage() http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        verified := r.URL.Query().Get("verified") == "true"
+        loginPage(verified).Render(w)
+    }
+}
+```
+
+- Full-page responses call `page().Render(w)` directly — no explicit `Content-Type` needed (gomponents sets it)
+- SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
+- Log errors server-side; return generic messages to clients
+- Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)
 
 ## Configuration
 
 ### Environment Variables
-- Environment variables are set in docker-compose file for local development
-- Document all required environment variables in README.md
-- Provide sensible defaults where possible
-- Use `os.Getenv()` or a config package for reading environment variables
+- Non-sensitive config (port, DSN for local dev) lives in `docker-compose.yml`
+- Sensitive or environment-specific values (API keys, tokens) go in `.env` — see `.env.example` for all required keys
+- Never commit `.env`; always keep `.env.example` up to date when adding new required variables
+- `main.go` reads required variables at startup and calls `log.Fatal` if any are missing — fail fast rather than silently misbehave at runtime
 
 ### Task Runner
-- Use Taskfile.yml for ALL development tasks (required in dev container)
+- Use Taskfile.yaml for ALL development tasks (required in dev container)
 - Run `task dev` for development with live reload
 - Run `task gen` to regenerate sqlc code after query changes
 - Run `task db:up` and `task db:down` for migrations
@@ -143,18 +127,6 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 - Use `testdata/` directory for test fixtures
 - Clean up resources in tests (use `t.Cleanup()`)
 
-## Dependencies
-
-### Adding Dependencies
-- Use `go get` to add dependencies
-- Run `go mod tidy` to clean up go.mod
-- Review dependencies before adding them (check maintenance, license, size)
-- Prefer standard library over external dependencies when reasonable
-
-### Tools
-- Install tools using `go install` or as `tool` directives in go.mod
-- Current tools: air (live reload), goose (migrations), sqlc (query generation)
-
 ## Security
 
 ### General Security
@@ -170,39 +142,20 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 - Use least privilege database users
 - Enable SSL/TLS for database connections in production
 
-## Performance
+## Code Review Workflow
 
-### Optimization Guidelines
-- Profile before optimizing
-- Use connection pooling (pgxpool)
-- Add database indexes for frequently queried columns
-- Use `LIMIT` in queries when appropriate
-- Consider caching for expensive queries (but measure first)
+When asked to do a code review, the expected workflow is:
+1. Run `git log --oneline` to identify the commits belonging to the feature being reviewed
+2. Run `git diff <first-commit>^..HEAD` to pull the full diff of those changes
+3. Read all changed files in full before forming any opinion
+4. Present a structured review: what looks good, what needs to change (with specific file/line references), and any questions
+5. Work through each issue with the user one at a time — do not batch-fix everything at once
+6. Check reviewed code against all active instructions (this file + `go.instructions.md` + `ui.instructions.md`)
 
-## Documentation
+Note: the project currently commits directly to main (solo dev, one feature at a time). If branches are introduced in the future, use `git diff main...HEAD` instead.
 
-### Code Comments
-- Document exported types, functions, and constants
-- Explain "why" not "what" in comments
-- Keep comments up to date with code changes
-- Use `// TODO:` for known issues or future improvements
+## Instruction Conflicts
 
-### README
-- Keep README.md updated with setup instructions
-- Document environment variables
-- Include examples of common operations
-- Add troubleshooting section for common issues
+When a user's request contradicts something in the project instructions, **always point it out explicitly** before proceeding. State which instruction applies, what the user asked, and offer the choice: update the instruction, make a one-time exception, or reconsider the approach.
 
-## Commit Guidelines
-
-### Git Commits
-- Write clear commit messages
-- Use conventional commits format when possible (feat:, fix:, docs:, etc.)
-- Keep commits focused on a single change
-- Test before committing
-
-### What Not to Commit
-- `.env` files with secrets
-- Generated binaries (`tmp/`, `bin/`)
-- IDE-specific files (add to .gitignore)
-- `go.sum` changes should be committed when dependencies change
+More broadly: if something in the conversation seems worth capturing as a rule or convention — a pattern that keeps coming up, a decision that took effort to reach, or a preference that would otherwise be lost — raise it proactively. The user prefers keeping instructions accurate over silently diverging from them.

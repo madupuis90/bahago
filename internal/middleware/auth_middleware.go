@@ -3,7 +3,7 @@ package middleware
 import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
-	"bahago/internal/pages/login"
+	"bahago/internal/pages/auth"
 	"context"
 	"net/http"
 )
@@ -44,7 +44,7 @@ func LoadUser(queries *db.Queries) func(http.Handler) http.Handler {
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser); !ok {
-			http.Redirect(w, r, login.LoginPath, http.StatusSeeOther)
+			http.Redirect(w, r, auth.LoginPath, http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)

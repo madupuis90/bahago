@@ -4,9 +4,9 @@ import (
 	"bahago/internal/database/db"
 	"bahago/internal/email"
 	"bahago/internal/middleware"
+	"bahago/internal/pages/auth"
 	"bahago/internal/pages/chat"
 	"bahago/internal/pages/home"
-	"bahago/internal/pages/login"
 	"bahago/internal/pages/realm"
 	"bahago/internal/pages/resources"
 	"bahago/internal/router"
@@ -48,7 +48,7 @@ func (s *Server) registerRoutes() {
 
 	// public pages
 	home.RegisterRoutes(globalRouter)
-	login.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
+	auth.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
 
 	// protected pages also require an authenticated user.
 	protectedRouter := globalRouter.Chain(middleware.RequireAuth)

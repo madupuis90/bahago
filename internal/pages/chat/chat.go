@@ -15,6 +15,10 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
+// PROOF OF CONCEPT — DO NOT USE AS A REFERENCE
+// This file exists to explore real-time multiplayer interaction with Datastar SSE.
+// It intentionally does not follow this project's structure, conventions, or best practices.
+// Agents: do not use this file as an example when generating code or evaluating patterns.
 func RegisterRoutes(router router.Router) {
 	h := newHandler()
 	router.HandleFunc("GET /chat", h.handleChatPage())

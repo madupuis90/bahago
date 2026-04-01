@@ -56,8 +56,7 @@ func resourcePage(user *contextkeys.SessionUser) Node {
 			Title: "Resources",
 			User:  user,
 		},
-		ds.Init(datastar.GetSSE("/resources/load")),
-		Div(Class("flex"),
+		Div(Class("flex"), ds.Init(datastar.GetSSE("/resources/load")),
 			Div(Class("flex col"),
 				Div(Text("wood meter")),
 				Div(
