@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"bahago/internal/contextkeys"
+	"bahago/internal/routes"
 )
 
 // ── Logout ──────────────────────────────────────────────────────────
@@ -14,7 +15,7 @@ func (h *handler) logout() http.HandlerFunc {
 		cookie, err := r.Cookie(string(contextkeys.SessionCookieName))
 		if err != nil {
 			// No session cookie — already logged out.
-			http.Redirect(w, r, LoginPath, http.StatusSeeOther)
+			http.Redirect(w, r, routes.LoginPath, http.StatusSeeOther)
 			return
 		}
 
@@ -30,6 +31,6 @@ func (h *handler) logout() http.HandlerFunc {
 			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 		})
-		http.Redirect(w, r, LoginPath, http.StatusSeeOther)
+		http.Redirect(w, r, routes.LoginPath, http.StatusSeeOther)
 	}
 }

@@ -9,16 +9,15 @@ import (
 	"net/netip"
 	"time"
 
-	"bahago/internal/contextkeys"
-	"bahago/internal/database/db"
-	"bahago/internal/pages/realm"
-
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/contextkeys"
+	"bahago/internal/database/db"
+	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
@@ -26,8 +25,8 @@ import (
 
 func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		verified := r.URL.Query().Get("verified") == "true"
-		reset := r.URL.Query().Get("reset") == "true"
+		verified := r.URL.Query().Get(verifiedParam) == "true"
+		reset := r.URL.Query().Get(resetParam) == "true"
 		loginPage(verified, reset).Render(w)
 	}
 }
@@ -60,16 +59,17 @@ func loginPage(verified bool, reset bool) Node {
 		),
 		Button(
 			Text("Login"),
-			ds.On("click", datastar.PostSSE(LoginPath)),
+			ds.On("click", datastar.PostSSE(routes.LoginPath)),
 		),
 		P(
 			Text("Don't have an account? "),
-			A(Href(RegisterPath), Text("Register")),
+			A(Href(routes.RegisterPath), Text("Register")),
 		),
 		P(
-			A(Href(ForgotPasswordPath), Text("Forgot your password?")),
+			A(Href(routes.ForgotPasswordPath), Text("Forgot your password?")),
 		),
 		errorComponent(nil),
+		Div(ID(resendVerificationID)),
 	)
 }
 
@@ -111,7 +111,9 @@ func (h *handler) login() http.HandlerFunc {
 		}
 
 		if !user.IsVerified {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("please verify your email before logging in")}))
+			sse := datastar.NewSSE(w, r)
+			sse.PatchElementGostar(errorComponent([]error{errors.New("please verify your email before logging in")}))
+			sse.PatchElementGostar(resendVerificationComponent())
 			return
 		}
 
@@ -160,7 +162,7 @@ func (h *handler) login() http.HandlerFunc {
 		})
 
 		sse := datastar.NewSSE(w, r)
-		if err := sse.Redirect(realm.RealmPath); err != nil {
+		if err := sse.Redirect(routes.RealmPath); err != nil {
 			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
 		}
 	}

@@ -38,6 +38,9 @@ WHERE s.id = $1
 INSERT INTO email_verification_tokens (token, user_id, expires_at)
 VALUES ($1, $2, $3);
 
+-- name: DeleteEmailVerificationByUserID :exec
+DELETE FROM email_verification_tokens WHERE user_id = $1;
+
 -- name: ConsumeEmailVerification :one
 DELETE FROM email_verification_tokens
 WHERE token = $1

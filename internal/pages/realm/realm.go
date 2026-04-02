@@ -1,26 +1,23 @@
 package realm
 
 import (
-	"bahago/internal/contextkeys"
-	"bahago/internal/database/db"
-	"bahago/internal/router"
 	"net/http"
-
-	. "bahago/internal/ui"
 
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
-)
 
-const (
-	RealmPath = "/realm"
+	"bahago/internal/contextkeys"
+	"bahago/internal/database/db"
+	"bahago/internal/router"
+	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 func RegisterRoutes(router router.Router, queries *db.Queries) {
 
 	h := newHandler(queries)
 
-	router.HandleFunc("GET "+RealmPath, h.handleRealmPage())
+	router.HandleFunc("GET "+routes.RealmPath, h.handleRealmPage())
 }
 
 type handler struct {

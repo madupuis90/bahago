@@ -5,14 +5,14 @@ import (
 	"log"
 	"net/http"
 
-	"bahago/internal/database/db"
-
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/database/db"
+	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
@@ -23,11 +23,11 @@ type ResetPasswordForm struct {
 	Password string `json:"password"`
 }
 
-var resetPasswordSignals = ResetPasswordForm{Token: "token", Password: "password"}
+var resetPasswordSignals = ResetPasswordForm{Token: tokenParam, Password: "password"}
 
 func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.URL.Query().Get("token")
+		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
 			invalidTokenPage().Render(w)
 			return
@@ -53,7 +53,7 @@ func resetPasswordPage(token string) Node {
 			),
 			Button(
 				Text("Reset password"),
-				ds.On("click", datastar.PostSSE(ResetPasswordPath)),
+				ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
 			),
 			errorComponent(nil),
 		),
@@ -123,7 +123,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 		}
 
 		sse := datastar.NewSSE(w, r)
-		if err := sse.Redirect(LoginPath + "?reset=true"); err != nil {
+		if err := sse.Redirect(routes.LoginPath + "?" + resetParam + "=true"); err != nil {
 			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to redirect")}))
 		}
 	}

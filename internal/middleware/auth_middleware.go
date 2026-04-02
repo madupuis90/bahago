@@ -1,11 +1,12 @@
 package middleware
 
 import (
-	"bahago/internal/contextkeys"
-	"bahago/internal/database/db"
-	"bahago/internal/pages/auth"
 	"context"
 	"net/http"
+
+	"bahago/internal/contextkeys"
+	"bahago/internal/database/db"
+	"bahago/internal/routes"
 )
 
 // LoadUser runs on all routes. If the request carries a valid session cookie,
@@ -44,7 +45,7 @@ func LoadUser(queries *db.Queries) func(http.Handler) http.Handler {
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser); !ok {
-			http.Redirect(w, r, auth.LoginPath, http.StatusSeeOther)
+			http.Redirect(w, r, routes.LoginPath, http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)

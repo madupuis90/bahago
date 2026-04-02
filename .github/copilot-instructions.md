@@ -28,6 +28,10 @@ The project runs in a dev container and uses Task (Taskfile.yml) for all develop
 
 See `.github/instructions/go.instructions.md` — auto-loaded for all `.go` files.
 
+## UI Best Practices
+
+See `.github/instructions/ui.instructions.md`. **Always read this file before making any change that involves gomponents, element IDs, signal names, SSE responses, or HTML templates.** The rules there (no string literals for IDs, paths, or signal names) must be applied proactively, not just when a violation is pointed out.
+
 ## Database Practices
 
 ### Connection Management
@@ -38,6 +42,7 @@ See `.github/instructions/go.instructions.md` — auto-loaded for all `.go` file
 
 ### Queries with sqlc
 - Write all SQL in `internal/database/queries/*.sql` files
+- One SQL file per feature, named after the feature (e.g. `auth.sql`, `chat.sql`)
 - Use sqlc naming conventions: `-- name: GetUser :one`, `-- name: ListUsers :many`
 - Keep queries simple and readable
 - Use parameterized queries (never string concatenation)
@@ -61,6 +66,7 @@ All code lives under `internal/` — nothing is intended to be imported external
 
 - `cmd/server/main.go` — entry point; minimal wiring only (routes, middleware, server start)
 - `internal/contextkeys/` — shared context key constants (avoids import cycles)
+- `internal/routes/` — shared route path constants (avoids import cycle between `internal/ui` and feature packages)
 - `internal/database/db/` — sqlc-generated code (never edit manually)
 - `internal/database/migrations/` — goose migration files
 - `internal/database/queries/` — SQL query files for sqlc
@@ -75,7 +81,7 @@ All code lives under `internal/` — nothing is intended to be imported external
 ### Feature Package Structure
 
 Each feature in `internal/pages/<feature>/` follows this pattern:
-- One file (typically `<feature>.go`) exports route constants, registers routes, and defines the `handler` struct
+- One file (typically `<feature>.go`) exports route constants **in `internal/routes/`**, registers routes, and defines the `handler` struct
 - Handler methods return `http.HandlerFunc` and are kept thin — they read input, call queries, and render responses
 - Page functions are pure functions returning `Node`, co-located with their handlers
 - Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`

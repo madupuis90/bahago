@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"net/mail"
 
-	"bahago/internal/database/db"
-	"bahago/internal/email"
-	"bahago/internal/router"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/database/db"
+	"bahago/internal/email"
+	"bahago/internal/router"
+	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
@@ -24,30 +24,28 @@ Error: PatchElementsNoTargetsFound
 More info: https://data-star.dev/errors/patch_elements_no_targets_found?metadata=%7B%22plugin%22%3A%7B%22type%22%3A%22watcher%22%2C%22name%22%3A%22datastar-patch-elements%22%7D%2C%22element%22%3A%7B%7D%7D
 */
 
-// Routes owned by this package.
+// Query parameter names used across the auth flow.
 const (
-	LoginPath          = "/login"
-	RegisterPath       = "/register"
-	VerifyPath         = "/verify"
-	LogoutPath         = "/logout"
-	ForgotPasswordPath = "/forgot-password"
-	ResetPasswordPath  = "/reset-password"
+	tokenParam    = "token"
+	verifiedParam = "verified"
+	resetParam    = "reset"
 )
 
 // ── Routing & handler setup ─────────────────────────────────────────
 
 func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, appURL string) {
 	h := newHandler(queries, pool, sender, appURL)
-	r.HandleFunc("GET "+LoginPath, h.loginPage())
-	r.HandleFunc("GET "+RegisterPath, h.registerPage())
-	r.HandleFunc("GET "+VerifyPath, h.verify())
-	r.HandleFunc("GET "+ForgotPasswordPath, h.forgotPasswordPage())
-	r.HandleFunc("GET "+ResetPasswordPath, h.resetPasswordPage())
-	r.HandleFunc("POST "+LoginPath, h.login())
-	r.HandleFunc("POST "+RegisterPath, h.register())
-	r.HandleFunc("POST "+LogoutPath, h.logout())
-	r.HandleFunc("POST "+ForgotPasswordPath, h.forgotPassword())
-	r.HandleFunc("POST "+ResetPasswordPath, h.resetPassword())
+	r.HandleFunc("GET "+routes.LoginPath, h.loginPage())
+	r.HandleFunc("GET "+routes.RegisterPath, h.registerPage())
+	r.HandleFunc("GET "+routes.VerifyPath, h.verify())
+	r.HandleFunc("GET "+routes.ForgotPasswordPath, h.forgotPasswordPage())
+	r.HandleFunc("GET "+routes.ResetPasswordPath, h.resetPasswordPage())
+	r.HandleFunc("POST "+routes.LoginPath, h.login())
+	r.HandleFunc("POST "+routes.RegisterPath, h.register())
+	r.HandleFunc("POST "+routes.LogoutPath, h.logout())
+	r.HandleFunc("POST "+routes.ForgotPasswordPath, h.forgotPassword())
+	r.HandleFunc("POST "+routes.ResetPasswordPath, h.resetPassword())
+	r.HandleFunc("POST "+routes.ResendVerificationPath, h.resendVerification())
 }
 
 type handler struct {
@@ -68,7 +66,11 @@ func newHandler(queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, a
 
 // ── Shared templates & helpers ──────────────────────────────────────
 
-const errorComponentID = "errors"
+const (
+	errorComponentID     = "errors"
+	forgotResultID       = "forgot-result"
+	resendVerificationID = "resend-verification"
+)
 
 func errorComponent(errors []error) Node {
 	return Div(

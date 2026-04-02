@@ -2,17 +2,18 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
-
-	"bahago/internal/database/db"
 
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/database/db"
+	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
@@ -39,9 +40,10 @@ func forgotPasswordPage() Node {
 		),
 		Button(
 			Text("Send reset link"),
-			ds.On("click", datastar.PostSSE(ForgotPasswordPath)),
+			ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
 		),
 		errorComponent(nil),
+		Div(ID(forgotResultID)),
 	)
 }
 
@@ -61,32 +63,40 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 			return
 		}
 
-		// Look up user — but always show a generic success response to prevent enumeration.
+		// Always respond with the same generic message regardless of outcome to prevent enumeration.
 		user, err := h.queries.GetUserByEmail(r.Context(), data.Email)
-		if err == nil && user.IsVerified {
-			token := generateToken()
-
-			if err := h.queries.DeletePasswordResetTokensByUserID(r.Context(), user.ID); err != nil {
-				log.Printf("forgot-password: delete old tokens: %v", err)
-			}
-
-			pwReset := db.CreatePasswordResetTokenParams{
-				Token:     token,
-				UserID:    user.ID,
-				ExpiresAt: time.Now().Add(1 * time.Hour),
-			}
-			if err := h.queries.CreatePasswordResetToken(r.Context(), pwReset); err != nil {
-				log.Printf("forgot-password: create token: %v", err)
-			} else {
-				resetURL := h.appURL + "/reset-password?token=" + token
-				if err := h.sender.Send(r.Context(), data.Email, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
-					log.Printf("forgot-password: send email: %v", err)
-				}
-			}
+		if err != nil {
+			genericMessage(w, r)
+			return
 		}
 
-		datastar.NewSSE(w, r).PatchElementGostar(
-			Div(ID("forgot-result"), P(Text("If that email is registered, you'll receive a reset link shortly."))),
-		)
+		if err := h.queries.DeletePasswordResetTokensByUserID(r.Context(), user.ID); err != nil {
+			log.Printf("forgot-password: delete old tokens: %v", err)
+		}
+
+		token := generateToken()
+		pwReset := db.CreatePasswordResetTokenParams{
+			Token:     token,
+			UserID:    user.ID,
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+		}
+		if err := h.queries.CreatePasswordResetToken(r.Context(), pwReset); err != nil {
+			log.Printf("forgot-password: create token: %v", err)
+			genericMessage(w, r)
+			return
+		}
+
+		resetURL := h.appURL + routes.ResetPasswordPath + "?" + tokenParam + "=" + token
+		fmt.Println(resetURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
+		if err := h.sender.Send(r.Context(), data.Email, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
+			log.Printf("forgot-password: send email: %v", err)
+		}
+		genericMessage(w, r)
 	}
+}
+
+func genericMessage(w http.ResponseWriter, r *http.Request) {
+	datastar.NewSSE(w, r).PatchElementGostar(
+		Div(ID(forgotResultID), P(Text("If that email is registered, you'll receive a reset link shortly."))),
+	)
 }

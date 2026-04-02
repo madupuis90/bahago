@@ -2,11 +2,10 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
-
-	"bahago/internal/database/db"
 
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
@@ -14,6 +13,8 @@ import (
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/database/db"
+	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
@@ -54,11 +55,11 @@ func registerPage() Node {
 		),
 		Button(
 			Text("Register"),
-			ds.On("click", datastar.PostSSE(RegisterPath)),
+			ds.On("click", datastar.PostSSE(routes.RegisterPath)),
 		),
 		P(
 			Text("Already have an account? "),
-			A(Href(LoginPath), Text("Login")),
+			A(Href(routes.LoginPath), Text("Login")),
 		),
 		errorComponent(nil),
 	)
@@ -110,17 +111,20 @@ func (h *handler) register() http.HandlerFunc {
 
 		token := generateToken()
 
-		if err := qtx.CreateEmailVerification(r.Context(), db.CreateEmailVerificationParams{
+		verifyEmail := db.CreateEmailVerificationParams{
 			Token:     token,
 			UserID:    userID,
 			ExpiresAt: time.Now().Add(24 * time.Hour),
-		}); err != nil {
+		}
+
+		if err := qtx.CreateEmailVerification(r.Context(), verifyEmail); err != nil {
 			log.Printf("register: create email verification: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
 			return
 		}
 
-		verifyURL := h.appURL + "/verify?token=" + token
+		verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
+		fmt.Println(verifyURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
 
 		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("send verification email: %v", err)

@@ -145,10 +145,10 @@ All styles are hand-written in `web/static/styles.css`. There are no CSS framewo
 
 ## No string literals for paths
 
-Each feature package exports its own route constants. Never write path strings inline in `Href`, `Action`, `ds.On`, `datastar.GetSSE`/`PostSSE`, or route registration — always reference the constant.
+All route path constants live in `internal/routes/`. Never write path strings inline in `Href`, `Action`, `ds.On`, `datastar.GetSSE`/`PostSSE`, or route registration — always reference the constant.
 
 ```go
-// internal/pages/auth/auth.go
+// internal/routes/routes.go
 const (
     LoginPath    = "/login"
     RegisterPath = "/register"
@@ -156,13 +156,13 @@ const (
 )
 
 // Route registration uses the same constants
-r.HandleFunc("GET "+LoginPath, h.loginPage())
-r.HandleFunc("POST "+LoginPath, h.login())
+r.HandleFunc("GET "+routes.LoginPath, h.loginPage())
+r.HandleFunc("POST "+routes.LoginPath, h.login())
 
 // Templates reference the same constants — no duplication
-A(Href(LoginPath), Text("Login"))
-ds.On("click", datastar.PostSSE(LoginPath))
-Form(Method("POST"), Action(LogoutPath), ...)
+A(Href(routes.LoginPath), Text("Login"))
+ds.On("click", datastar.PostSSE(routes.LoginPath))
+Form(Method("POST"), Action(routes.LogoutPath), ...)
 ```
 
 ## Datastar attributes must be owned by the element they are placed on

@@ -126,6 +126,27 @@ This project uses **Go 1.25**.
 - Keep tests in the same package; use `_test` suffix package only for black-box testing
 - Test both success and error paths
 
+## Struct Literals as Arguments
+
+When passing a multi-field struct literal as the sole argument to a function call inside an `if err :=` clause, assign it to a named variable first — it avoids deep nesting and makes both the struct construction and the error check easier to read:
+
+```go
+// Good
+params := db.CreateThingParams{
+    Name:      name,
+    UserID:    userID,
+    ExpiresAt: time.Now().Add(24 * time.Hour),
+}
+if err := h.queries.CreateThing(ctx, params); err != nil {
+
+// Avoid
+if err := h.queries.CreateThing(ctx, db.CreateThingParams{
+    Name:      name,
+    UserID:    userID,
+    ExpiresAt: time.Now().Add(24 * time.Hour),
+}); err != nil {
+```
+
 ## Common Pitfalls
 
 - Not checking errors

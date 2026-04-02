@@ -3,13 +3,14 @@ package auth
 import (
 	"log"
 	"net/http"
+
+	"bahago/internal/routes"
 )
 
 // ── Verify ──────────────────────────────────────────────────────────
-
 func (h *handler) verify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.URL.Query().Get("token")
+		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
 			invalidTokenPage().Render(w)
 			return
@@ -27,6 +28,6 @@ func (h *handler) verify() http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, LoginPath+"?verified=true", http.StatusSeeOther)
+		http.Redirect(w, r, routes.LoginPath+"?"+verifiedParam+"=true", http.StatusSeeOther)
 	}
 }

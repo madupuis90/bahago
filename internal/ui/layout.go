@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bahago/internal/contextkeys"
+	"bahago/internal/routes"
 
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
@@ -23,18 +24,18 @@ func Layout(args LayoutArgs, body ...Node) Node {
 			),
 			Body(
 				Nav(
-					A(Text("Home"), Href("/")),
+					A(Text("Home"), Href(routes.HomePath)),
 					If(args.User == nil,
-						A(Text("Login"), Href("/login")),
+						A(Text("Login"), Href(routes.LoginPath)),
 					),
 					If(args.User != nil,
-						Form(Method("POST"), Action("/logout"),
+						Form(Method("POST"), Action(routes.LogoutPath),
 							Button(Type("submit"), Text("Logout"), Class("nav-link-btn")),
 						),
 					),
-					A(Text("Resources"), Href("/resources")),
-					A(Text("Chat"), Href("/chat")),
-					A(Text("Realm"), Href("/realm")),
+					A(Text("Resources"), Href(routes.ResourcesPath)),
+					A(Text("Chat"), Href(routes.ChatPath)),
+					A(Text("Realm"), Href(routes.RealmPath)),
 				),
 				Main(body...), // Inject the content here
 				Footer(),

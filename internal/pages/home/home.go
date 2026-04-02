@@ -1,18 +1,20 @@
 package home
 
 import (
-	"bahago/internal/contextkeys"
-	"bahago/internal/router"
-	. "bahago/internal/ui"
 	"net/http"
 
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
+
+	"bahago/internal/contextkeys"
+	"bahago/internal/router"
+	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 func RegisterRoutes(router router.Router) {
 	h := newHandler()
-	router.HandleFunc("GET /home", h.handleHomePage())
+	router.HandleFunc("GET "+routes.HomePath, h.handleHomePage())
 }
 
 type handler struct {

@@ -10,6 +10,7 @@ import (
 	"bahago/internal/pages/realm"
 	"bahago/internal/pages/resources"
 	"bahago/internal/router"
+	"bahago/internal/routes"
 	"bahago/web"
 	"net/http"
 
@@ -60,7 +61,7 @@ func (s *Server) registerRoutes() {
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
 
 	// redirect to home
-	s.mux.Handle("/", http.RedirectHandler("/home", http.StatusMovedPermanently))
+	s.mux.Handle("/", http.RedirectHandler(routes.HomePath, http.StatusMovedPermanently))
 }
 
 // implements http.Handler

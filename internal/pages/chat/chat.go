@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"sync"
 
-	"bahago/internal/contextkeys"
-	"bahago/internal/router"
-	. "bahago/internal/ui"
-
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
+
+	"bahago/internal/contextkeys"
+	"bahago/internal/router"
+	. "bahago/internal/ui"
 )
 
 // PROOF OF CONCEPT — DO NOT USE AS A REFERENCE
