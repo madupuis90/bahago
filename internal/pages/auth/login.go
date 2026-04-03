@@ -27,7 +27,7 @@ func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		verified := r.URL.Query().Get(verifiedParam) == "true"
 		reset := r.URL.Query().Get(resetParam) == "true"
-		loginPage(verified, reset).Render(w)
+		loginPage(verified, reset, r).Render(w)
 	}
 }
 
@@ -38,11 +38,12 @@ type LoginForm struct {
 
 var loginSignals = LoginForm{Email: "email", Password: "password"}
 
-func loginPage(verified bool, reset bool) Node {
+func loginPage(verified bool, reset bool, r *http.Request) Node {
 	return Layout(
 		LayoutArgs{
-			Title: "Login",
-			User:  nil,
+			Title:       "Login",
+			User:        nil,
+			CurrentPath: r.URL.Path,
 		},
 		H1(Text("Login")),
 		If(verified, P(Text("Your email has been verified. You can now log in."))),
@@ -162,7 +163,7 @@ func (h *handler) login() http.HandlerFunc {
 		})
 
 		sse := datastar.NewSSE(w, r)
-		if err := sse.Redirect(routes.RealmPath); err != nil {
+		if err := sse.Redirect(routes.KingdomPath); err != nil {
 			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
 		}
 	}

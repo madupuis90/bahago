@@ -6,6 +6,7 @@
       ". \"bahago/internal/ui\"",
       ". \"maragu.dev/gomponents\"",
       ". \"maragu.dev/gomponents/html\"",
+      ". \"maragu.dev/gomponents/components\"",
       "ds \"maragu.dev/gomponents-datastar\"",
       "\"github.com/starfederation/datastar-go/datastar\"",
     ],

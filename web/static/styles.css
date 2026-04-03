@@ -7,9 +7,17 @@
 }
 
 :root {
-  --main-bg: #333;
-}
+  /* Link colors (used outside panels) */
+  --link-color: #c9a84c;
+  --link-hover-color: #e8c96a;
 
+  /* Panels */
+  --panel-bg: #e8d9a0;
+  --panel-text: #1a1008;
+  --panel-link-color: #1a1008;
+  --panel-link-hover-color: #5c3a00;
+  --panel-radius: 0.5rem;
+}
 
 html {
   color-scheme: light dark;
@@ -20,7 +28,99 @@ html {
 }
 
 body {
-  background: var(--main-bg);
+  background-color: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--link-hover-color);
+  }
+
+  &[aria-current="page"] {
+    color: var(--link-hover-color);
+    font-weight: bold;
+    text-decoration: underline;
+    pointer-events: none;
+  }
+}
+
+.panel {
+  background: var(--panel-bg);
+  border-radius: var(--panel-radius);
+  color: var(--panel-text);
+
+  & a {
+    color: var(--panel-link-color);
+
+    &:hover {
+      color: var(--panel-link-hover-color);
+    }
+
+    &[aria-current="page"] {
+      color: var(--panel-link-hover-color);
+    }
+  }
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3rem;
+  padding: 0 1rem;
+
+
+  .top-nav-left,
+  .top-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+}
+
+.content-area {
+  display: flex;
+  flex: 1;
+  gap: 1rem;
+
+  main {
+    flex: 1;
+    padding: 1.5rem;
+  }
+
+  .side-nav {
+    width: 14rem;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem 1rem;
+  }
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+
+  .nav-group-name {
+    font-weight: bold;
+  }
+
+  .nav-group-content {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .flex {
@@ -33,14 +133,4 @@ body {
   & .col {
     flex-direction: column;
   }
-}
-
-.nav-link-btn {
-  /* Make button look like link */
-  background: none;
-  border: none;
-  padding: 0;
-  text-decoration: underline;
-  cursor: pointer;
-  font: inherit;
 }

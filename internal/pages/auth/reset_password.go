@@ -29,16 +29,16 @@ func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			invalidTokenPage().Render(w)
+			invalidTokenPage(r).Render(w)
 			return
 		}
-		resetPasswordPage(token).Render(w)
+		resetPasswordPage(token, r).Render(w)
 	}
 }
 
-func resetPasswordPage(token string) Node {
+func resetPasswordPage(token string, r *http.Request) Node {
 	return Layout(
-		LayoutArgs{Title: "Reset Password", User: nil},
+		LayoutArgs{Title: "Reset Password", User: nil, CurrentPath: r.URL.Path},
 		H1(Text("Choose a new password")),
 		Div(
 			ds.Signals(map[string]any{resetPasswordSignals.Token: token, "showPassword": false}),

@@ -27,15 +27,16 @@ func newHandler() *handler {
 func (h *handler) handleHomePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
-		homePage(user).Render(w)
+		homePage(user, r).Render(w)
 	}
 }
 
-func homePage(user *contextkeys.SessionUser) Node {
+func homePage(user *contextkeys.SessionUser, r *http.Request) Node {
 	return Layout(
 		LayoutArgs{
-			Title: "Home",
-			User:  user,
+			Title:       "Home",
+			User:        user,
+			CurrentPath: r.URL.Path,
 		},
 		H1(Text("Home Page")),
 	)

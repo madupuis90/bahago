@@ -7,8 +7,7 @@ import (
 	"bahago/internal/pages/auth"
 	"bahago/internal/pages/chat"
 	"bahago/internal/pages/home"
-	"bahago/internal/pages/realm"
-	"bahago/internal/pages/resources"
+	"bahago/internal/pages/kingdom"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 	"bahago/web"
@@ -50,12 +49,11 @@ func (s *Server) registerRoutes() {
 	// public pages
 	home.RegisterRoutes(globalRouter)
 	auth.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
+	chat.RegisterRoutes(globalRouter)
 
 	// protected pages also require an authenticated user.
 	protectedRouter := globalRouter.Chain(middleware.RequireAuth)
-	realm.RegisterRoutes(protectedRouter, s.queries)
-	chat.RegisterRoutes(protectedRouter)
-	resources.RegisterRoutes(protectedRouter, s.queries)
+	kingdom.RegisterRoutes(protectedRouter, s.queries)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))

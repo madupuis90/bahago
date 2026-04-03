@@ -6,6 +6,8 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/routes"
+
+	"github.com/starfederation/datastar-go/datastar"
 )
 
 // ── Logout ──────────────────────────────────────────────────────────
@@ -15,7 +17,7 @@ func (h *handler) logout() http.HandlerFunc {
 		cookie, err := r.Cookie(string(contextkeys.SessionCookieName))
 		if err != nil {
 			// No session cookie — already logged out.
-			http.Redirect(w, r, routes.LoginPath, http.StatusSeeOther)
+			datastar.NewSSE(w, r).Redirect(routes.LoginPath)
 			return
 		}
 
@@ -23,6 +25,7 @@ func (h *handler) logout() http.HandlerFunc {
 			log.Printf("logout: delete session: %v", err)
 		}
 
+		// Cookie must be set before NewSSE (headers are flushed on NewSSE).
 		http.SetCookie(w, &http.Cookie{
 			Name:     string(contextkeys.SessionCookieName),
 			MaxAge:   -1,
@@ -31,6 +34,6 @@ func (h *handler) logout() http.HandlerFunc {
 			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 		})
-		http.Redirect(w, r, routes.LoginPath, http.StatusSeeOther)
+		datastar.NewSSE(w, r).Redirect(routes.HomePath)
 	}
 }

@@ -12,13 +12,13 @@ func (h *handler) verify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			invalidTokenPage().Render(w)
+			invalidTokenPage(r).Render(w)
 			return
 		}
 
 		userID, err := h.queries.ConsumeEmailVerification(r.Context(), token)
 		if err != nil {
-			invalidTokenPage().Render(w)
+			invalidTokenPage(r).Render(w)
 			return
 		}
 

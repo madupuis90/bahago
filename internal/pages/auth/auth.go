@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/mail"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -81,8 +82,8 @@ func errorComponent(errors []error) Node {
 	)
 }
 
-func invalidTokenPage() Node {
-	return Layout(LayoutArgs{Title: "Verification Failed", User: nil},
+func invalidTokenPage(r *http.Request) Node {
+	return Layout(LayoutArgs{Title: "Verification Failed", User: nil, CurrentPath: r.URL.Path},
 		H1(Text("Verification link invalid or expired")),
 		P(Text("Please register again to receive a new link.")),
 	)

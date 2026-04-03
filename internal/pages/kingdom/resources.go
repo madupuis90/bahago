@@ -1,4 +1,4 @@
-package resources
+package kingdom
 
 import (
 	"net/http"
@@ -9,33 +9,14 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
-	"bahago/internal/database/db"
-	"bahago/internal/router"
 	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
 
-func RegisterRoutes(router router.Router, queries *db.Queries) {
-
-	h := newHandler(queries)
-
-	router.HandleFunc("GET "+routes.ResourcesPath, h.handleResourcePage())
-	router.HandleFunc("GET "+routes.ResourcesLoadPath, h.handleLoadResource())
-	router.HandleFunc("POST "+routes.ResourcesCreatePath, h.handleCreateResources())
-}
-
-type handler struct {
-	queries *db.Queries
-}
-
-func newHandler(queries *db.Queries) *handler {
-	return &handler{queries: queries}
-}
-
 func (h *handler) handleResourcePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
-		resourcePage(user).Render(w)
+		resourcePage(user, r).Render(w)
 	}
 }
 
@@ -51,21 +32,22 @@ func (h *handler) handleLoadResource() http.HandlerFunc {
 	}
 }
 
-type ResourceSignals struct {
+type resourceSignalsType struct {
 	Wood  string `json:"wood"`
 	Stone string `json:"stone"`
 	Food  string `json:"food"`
 }
 
-var resourceSignals = ResourceSignals{Wood: "wood", Stone: "stone", Food: "food"}
+var resourceSignals = resourceSignalsType{Wood: "wood", Stone: "stone", Food: "food"}
 
-func resourcePage(user *contextkeys.SessionUser) Node {
+func resourcePage(user *contextkeys.SessionUser, r *http.Request) Node {
 	return Layout(
 		LayoutArgs{
-			Title: "Resources",
-			User:  user,
+			Title:       "Resources",
+			User:        user,
+			CurrentPath: r.URL.Path,
 		},
-		Div(Class("flex"), ds.Init(datastar.GetSSE(routes.ResourcesLoadPath)),
+		Div(Class("flex"), ds.Init(datastar.GetSSE(routes.KingdomResourcesLoadPath)),
 			Div(Class("flex col"),
 				Div(Text("wood meter")),
 				Div(

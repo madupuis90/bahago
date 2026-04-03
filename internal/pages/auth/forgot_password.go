@@ -27,13 +27,13 @@ var forgotPasswordSignals = ForgotPasswordForm{Email: "email"}
 
 func (h *handler) forgotPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		forgotPasswordPage().Render(w)
+		forgotPasswordPage(r).Render(w)
 	}
 }
 
-func forgotPasswordPage() Node {
+func forgotPasswordPage(r *http.Request) Node {
 	return Layout(
-		LayoutArgs{Title: "Forgot Password", User: nil},
+		LayoutArgs{Title: "Forgot Password", User: nil, CurrentPath: r.URL.Path},
 		H1(Text("Reset your password")),
 		Div(
 			Label(Text("Email"), Input(ds.Bind(forgotPasswordSignals.Email))),

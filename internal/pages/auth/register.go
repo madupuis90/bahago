@@ -29,13 +29,13 @@ var registerSignals = RegisterForm{Email: "email", Password: "password"}
 
 func (h *handler) registerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		registerPage().Render(w)
+		registerPage(r).Render(w)
 	}
 }
 
-func registerPage() Node {
+func registerPage(r *http.Request) Node {
 	return Layout(
-		LayoutArgs{Title: "Register", User: nil},
+		LayoutArgs{Title: "Register", User: nil, CurrentPath: r.URL.Path},
 		H1(Text("Create an account")),
 		Div(
 			ds.Signals(map[string]any{"showPassword": false}),
