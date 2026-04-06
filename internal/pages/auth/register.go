@@ -21,31 +21,31 @@ import (
 // ── Register ────────────────────────────────────────────────────────
 
 type RegisterForm struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    Signal[string] `json:"email"`
+	Password Signal[string] `json:"password"`
 }
 
-var registerSignals = RegisterForm{Email: "email", Password: "password"}
+var registerSigDef = NewSignalDef[RegisterForm]()
 
 func (h *handler) registerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		registerPage(r).Render(w)
+		NewPage("Register", AppLayout(r), registerContent(registerSigDef.New())).Render(w)
 	}
 }
 
-func registerPage(r *http.Request) Node {
-	return Layout(
-		LayoutArgs{Title: "Register", User: nil, CurrentPath: r.URL.Path},
+func registerContent(sigs RegisterForm) Node {
+	return Group([]Node{
 		H1(Text("Create an account")),
 		Div(
+			ds.Signals(SignalMap(sigs)),
 			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("Email"),
-				Input(ds.Bind(registerSignals.Email)),
+				Input(ds.Bind(sigs.Email.Key)),
 			),
 			Label(
 				Text("Password"),
-				Input(ds.Bind(registerSignals.Password), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+				Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 			),
 			Button(
 				Type("button"),
@@ -62,7 +62,7 @@ func registerPage(r *http.Request) Node {
 			A(Href(routes.LoginPath), Text("Login")),
 		),
 		errorComponent(nil),
-	)
+	})
 }
 
 func (h *handler) register() http.HandlerFunc {
@@ -75,15 +75,15 @@ func (h *handler) register() http.HandlerFunc {
 			errs = append(errs, errors.New("invalid request"))
 		}
 
-		validateEmail(&errs, data.Email)
-		validatePassword(&errs, data.Password)
+		validateEmail(&errs, data.Email.Value)
+		validatePassword(&errs, data.Password.Value)
 
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
 			return
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("register: bcrypt hash: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
@@ -101,7 +101,7 @@ func (h *handler) register() http.HandlerFunc {
 		qtx := h.queries.WithTx(tx)
 
 		userID, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
-			Email:  data.Email,
+			Email:  data.Email.Value,
 			PwHash: string(hashedPassword),
 		})
 		if err != nil {
@@ -126,7 +126,7 @@ func (h *handler) register() http.HandlerFunc {
 		verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
 		fmt.Println(verifyURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
 
-		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
+		if err := h.sender.Send(r.Context(), data.Email.Value, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("send verification email: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to send verification email — please try again")}))
 			return

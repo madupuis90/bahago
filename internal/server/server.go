@@ -40,7 +40,7 @@ func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
 
 func (s *Server) registerRoutes() {
 	// globalRouter applies LoadUser to every route — public or protected —
-	// so all handlers can read the current user from context.
+	// so all handlers can read the current user from context if present - needed in layout
 	globalRouter := &router.MiddlewareRouter{
 		Router:     s.mux,
 		Middleware: middleware.LoadUser(s.queries),
@@ -49,11 +49,15 @@ func (s *Server) registerRoutes() {
 	// public pages
 	home.RegisterRoutes(globalRouter)
 	auth.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
-	chat.RegisterRoutes(globalRouter)
+	chat.RegisterRoutes(globalRouter) // Experiment
 
-	// protected pages also require an authenticated user.
-	protectedRouter := globalRouter.Chain(middleware.RequireAuth)
-	kingdom.RegisterRoutes(protectedRouter, s.queries)
+	// routes requiring an authenticated user
+	authRouter := globalRouter.Chain(middleware.RequireAuth)
+	kingdomLoadRouter := authRouter.Chain(middleware.LoadKingdom(s.queries))
+	kingdomRouter := kingdomLoadRouter.Chain(middleware.RequireKingdom)
+
+	kingdom.RegisterSetupRoutes(kingdomLoadRouter, s.queries)
+	kingdom.RegisterRoutes(kingdomRouter, s.queries)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))

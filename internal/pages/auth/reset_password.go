@@ -19,32 +19,33 @@ import (
 // ── Reset password ──────────────────────────────────────────────────
 
 type ResetPasswordForm struct {
-	Token    string `json:"token"`
-	Password string `json:"password"`
+	Token    Signal[string] `json:"token"`
+	Password Signal[string] `json:"password"`
 }
 
-var resetPasswordSignals = ResetPasswordForm{Token: tokenParam, Password: "password"}
+var resetPasswordSigDef = NewSignalDef[ResetPasswordForm]()
 
 func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			invalidTokenPage(r).Render(w)
+			NewPage("Verification Failed", AppLayout(r), invalidTokenContent()).Render(w)
 			return
 		}
-		resetPasswordPage(token, r).Render(w)
+		sigs := resetPasswordSigDef.New()
+		sigs.Token.Value = token
+		NewPage("Reset Password", AppLayout(r), resetPasswordContent(sigs)).Render(w)
 	}
 }
 
-func resetPasswordPage(token string, r *http.Request) Node {
-	return Layout(
-		LayoutArgs{Title: "Reset Password", User: nil, CurrentPath: r.URL.Path},
+func resetPasswordContent(sigs ResetPasswordForm) Node {
+	return Group([]Node{
 		H1(Text("Choose a new password")),
 		Div(
-			ds.Signals(map[string]any{resetPasswordSignals.Token: token, "showPassword": false}),
+			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("New password"),
-				Input(ds.Bind(resetPasswordSignals.Password), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+				Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 			),
 			Button(
 				Type("button"),
@@ -57,7 +58,7 @@ func resetPasswordPage(token string, r *http.Request) Node {
 			),
 			errorComponent(nil),
 		),
-	)
+	})
 }
 
 func (h *handler) resetPassword() http.HandlerFunc {
@@ -68,13 +69,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 			return
 		}
 
-		if data.Token == "" {
+		if data.Token.Value == "" {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("missing token")}))
 			return
 		}
 
 		var errs []error
-		validatePassword(&errs, data.Password)
+		validatePassword(&errs, data.Password.Value)
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
 			return
@@ -90,13 +91,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		qtx := h.queries.WithTx(tx)
 
-		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token)
+		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token.Value)
 		if err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("reset link is invalid or has expired")}))
 			return
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("reset-password: bcrypt hash: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to reset password")}))

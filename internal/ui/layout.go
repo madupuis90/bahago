@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
 
 	"bahago/internal/contextkeys"
+	"bahago/internal/database/db"
 	"bahago/internal/routes"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -15,7 +18,33 @@ import (
 type LayoutArgs struct {
 	Title       string
 	User        *contextkeys.SessionUser
+	Kingdom     *db.Kingdom
 	CurrentPath string
+}
+
+// ── Request-scoped layout ─────────────────────────────────────────────────────
+
+// LayoutFn is a configured layout ready to wrap page content.
+type LayoutFn func(title string, content ...Node) Node
+
+// AppLayout captures the current user, kingdom, and path from the request
+// context and returns a LayoutFn backed by the standard application layout.
+func AppLayout(r *http.Request) LayoutFn {
+	user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+	kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+	return func(title string, content ...Node) Node {
+		return Layout(LayoutArgs{
+			Title:       title,
+			User:        user,
+			Kingdom:     kingdom,
+			CurrentPath: r.URL.Path,
+		}, content...)
+	}
+}
+
+// NewPage assembles a full page from a title, layout, and content nodes.
+func NewPage(title string, l LayoutFn, content ...Node) Node {
+	return l(title, content...)
 }
 
 func Layout(args LayoutArgs, content ...Node) Node {
@@ -41,8 +70,8 @@ func Layout(args LayoutArgs, content ...Node) Node {
 				),
 				Div(Class("content-area"),
 					Nav(Class("side-nav panel"),
-						If(!isKingdom, HomeSideNav(currentPath)),
-						If(isKingdom, KingdomSideNav(currentPath)),
+						Iff(!isKingdom, func() Node { return HomeSideNav(currentPath) }),
+						Iff(isKingdom, func() Node { return KingdomSideNav(currentPath, args.Kingdom) }),
 					),
 					Main(content...),
 				),
@@ -77,6 +106,10 @@ func NavGroup(name string, navItems ...Node) Node {
 	)
 }
 
+func Resource(kingdom *db.Kingdom) {
+
+}
+
 // URLs are placeholder for now, no need to create routes
 func HomeSideNav(currentPath string) Node {
 	return Group([]Node{
@@ -102,8 +135,17 @@ func HomeSideNav(currentPath string) Node {
 	})
 }
 
-func KingdomSideNav(currentPath string) Node {
+func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
+
 	return Group([]Node{
+		NavGroup("Resources",
+			P(Text(fmt.Sprintf("Wood: %v", kingdom.Wood))),
+			P(Text(fmt.Sprintf("Stone: %v", kingdom.Stone))),
+			P(Text(fmt.Sprintf("Food: %v", kingdom.Food))),
+			P(Text(fmt.Sprintf("Mana: %v", kingdom.Mana))),
+			P(Text(fmt.Sprintf("Devotion: %v", kingdom.Devotion))),
+			P(Text(fmt.Sprintf("Knowledge: %v", kingdom.Knowledge))),
+		),
 		NavItem(routes.KingdomPath, "Overview", currentPath),
 		NavItem(routes.KingdomResourcesPath, "Resources", currentPath),
 	})

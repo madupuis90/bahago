@@ -18,6 +18,28 @@ type EmailVerificationToken struct {
 	CreatedAt time.Time
 }
 
+type Kingdom struct {
+	ID           int64
+	UserID       int64
+	Name         string
+	Population   int64
+	WoodPct      int
+	StonePct     int
+	FoodPct      int
+	ManaPct      int
+	DevotionPct  int
+	KnowledgePct int
+	IdlePct      int
+	Wood         int64
+	Stone        int64
+	Food         int64
+	Mana         int64
+	Devotion     int64
+	Knowledge    int64
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type PasswordResetToken struct {
 	Token     string
 	UserID    int64

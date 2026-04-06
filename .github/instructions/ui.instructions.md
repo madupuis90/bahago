@@ -97,20 +97,26 @@ Classes{
 
 ## Project Layout convention
 
-- All pages use `Layout(LayoutArgs{Title, User}, body...)` from `internal/ui/` (dot-imported)
-- Page functions return `Node` (pure functions, no side effects)
-- Handlers call `page().Render(w)` for full-page responses
+- All pages use `NewPage(AppLayout(r), title, content...)` — `AppLayout(r)` resolves user/kingdom/path from the request context
+- Content functions return `Node` with only domain data as parameters — no user, path, or request
+- Handlers call `NewPage(AppLayout(r), title, contentFn(data...)).Render(w)` for full-page responses
 - Components extracted to `internal/ui/` only when used by 2+ pages
-- **Internal UI packages (`internal/ui/`) are dot-imported** — their exported functions (`Layout`, shared components) are used without a package prefix, just like the gomponents html functions
+- **Internal UI packages (`internal/ui/`) are dot-imported** — their exported functions (`Layout`, `NewPage`, `AppLayout`, shared components) are used without a package prefix, just like the gomponents html functions
 
 ```go
-// A page function — returns Node, reads like a template
-func myPage(data SomeData) Node {
-    return Layout(
-        LayoutArgs{Title: "My Page", User: user},
+// A content function — takes domain data, returns just the body
+func myContent(data SomeData) Node {
+    return Group([]Node{
         H1(Text("Hello")),
         myCard(data),  // reusable component in same or ui package
-    )
+    })
+}
+
+// Handler assembles the full page
+func (h *handler) handleMyPage() http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        NewPage("My Page", AppLayout(r), myContent(data)).Render(w)
+    }
 }
 
 // A reusable component function — same pattern
@@ -207,26 +213,34 @@ sse.PatchElementGostar(myNode, datastar.WithSelectorID(someOtherID))  // explici
 
 ## No string literals for signal names
 
-Signal names are shared between the HTML template (via `ds.Bind`) and the handler (via `datastar.ReadSignals`). Define a struct for deserialization and immediately declare a variable of that type holding the field names as values. Reference the variable in both the template and the handler — the compiler catches typos.
+Define a struct where every field is `Signal[T]` with a `json` tag. Use `NewSignalDef` to create a package-level definition — this populates `Key` and `Ref` on every field at startup. In handlers, call `.New()` to get a value copy you can set `.Value` on, then pass it to content functions. For reading signals from the client, use a plain zero-value struct.
 
 ```go
-// Define once per form/feature
-type LoginForm struct {
-    Email    string `json:"email"`
-    Password string `json:"password"`
+// Define once per page/feature
+type PageSignals struct {
+    WoodPct Signal[int]    `json:"wood_pct"`
+    Name    Signal[string] `json:"name"`
 }
-var loginSignals = LoginForm{Email: "email", Password: "password"}
+var sigDef = NewSignalDef[PageSignals]()
 
-// Template — references variable fields, not string literals
-Input(ds.Bind(loginSignals.Email))
-Input(Type("password"), ds.Bind(loginSignals.Password))
+// Handler — populate values and render
+sigs := sigDef.New()
+sigs.WoodPct.Value = kingdom.WoodPct
+pageContent(sigs)
 
-// Handler — deserializes using the same struct
-data := &LoginForm{}
-datastar.ReadSignals(r, data)  // json tags match the signal names
+// Handler — read values from client
+input := &PageSignals{}
+datastar.ReadSignals(r, input)
+// use input.WoodPct.Value
+
+// Content function — initialise datastar signals and bind inputs
+ds.Signals(SignalMap(sigs))           // initialise all signals from the struct
+ds.Bind(sigs.WoodPct.Key)             // two-way bind
+ds.Text(sigs.WoodPct.Ref)             // reactive JS expression
+ds.On("click", sigs.WoodPct.Ref+"++") // JS expression in event handler
 ```
 
-The `json` tags on the struct define the actual signal name on the wire. The variable provides compile-time–checked references to those names in templates.
+The `json` tags define the signal name on the wire. `Key` and `Ref` are derived from them at startup — no string literals anywhere in the template.
 
 ## gomponents-datastar (`ds`) — reactive attributes
 
@@ -242,14 +256,16 @@ ds.Signals(map[string]any{"count": 0, "open": false})
 ds.Bind("signalName")
 ```
 
-**Signal naming pattern** — define a struct for compile-time checked names:
+**Signal naming pattern** — use `Signal[T]` fields and `NewSignalDef`:
 ```go
-type LoginForm struct {
-    Email    string `json:"email"`
-    Password string `json:"password"`
+type PageSignals struct {
+    WoodPct Signal[int] `json:"wood_pct"`
+    Name    Signal[string] `json:"name"`
 }
-var loginSignals = LoginForm{Email: "email", Password: "password"}
-// Usage: ds.Bind(loginSignals.Email)
+var sigDef = NewSignalDef[PageSignals]()
+// In handler: sigs := sigDef.New(); sigs.WoodPct.Value = x
+// In template: ds.Bind(sigs.WoodPct.Key), ds.Text(sigs.WoodPct.Ref)
+// Init signals: ds.Signals(SignalMap(sigs))
 ```
 
 ### Reactivity

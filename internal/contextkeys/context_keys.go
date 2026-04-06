@@ -5,6 +5,7 @@ type contextKey string
 const (
 	SessionCookieName contextKey = "session_id"
 	User              contextKey = "user"
+	Kingdom           contextKey = "kingdom"
 )
 
 // SessionUser holds the authenticated user data attached to the request context

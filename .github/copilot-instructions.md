@@ -83,7 +83,7 @@ All code lives under `internal/` — nothing is intended to be imported external
 Each feature in `internal/pages/<feature>/` follows this pattern:
 - One file (typically `<feature>.go`) exports route constants **in `internal/routes/`**, registers routes, and defines the `handler` struct
 - Handler methods return `http.HandlerFunc` and are kept thin — they read input, call queries, and render responses
-- Page functions are pure functions returning `Node`, co-located with their handlers
+- Content functions are pure functions returning `Node` — they take only domain data as parameters, never user, path, or request. Co-located with their handlers.
 - Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
 
 ### Handlers
@@ -91,18 +91,19 @@ Each feature in `internal/pages/<feature>/` follows this pattern:
 Handlers return `http.HandlerFunc` closures, which allows pre-computation outside the request loop (e.g., generating sentinel hashes, preparing queries):
 
 ```go
-func (h *handler) loginPage() http.HandlerFunc {
+func (h *handler) handleKingdomPage() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        verified := r.URL.Query().Get("verified") == "true"
-        loginPage(verified).Render(w)
+        kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+        NewPage("Kingdom", AppLayout(r), kingdomContent(kingdom)).Render(w)
     }
 }
 ```
 
-- Full-page responses call `page().Render(w)` directly — no explicit `Content-Type` needed (gomponents sets it)
+- Full-page responses call `NewPage(AppLayout(r), title, content...).Render(w)` — `AppLayout(r)` resolves user/kingdom/path from context; no explicit `Content-Type` needed (gomponents sets it)
 - SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
 - Log errors server-side; return generic messages to clients
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)
+- Do not re-check middleware guarantees inside handlers. If a route is behind `RequireAuth`, trust that a user is in context — no `if user == nil` guard needed. Same for `LoadKingdom` on kingdom routes. Defensive checks at internal wiring boundaries add noise and imply to readers that the scenario is actually possible.
 
 ## Configuration
 

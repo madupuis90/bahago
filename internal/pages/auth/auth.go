@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/mail"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +15,6 @@ import (
 	"bahago/internal/email"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
 )
 
 /*
@@ -82,11 +80,11 @@ func errorComponent(errors []error) Node {
 	)
 }
 
-func invalidTokenPage(r *http.Request) Node {
-	return Layout(LayoutArgs{Title: "Verification Failed", User: nil, CurrentPath: r.URL.Path},
+func invalidTokenContent() Node {
+	return Group([]Node{
 		H1(Text("Verification link invalid or expired")),
 		P(Text("Please register again to receive a new link.")),
-	)
+	})
 }
 
 func verificationEmail(verifyURL string) Node {

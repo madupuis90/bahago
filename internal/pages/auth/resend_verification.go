@@ -13,12 +13,13 @@ import (
 
 	"bahago/internal/database/db"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Resend verification ─────────────────────────────────────────────
 
 type ResendVerificationForm struct {
-	Email string `json:"email"`
+	Email Signal[string] `json:"email"`
 }
 
 func resendVerificationComponent() Node {
@@ -39,7 +40,7 @@ func (h *handler) resendVerification() http.HandlerFunc {
 		}
 
 		// Always respond generically to prevent enumeration.
-		user, err := h.queries.GetUserByEmail(r.Context(), data.Email)
+		user, err := h.queries.GetUserByEmail(r.Context(), data.Email.Value)
 		if err != nil || user.IsVerified {
 			genericResendMessage(w, r)
 			return
@@ -64,7 +65,7 @@ func (h *handler) resendVerification() http.HandlerFunc {
 		verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
 		fmt.Println(verifyURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
 
-		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
+		if err := h.sender.Send(r.Context(), data.Email.Value, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("resend-verification: send email: %v", err)
 		}
 		genericResendMessage(w, r)

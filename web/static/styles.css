@@ -17,6 +17,10 @@
   --panel-link-color: #1a1008;
   --panel-link-hover-color: #5c3a00;
   --panel-radius: 0.5rem;
+
+  /* Value colors */
+  --color-positive: #2d7a3a;
+  --color-negative: #a02020;
 }
 
 html {
@@ -133,4 +137,46 @@ a {
   & .col {
     flex-direction: column;
   }
+}
+
+.allocation-card {
+  display: inline-block;
+  padding: 1.5rem;
+}
+
+.allocation-table {
+  border-collapse: collapse;
+
+  th, td {
+    text-align: center;
+    padding: 0.4rem 1.2rem;
+  }
+
+  th {
+    padding-bottom: 0.75rem;
+  }
+}
+
+.allocation-btn {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: var(--panel-text);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.text-positive {
+  color: var(--color-positive);
+}
+
+.text-negative {
+  color: var(--color-negative);
 }

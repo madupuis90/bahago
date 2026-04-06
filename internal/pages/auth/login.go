@@ -27,35 +27,30 @@ func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		verified := r.URL.Query().Get(verifiedParam) == "true"
 		reset := r.URL.Query().Get(resetParam) == "true"
-		loginPage(verified, reset, r).Render(w)
+		NewPage("Login", AppLayout(r), loginContent(verified, reset, loginSigDef.New())).Render(w)
 	}
 }
 
 type LoginForm struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    Signal[string] `json:"email"`
+	Password Signal[string] `json:"password"`
 }
 
-var loginSignals = LoginForm{Email: "email", Password: "password"}
+var loginSigDef = NewSignalDef[LoginForm]()
 
-func loginPage(verified bool, reset bool, r *http.Request) Node {
-	return Layout(
-		LayoutArgs{
-			Title:       "Login",
-			User:        nil,
-			CurrentPath: r.URL.Path,
-		},
+func loginContent(verified bool, reset bool, sigs LoginForm) Node {
+	return Group([]Node{
 		H1(Text("Login")),
 		If(verified, P(Text("Your email has been verified. You can now log in."))),
 		If(reset, P(Text("Your password has been reset. You can now log in."))),
 		Div(
 			Label(
 				Text("Email"),
-				Input(ds.Bind(loginSignals.Email)),
+				Input(ds.Bind(sigs.Email.Key)),
 			),
 			Label(
 				Text("Password"),
-				Input(Type("password"), ds.Bind(loginSignals.Password)),
+				Input(Type("password"), ds.Bind(sigs.Password.Key)),
 			),
 		),
 		Button(
@@ -71,7 +66,7 @@ func loginPage(verified bool, reset bool, r *http.Request) Node {
 		),
 		errorComponent(nil),
 		Div(ID(resendVerificationID)),
-	)
+	})
 }
 
 func (h *handler) login() http.HandlerFunc {
@@ -91,7 +86,7 @@ func (h *handler) login() http.HandlerFunc {
 			errs = append(errs, errors.New("invalid request"))
 		}
 
-		validateEmail(&errs, data.Email)
+		validateEmail(&errs, data.Email.Value)
 
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
@@ -100,13 +95,13 @@ func (h *handler) login() http.HandlerFunc {
 
 		// Look up user. If not found, run a dummy bcrypt comparison against the
 		// sentinel hash to prevent user-enumeration via timing side-channel.
-		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email)
+		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email.Value)
 		hashToCompare := []byte(user.PwHash)
 		if dbErr != nil {
 			hashToCompare = sentinelHash
 		}
 
-		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password)); err != nil || dbErr != nil {
+		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password.Value)); err != nil || dbErr != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("invalid email or password")}))
 			return
 		}

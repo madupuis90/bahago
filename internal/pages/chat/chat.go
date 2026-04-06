@@ -10,7 +10,6 @@ import (
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
-	"bahago/internal/contextkeys"
 	"bahago/internal/router"
 	. "bahago/internal/ui"
 )
@@ -35,8 +34,7 @@ func newHandler() *handler {
 
 func (h *handler) handleChatPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
-		chatPage(user, r).Render(w)
+		NewPage("Chat Page", AppLayout(r), chatContent()).Render(w)
 	}
 }
 
@@ -118,13 +116,8 @@ func (h *hub) publish(msg string) {
 
 var containerId = "messages-container"
 
-func chatPage(user *contextkeys.SessionUser, r *http.Request) Node {
-	return Layout(
-		LayoutArgs{
-			Title:       "Chat Page",
-			User:        user,
-			CurrentPath: r.URL.Path,
-		},
+func chatContent() Node {
+	return Group([]Node{
 		H1(Text("Let's chat!")),
 		Div(ID(containerId), ds.Init(datastar.GetSSE("/chat/read")),
 			Div(ID("messages"), Text("Waiting for messages...")),
@@ -134,5 +127,5 @@ func chatPage(user *contextkeys.SessionUser, r *http.Request) Node {
 			Input(ds.Bind("message")),
 			Button(Text("Send")),
 		),
-	)
+	})
 }
