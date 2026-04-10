@@ -95,6 +95,15 @@ Classes{
 }
 ```
 
+> **Never mix `Class()` and `Classes{}` on the same element.** Both render as a `class="..."` attribute independently, producing two `class` attributes in the HTML — which is invalid. Browsers silently ignore all but the first, so the `Classes{}` conditions would have no effect. Always fold everything into a single `Classes{}`, using `true` for static classes:
+> ```go
+> // Wrong — two class attributes rendered
+> Td(Class("allocation-total"), Classes{"text-positive": net > 0})
+>
+> // Correct — one class attribute
+> Td(Classes{"allocation-total": true, "text-positive": net > 0, "text-negative": net < 0})
+> ```
+
 ## Project Layout convention
 
 - All pages use `NewPage(AppLayout(r), title, content...)` — `AppLayout(r)` resolves user/kingdom/path from the request context
@@ -150,6 +159,22 @@ All styles are hand-written in `web/static/styles.css`. There are no CSS framewo
 **When generating new UI**, omit styles unless explicitly asked — focus on structure and correctness. When styles are needed later, they go in `web/static/styles.css`. Do not suggest inline styles or CSS-in-Go approaches.
 
 **Use CSS variables** for any value that appears more than once or is likely to be reused — especially spacing sizes, colors, dimensions, and border definitions. Define them in `:root` in `styles.css`. For example, prefer `var(--spacing-md)` over a hardcoded `1rem`, and `var(--border)` over a repeated `1px solid var(--border-color)`.
+
+**Treat each class as a component** — nest pseudo-classes (`:hover`, `:active`, `:focus`) and child element selectors inside the parent rule using native CSS nesting (`&`). Do not write them as separate top-level rules:
+```css
+/* Good */
+.allocation-btn {
+  background: var(--panel-bg);
+
+  &:hover { box-shadow: ...; }
+  &:active { transform: translateY(1px); }
+}
+
+/* Bad */
+.allocation-btn { background: var(--panel-bg); }
+.allocation-btn:hover { box-shadow: ...; }
+.allocation-btn:active { transform: translateY(1px); }
+```
 
 ## No string literals for paths
 

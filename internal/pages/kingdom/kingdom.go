@@ -42,8 +42,8 @@ func RegisterSetupRoutes(r router.Router, queries *db.Queries) {
 func RegisterRoutes(r router.Router, queries *db.Queries) {
 	h := newHandler(queries)
 
-	r.HandleFunc("GET "+routes.KingdomResourcesPath, h.handleResourcePage())
-	r.HandleFunc("POST "+routes.KingdomResourcesSavePath, h.handleSaveAllocation())
+	r.HandleFunc("GET "+routes.KingdomAllocationPath, h.handleAllocationPage())
+	r.HandleFunc("POST "+routes.KingdomAllocationSavePath, h.handleSaveAllocation())
 }
 
 type handler struct {
@@ -92,7 +92,6 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(kingdomCreateErrorComponent("Failed to create kingdom"))
 			return
 		}
-
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(routes.KingdomPath); err != nil {
 			log.Printf("create kingdom: redirect: %v", err)
@@ -124,7 +123,7 @@ func kingdomCreateSection(sigs kingdomCreateForm) Node {
 			ds.Bind(sigs.Name.Key),
 			Placeholder("Enter your kingdom name"),
 		),
-		Button(
+		Button(Class("btn"),
 			Type("button"),
 			ds.On("click", datastar.PostSSE(routes.KingdomCreatePath)),
 			Text("Create Kingdom"),

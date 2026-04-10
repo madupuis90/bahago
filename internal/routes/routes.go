@@ -6,11 +6,10 @@ const (
 	HomePath = "/home"
 	ChatPath = "/chat"
 
-	KingdomPath              = "/kingdom"
-	KingdomCreatePath        = "/kingdom/create"
-	KingdomResourcesPath     = "/kingdom/resources"
-	KingdomResourcesLoadPath = "/kingdom/resources/load"
-	KingdomResourcesSavePath = "/kingdom/resources/save"
+	KingdomPath               = "/kingdom"
+	KingdomCreatePath         = "/kingdom/create"
+	KingdomAllocationPath     = "/kingdom/allocation"
+	KingdomAllocationSavePath = "/kingdom/allocation/save"
 
 	LoginPath              = "/login"
 	RegisterPath           = "/register"

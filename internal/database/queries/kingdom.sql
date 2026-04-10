@@ -2,6 +2,10 @@
 SELECT * FROM kingdoms
 WHERE user_id = $1;
 
+-- name: GetKingdomByID :one
+SELECT * FROM kingdoms
+WHERE id = $1;
+
 -- name: CreateKingdom :one
 INSERT INTO kingdoms (user_id, name)
 VALUES ($1, $2)
@@ -20,3 +24,30 @@ SET
     updated_at    = NOW()
 WHERE user_id = $1
 RETURNING *;
+
+-- name: ListAllKingdoms :many
+SELECT * FROM kingdoms;
+
+-- name: BulkTickKingdoms :exec
+UPDATE kingdoms
+SET
+    wood       = new.wood,
+    stone      = new.stone,
+    food       = new.food,
+    mana       = new.mana,
+    devotion   = new.devotion,
+    knowledge  = new.knowledge,
+    population = new.population,
+    updated_at = NOW()
+FROM (
+    SELECT
+        unnest(@ids::bigint[])        AS id,
+        unnest(@wood::bigint[])       AS wood,
+        unnest(@stone::bigint[])      AS stone,
+        unnest(@food::bigint[])       AS food,
+        unnest(@mana::bigint[])       AS mana,
+        unnest(@devotion::bigint[])   AS devotion,
+        unnest(@knowledge::bigint[])  AS knowledge,
+        unnest(@population::bigint[]) AS population
+) AS new
+WHERE kingdoms.id = new.id;

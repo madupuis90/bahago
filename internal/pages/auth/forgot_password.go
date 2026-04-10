@@ -37,7 +37,7 @@ func forgotPasswordContent(sigs ForgotPasswordForm) Node {
 		Div(
 			Label(Text("Email"), Input(ds.Bind(sigs.Email.Key))),
 		),
-		Button(
+		Button(Class("btn"),
 			Text("Send reset link"),
 			ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
 		),

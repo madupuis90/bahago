@@ -53,7 +53,7 @@ func loginContent(verified bool, reset bool, sigs LoginForm) Node {
 				Input(Type("password"), ds.Bind(sigs.Password.Key)),
 			),
 		),
-		Button(
+		Button(Class("btn"),
 			Text("Login"),
 			ds.On("click", datastar.PostSSE(routes.LoginPath)),
 		),

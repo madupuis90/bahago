@@ -125,7 +125,7 @@ func chatContent() Node {
 		Form(
 			ds.On("submit", datastar.PostSSE("/chat/write")),
 			Input(ds.Bind("message")),
-			Button(Text("Send")),
+			Button(Class("btn"), Text("Send")),
 		),
 	})
 }

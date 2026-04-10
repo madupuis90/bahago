@@ -11,7 +11,7 @@ const (
 // SessionUser holds the authenticated user data attached to the request context
 // by the LoadUser middleware. A nil value means the request is unauthenticated.
 type SessionUser struct {
-	ID        int64
+	ID        int
 	Email     string
 	SessionID string
 }

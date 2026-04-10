@@ -13,16 +13,16 @@ import (
 
 type EmailVerificationToken struct {
 	Token     string
-	UserID    int64
+	UserID    int
 	ExpiresAt time.Time
 	CreatedAt time.Time
 }
 
 type Kingdom struct {
-	ID           int64
-	UserID       int64
+	ID           int
+	UserID       int
 	Name         string
-	Population   int64
+	Population   int
 	WoodPct      int
 	StonePct     int
 	FoodPct      int
@@ -30,26 +30,26 @@ type Kingdom struct {
 	DevotionPct  int
 	KnowledgePct int
 	IdlePct      int
-	Wood         int64
-	Stone        int64
-	Food         int64
-	Mana         int64
-	Devotion     int64
-	Knowledge    int64
+	Wood         int
+	Stone        int
+	Food         int
+	Mana         int
+	Devotion     int
+	Knowledge    int
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
 type PasswordResetToken struct {
 	Token     string
-	UserID    int64
+	UserID    int
 	ExpiresAt time.Time
 	CreatedAt time.Time
 }
 
 type Session struct {
 	ID        string
-	UserID    int64
+	UserID    int
 	IpAddress netip.Addr
 	UserAgent string
 	ExpiresAt time.Time
@@ -57,7 +57,7 @@ type Session struct {
 }
 
 type User struct {
-	ID          int64
+	ID          int
 	Email       string
 	PwHash      string
 	IsActive    bool

@@ -47,12 +47,12 @@ func resetPasswordContent(sigs ResetPasswordForm) Node {
 				Text("New password"),
 				Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 			),
-			Button(
+			Button(Class("btn"),
 				Type("button"),
 				ds.Text("$showPassword ? 'Hide password' : 'Show password'"),
 				ds.On("click", "$showPassword = !$showPassword"),
 			),
-			Button(
+			Button(Class("btn"),
 				Text("Reset password"),
 				ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
 			),

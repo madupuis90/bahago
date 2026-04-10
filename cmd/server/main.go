@@ -6,18 +6,22 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 
 	"bahago/internal/email"
+	"bahago/internal/game"
 	"bahago/internal/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
+	// --- signal ---
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-	ctx := context.Background()
-
+	// --- config ---
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL environment variable is not set")
@@ -38,15 +42,16 @@ func main() {
 		log.Fatal("APP_URL environment variable is not set")
 	}
 
-	db, err := pgxpool.New(ctx, dbURL)
+	// --- database ---
+	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
-		log.Fatalf("Expected new pgxpool created: %v", err)
+		log.Fatalf("could not connect to database: %v", err)
 	}
-	defer db.Close()
+	defer pool.Close()
 
+	// --- application wiring ---
 	sender := email.NewSender(resendAPIKey, emailFrom)
-
-	srv := server.New(db, sender, appURL)
+	srv := server.New(pool, sender, appURL)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
@@ -60,6 +65,25 @@ func main() {
 		IdleTimeout: 120 * time.Second,
 	}
 
+	// --- start ---
 	fmt.Println("Server running at http://localhost:8080")
-	log.Fatal(httpServer.ListenAndServe())
+
+	// go game.StartTicker(ctx, pool, 15*time.Minute)
+	go game.StartTicker(ctx, pool, 15*time.Second)
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	// --- shutdown ---
+	<-ctx.Done()
+	stop()
+	log.Println("shutting down...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown error: %v", err)
+	}
 }

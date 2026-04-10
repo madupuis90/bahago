@@ -9,6 +9,56 @@ import (
 	"context"
 )
 
+const bulkTickKingdoms = `-- name: BulkTickKingdoms :exec
+UPDATE kingdoms
+SET
+    wood       = new.wood,
+    stone      = new.stone,
+    food       = new.food,
+    mana       = new.mana,
+    devotion   = new.devotion,
+    knowledge  = new.knowledge,
+    population = new.population,
+    updated_at = NOW()
+FROM (
+    SELECT
+        unnest($1::bigint[])        AS id,
+        unnest($2::bigint[])       AS wood,
+        unnest($3::bigint[])      AS stone,
+        unnest($4::bigint[])       AS food,
+        unnest($5::bigint[])       AS mana,
+        unnest($6::bigint[])   AS devotion,
+        unnest($7::bigint[])  AS knowledge,
+        unnest($8::bigint[]) AS population
+) AS new
+WHERE kingdoms.id = new.id
+`
+
+type BulkTickKingdomsParams struct {
+	Ids        []int
+	Wood       []int
+	Stone      []int
+	Food       []int
+	Mana       []int
+	Devotion   []int
+	Knowledge  []int
+	Population []int
+}
+
+func (q *Queries) BulkTickKingdoms(ctx context.Context, arg BulkTickKingdomsParams) error {
+	_, err := q.db.Exec(ctx, bulkTickKingdoms,
+		arg.Ids,
+		arg.Wood,
+		arg.Stone,
+		arg.Food,
+		arg.Mana,
+		arg.Devotion,
+		arg.Knowledge,
+		arg.Population,
+	)
+	return err
+}
+
 const createKingdom = `-- name: CreateKingdom :one
 INSERT INTO kingdoms (user_id, name)
 VALUES ($1, $2)
@@ -16,7 +66,7 @@ RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct
 `
 
 type CreateKingdomParams struct {
-	UserID int64
+	UserID int
 	Name   string
 }
 
@@ -47,12 +97,44 @@ func (q *Queries) CreateKingdom(ctx context.Context, arg CreateKingdomParams) (K
 	return i, err
 }
 
+const getKingdomByID = `-- name: GetKingdomByID :one
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
+WHERE id = $1
+`
+
+func (q *Queries) GetKingdomByID(ctx context.Context, id int) (Kingdom, error) {
+	row := q.db.QueryRow(ctx, getKingdomByID, id)
+	var i Kingdom
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Population,
+		&i.WoodPct,
+		&i.StonePct,
+		&i.FoodPct,
+		&i.ManaPct,
+		&i.DevotionPct,
+		&i.KnowledgePct,
+		&i.IdlePct,
+		&i.Wood,
+		&i.Stone,
+		&i.Food,
+		&i.Mana,
+		&i.Devotion,
+		&i.Knowledge,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getKingdomByUserID = `-- name: GetKingdomByUserID :one
 SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
 WHERE user_id = $1
 `
 
-func (q *Queries) GetKingdomByUserID(ctx context.Context, userID int64) (Kingdom, error) {
+func (q *Queries) GetKingdomByUserID(ctx context.Context, userID int) (Kingdom, error) {
 	row := q.db.QueryRow(ctx, getKingdomByUserID, userID)
 	var i Kingdom
 	err := row.Scan(
@@ -79,6 +161,50 @@ func (q *Queries) GetKingdomByUserID(ctx context.Context, userID int64) (Kingdom
 	return i, err
 }
 
+const listAllKingdoms = `-- name: ListAllKingdoms :many
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
+`
+
+func (q *Queries) ListAllKingdoms(ctx context.Context) ([]Kingdom, error) {
+	rows, err := q.db.Query(ctx, listAllKingdoms)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Kingdom
+	for rows.Next() {
+		var i Kingdom
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Population,
+			&i.WoodPct,
+			&i.StonePct,
+			&i.FoodPct,
+			&i.ManaPct,
+			&i.DevotionPct,
+			&i.KnowledgePct,
+			&i.IdlePct,
+			&i.Wood,
+			&i.Stone,
+			&i.Food,
+			&i.Mana,
+			&i.Devotion,
+			&i.Knowledge,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateKingdomAllocations = `-- name: UpdateKingdomAllocations :one
 UPDATE kingdoms
 SET
@@ -95,7 +221,7 @@ RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct
 `
 
 type UpdateKingdomAllocationsParams struct {
-	UserID       int64
+	UserID       int
 	WoodPct      int
 	StonePct     int
 	FoodPct      int

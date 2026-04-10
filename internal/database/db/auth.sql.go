@@ -18,9 +18,9 @@ WHERE token = $1
 RETURNING user_id
 `
 
-func (q *Queries) ConsumeEmailVerification(ctx context.Context, token string) (int64, error) {
+func (q *Queries) ConsumeEmailVerification(ctx context.Context, token string) (int, error) {
 	row := q.db.QueryRow(ctx, consumeEmailVerification, token)
-	var user_id int64
+	var user_id int
 	err := row.Scan(&user_id)
 	return user_id, err
 }
@@ -32,9 +32,9 @@ WHERE token = $1
 RETURNING user_id
 `
 
-func (q *Queries) ConsumePasswordResetToken(ctx context.Context, token string) (int64, error) {
+func (q *Queries) ConsumePasswordResetToken(ctx context.Context, token string) (int, error) {
 	row := q.db.QueryRow(ctx, consumePasswordResetToken, token)
-	var user_id int64
+	var user_id int
 	err := row.Scan(&user_id)
 	return user_id, err
 }
@@ -46,7 +46,7 @@ VALUES ($1, $2, $3)
 
 type CreateEmailVerificationParams struct {
 	Token     string
-	UserID    int64
+	UserID    int
 	ExpiresAt time.Time
 }
 
@@ -62,7 +62,7 @@ VALUES ($1, $2, $3)
 
 type CreatePasswordResetTokenParams struct {
 	Token     string
-	UserID    int64
+	UserID    int
 	ExpiresAt time.Time
 }
 
@@ -82,7 +82,7 @@ RETURNING id, user_id, ip_address, user_agent, expires_at, created_at
 
 type CreateSessionParams struct {
 	ID        string
-	UserID    int64
+	UserID    int
 	IpAddress netip.Addr
 	UserAgent string
 	ExpiresAt time.Time
@@ -119,9 +119,9 @@ type CreateUserParams struct {
 	PwHash string
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int, error) {
 	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PwHash)
-	var id int64
+	var id int
 	err := row.Scan(&id)
 	return id, err
 }
@@ -130,7 +130,7 @@ const deleteEmailVerificationByUserID = `-- name: DeleteEmailVerificationByUserI
 DELETE FROM email_verification_tokens WHERE user_id = $1
 `
 
-func (q *Queries) DeleteEmailVerificationByUserID(ctx context.Context, userID int64) error {
+func (q *Queries) DeleteEmailVerificationByUserID(ctx context.Context, userID int) error {
 	_, err := q.db.Exec(ctx, deleteEmailVerificationByUserID, userID)
 	return err
 }
@@ -139,7 +139,7 @@ const deletePasswordResetTokensByUserID = `-- name: DeletePasswordResetTokensByU
 DELETE FROM password_reset_tokens WHERE user_id = $1
 `
 
-func (q *Queries) DeletePasswordResetTokensByUserID(ctx context.Context, userID int64) error {
+func (q *Queries) DeletePasswordResetTokensByUserID(ctx context.Context, userID int) error {
 	_, err := q.db.Exec(ctx, deletePasswordResetTokensByUserID, userID)
 	return err
 }
@@ -157,7 +157,7 @@ const deleteSessionsByUserID = `-- name: DeleteSessionsByUserID :exec
 DELETE FROM sessions WHERE user_id = $1
 `
 
-func (q *Queries) DeleteSessionsByUserID(ctx context.Context, userID int64) error {
+func (q *Queries) DeleteSessionsByUserID(ctx context.Context, userID int) error {
 	_, err := q.db.Exec(ctx, deleteSessionsByUserID, userID)
 	return err
 }
@@ -199,7 +199,7 @@ WHERE s.id = $1
 `
 
 type GetUserBySessionIDRow struct {
-	ID         int64
+	ID         int
 	Email      string
 	IsActive   bool
 	IsVerified bool
@@ -227,7 +227,7 @@ SET last_login_at = NOW()
 WHERE id = $1
 `
 
-func (q *Queries) UpdateLastLogin(ctx context.Context, id int64) error {
+func (q *Queries) UpdateLastLogin(ctx context.Context, id int) error {
 	_, err := q.db.Exec(ctx, updateLastLogin, id)
 	return err
 }
@@ -239,7 +239,7 @@ WHERE id = $1
 `
 
 type UpdatePasswordParams struct {
-	ID     int64
+	ID     int
 	PwHash string
 }
 
@@ -254,7 +254,7 @@ SET is_verified = true
 WHERE id = $1
 `
 
-func (q *Queries) VerifyUser(ctx context.Context, id int64) error {
+func (q *Queries) VerifyUser(ctx context.Context, id int) error {
 	_, err := q.db.Exec(ctx, verifyUser, id)
 	return err
 }

@@ -9,10 +9,12 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
+	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	"bahago/internal/game"
 	"bahago/internal/routes"
 	. "bahago/internal/ui"
 )
@@ -33,24 +35,19 @@ var sigDef = NewSignalDef[allocationSignals]()
 
 // ── Component IDs ─────────────────────────────────────────────────────────────
 
-const allocationErrorID = "allocation-error"
+const (
+	allocationContentID = "allocation-content"
+	allocationErrorID   = "allocation-error"
+)
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-func (h *handler) handleResourcePage() http.HandlerFunc {
+func (h *handler) handleAllocationPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-
-		sigs := sigDef.New()
-		sigs.WoodPct.Value = kingdom.WoodPct
-		sigs.StonePct.Value = kingdom.StonePct
-		sigs.FoodPct.Value = kingdom.FoodPct
-		sigs.ManaPct.Value = kingdom.ManaPct
-		sigs.DevotionPct.Value = kingdom.DevotionPct
-		sigs.KnowledgePct.Value = kingdom.KnowledgePct
-		sigs.IdlePct.Value = kingdom.IdlePct
-
-		NewPage("Resources", AppLayout(r), resourceContent(sigs)).Render(w)
+		rates := game.ComputeRates(*kingdom)
+		sigs := sigsFromKingdom(*kingdom)
+		NewPage("Allocation", AppLayout(r), allocationContent(sigs, rates)).Render(w)
 	}
 }
 
@@ -61,8 +58,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		input := &allocationSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("save-allocation: read signals: %v", err)
-			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(allocationErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("invalid request")))
 			return
 		}
 
@@ -80,8 +76,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		total := input.WoodPct.Value + input.StonePct.Value + input.FoodPct.Value +
 			input.ManaPct.Value + input.DevotionPct.Value + input.KnowledgePct.Value
 		if total > 100 {
-			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(allocationErrorComponent(errors.New("allocation cannot exceed 100%")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("allocation cannot exceed 100%")))
 			return
 		}
 
@@ -95,22 +90,37 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			KnowledgePct: input.KnowledgePct.Value,
 			IdlePct:      100 - total,
 		}
-		if _, err := h.queries.UpdateKingdomAllocations(r.Context(), params); err != nil {
+		updatedKingdom, err := h.queries.UpdateKingdomAllocations(r.Context(), params)
+		if err != nil {
 			log.Printf("save-allocation: update allocations: %v", err)
-			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(allocationErrorComponent(errors.New("failed to save allocation")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("failed to save allocation")))
 			return
 		}
 
+		rates := game.ComputeRates(updatedKingdom)
 		sse := datastar.NewSSE(w, r)
+		sse.PatchElementGostar(allocationContent(sigsFromKingdom(updatedKingdom), rates))
 		sse.PatchElementGostar(allocationErrorComponent(nil))
 	}
 }
 
+// sigsFromKingdom builds an allocationSignals from stored kingdom percentages.
+func sigsFromKingdom(k db.Kingdom) allocationSignals {
+	sigs := sigDef.New()
+	sigs.WoodPct.Value = k.WoodPct
+	sigs.StonePct.Value = k.StonePct
+	sigs.FoodPct.Value = k.FoodPct
+	sigs.ManaPct.Value = k.ManaPct
+	sigs.DevotionPct.Value = k.DevotionPct
+	sigs.KnowledgePct.Value = k.KnowledgePct
+	sigs.IdlePct.Value = k.IdlePct
+	return sigs
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-func resourceContent(sigs allocationSignals) Node {
-	return Div(
+func allocationContent(sigs allocationSignals, rates game.ResourceRates) Node {
+	return Div(ID(allocationContentID),
 		ds.Signals(SignalMap(sigs)),
 		Div(Class("allocation-card panel"),
 			Table(Class("allocation-table"),
@@ -119,25 +129,25 @@ func resourceContent(sigs allocationSignals) Node {
 						Th(Text("Role")),
 						Th(Text("Assignment")),
 						Th(Text("Percentage")),
-						Th(Text("Rate")),
+						Th(Text("Production")),
 						Th(Text("Upkeep")),
 						Th(Text("Total")),
 						Th(Text("Resource")),
 					),
 				),
 				TBody(
-					allocationRow("Logger", sigs.WoodPct, "Wood/hour"),
-					allocationRow("Miner", sigs.StonePct, "Stone/hour"),
-					allocationRow("Scholar", sigs.KnowledgePct, "Knowledge/hour"),
-					allocationRow("Clergy", sigs.DevotionPct, "Devotion/hour"),
-					allocationRow("Disciple", sigs.ManaPct, "Mana/hour"),
-					allocationRow("Farmer", sigs.FoodPct, "Food/hour"),
-					idleRow(sigs),
+					allocationRow("Woodcutter", sigs.WoodPct, "Wood", rates.WoodProduction, rates.WoodUpkeep),
+					allocationRow("Miner", sigs.StonePct, "Stone", rates.StoneProduction, rates.StoneUpkeep),
+					allocationRow("Farmer", sigs.FoodPct, "Food", rates.FoodProduction, rates.FoodUpkeep),
+					allocationRow("Clergy", sigs.DevotionPct, "Devotion", rates.DevotionProduction, rates.DevotionUpkeep),
+					allocationRow("Disciple", sigs.ManaPct, "Mana", rates.ManaProduction, rates.ManaUpkeep),
+					allocationRow("Scholar", sigs.KnowledgePct, "Knowledge", rates.KnowledgeProduction, rates.KnowledgeUpkeep),
+					idleRow(sigs, rates.PopulationProduction, rates.PopulationUpkeep),
 				),
 			),
 			Div(Class("allocation-footer"),
-				Button(
-					ds.On("click", datastar.PostSSE(routes.KingdomResourcesSavePath)),
+				Button(Class("btn"),
+					ds.On("click", datastar.PostSSE(routes.KingdomAllocationSavePath)),
 					Text("Save"),
 				),
 			),
@@ -153,25 +163,31 @@ func allocationErrorComponent(err error) Node {
 	}
 	return Div(ID(allocationErrorID), Text(msg))
 }
-func allocationRow(roleName string, sig Signal[int], resourceLabel string) Node {
+
+func allocationRow(roleName string, sig Signal[int], resourceLabel string, production, upkeep int) Node {
+	net := production - upkeep
 	return Tr(
 		Td(Class("allocation-role"), Text(roleName)),
 		Td(Class("allocation-assignment"),
-			Button(Class("allocation-btn"), ds.On("click", sig.Ref+" = Math.max(0, "+sig.Ref+" - 1)"), Text("-")),
+			Button(Class("btn allocation-btn plus-five"), ds.On("click", sig.Ref+" = Math.max(0, "+sig.Ref+" - 5)"), Text("−5")),
+			Button(Class("btn allocation-btn"), ds.On("click", sig.Ref+" = Math.max(0, "+sig.Ref+" - 1)"), Text("−")),
 			Input(Type("range"), Min("0"), Max("100"), ds.Bind(sig.Key)),
-			Button(Class("allocation-btn"), ds.On("click", sig.Ref+" = Math.min(100, "+sig.Ref+" + 1)"), Text("+")),
+			Button(Class("btn allocation-btn"), ds.On("click", sig.Ref+" = Math.min(100, "+sig.Ref+" + 1)"), Text("+")),
+			Button(Class("btn allocation-btn plus-five"), ds.On("click", sig.Ref+" = Math.min(100, "+sig.Ref+" + 5)"), Text("+5")),
 		),
 		Td(Class("allocation-percentage"),
 			Span(ds.Text(sig.Ref)),
+			Span(Text("%")),
 		),
-		Td(Class("allocation-rate"), Text("-")),
-		Td(Class("allocation-upkeep"), Text("-")),
-		Td(Class("allocation-total"), Text("-")),
-		Td(Class("allocation-resource"), Text(resourceLabel)),
+		Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),
+		Td(Classes{"allocation-upkeep": true, "text-negative": upkeep > 0}, Text(fmt.Sprintf("-%d", upkeep))),
+		Td(Classes{"allocation-total": true, "text-positive": net > 0, "text-negative": net < 0}, Text(fmt.Sprintf("%+d", net))),
+		Td(Class("allocation-resource"), Text(resourceLabel+"/tick")),
 	)
 }
 
-func idleRow(sigs allocationSignals) Node {
+func idleRow(sigs allocationSignals, production, upkeep int) Node {
+	net := production - upkeep
 	idleExpr := fmt.Sprintf("100 - (%s + %s + %s + %s + %s + %s)",
 		sigs.WoodPct.Ref,
 		sigs.StonePct.Ref,
@@ -180,16 +196,28 @@ func idleRow(sigs allocationSignals) Node {
 		sigs.ManaPct.Ref,
 		sigs.FoodPct.Ref,
 	)
-	return Tr(
-		ds.Computed(sigs.IdlePct.Key, idleExpr),
-		Td(Class("allocation-role"), Text("Idle")),
-		Td(Class("allocation-assignment")),
-		Td(Class("allocation-percentage"),
-			Span(ds.Text(sigs.IdlePct.Ref)),
+	return Group([]Node{
+		Tr(
+			Td(Text("---------")),
+			Td(Text("---------")),
+			Td(Text("---------")),
+			Td(Text("---------")),
+			Td(Text("---------")),
+			Td(Text("---------")),
+			Td(Text("---------")),
 		),
-		Td(Class("allocation-rate"), Text("-")),
-		Td(Class("allocation-upkeep"), Text("-")),
-		Td(Class("allocation-total"), Text("-")),
-		Td(Class("allocation-resource"), Text("Population/hour")),
-	)
+		Tr(
+			ds.Computed(sigs.IdlePct.Key, idleExpr),
+			Td(Class("allocation-role"), Text("Idle")),
+			Td(Class("allocation-assignment")),
+			Td(Class("allocation-percentage"),
+				Span(ds.Text(sigs.IdlePct.Ref)),
+				Span(Text("%")),
+			),
+			Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),
+			Td(Classes{"allocation-upkeep": true, "text-negative": upkeep > 0}, Text(fmt.Sprintf("-%d", upkeep))),
+			Td(Classes{"allocation-total": true, "text-positive": net > 0, "text-negative": net < 0}, Text(fmt.Sprintf("%+d", net))),
+			Td(Class("allocation-resource"), Text("Population/tick")),
+		),
+	})
 }

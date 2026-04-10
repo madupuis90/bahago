@@ -24,7 +24,7 @@ type ResendVerificationForm struct {
 
 func resendVerificationComponent() Node {
 	return Div(ID(resendVerificationID),
-		Button(
+		Button(Class("btn"),
 			Text("Resend verification email"),
 			ds.On("click", datastar.PostSSE(routes.ResendVerificationPath)),
 		),

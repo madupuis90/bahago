@@ -49,7 +49,7 @@ func NewPage(title string, l LayoutFn, content ...Node) Node {
 
 func Layout(args LayoutArgs, content ...Node) Node {
 	currentPath := args.CurrentPath
-	isKingdom := strings.HasPrefix(currentPath, routes.KingdomPath)
+	showKingdomNav := strings.HasPrefix(currentPath, routes.KingdomPath)
 	return Doctype(
 		HTML(
 			Lang("en"),
@@ -61,8 +61,8 @@ func Layout(args LayoutArgs, content ...Node) Node {
 			Body(
 				Nav(Class("top-nav panel"),
 					Div(Class("top-nav-left"),
-						NavItem(routes.HomePath, "Home", currentPath),
-						NavItem(routes.KingdomPath, "Kingdom", currentPath),
+						A(Href(routes.HomePath), If(!showKingdomNav, Attr("aria-current", "page")), Text("Home")),
+						A(Href(routes.KingdomPath), If(showKingdomNav, Attr("aria-current", "page")), Text("Kingdom")),
 					),
 					Div(Class("top-nav-right"),
 						LoginNav(args.User, currentPath),
@@ -70,8 +70,8 @@ func Layout(args LayoutArgs, content ...Node) Node {
 				),
 				Div(Class("content-area"),
 					Nav(Class("side-nav panel"),
-						Iff(!isKingdom, func() Node { return HomeSideNav(currentPath) }),
-						Iff(isKingdom, func() Node { return KingdomSideNav(currentPath, args.Kingdom) }),
+						Iff(!showKingdomNav, func() Node { return HomeSideNav(currentPath) }),
+						Iff(showKingdomNav && args.Kingdom != nil, func() Node { return KingdomSideNav(currentPath, args.Kingdom) }),
 					),
 					Main(content...),
 				),
@@ -106,10 +106,6 @@ func NavGroup(name string, navItems ...Node) Node {
 	)
 }
 
-func Resource(kingdom *db.Kingdom) {
-
-}
-
 // URLs are placeholder for now, no need to create routes
 func HomeSideNav(currentPath string) Node {
 	return Group([]Node{
@@ -138,6 +134,10 @@ func HomeSideNav(currentPath string) Node {
 func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
 
 	return Group([]Node{
+		NavGroup("Kingdom",
+			P(Text(kingdom.Name)),
+			P(Text(fmt.Sprintf("Population: %v", kingdom.Population))),
+		),
 		NavGroup("Resources",
 			P(Text(fmt.Sprintf("Wood: %v", kingdom.Wood))),
 			P(Text(fmt.Sprintf("Stone: %v", kingdom.Stone))),
@@ -146,7 +146,9 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
 			P(Text(fmt.Sprintf("Devotion: %v", kingdom.Devotion))),
 			P(Text(fmt.Sprintf("Knowledge: %v", kingdom.Knowledge))),
 		),
-		NavItem(routes.KingdomPath, "Overview", currentPath),
-		NavItem(routes.KingdomResourcesPath, "Resources", currentPath),
+		NavGroup("Kingdom",
+			NavItem(routes.KingdomPath, "Overview", currentPath),
+			NavItem(routes.KingdomAllocationPath, "Allocation", currentPath),
+		),
 	})
 }
