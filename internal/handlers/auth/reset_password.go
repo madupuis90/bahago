@@ -12,29 +12,30 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
+	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Reset password ──────────────────────────────────────────────────
 
 type ResetPasswordForm struct {
-	Token    Signal[string] `json:"token"`
-	Password Signal[string] `json:"password"`
+	Token    signals.Signal[string] `json:"token"`
+	Password signals.Signal[string] `json:"password"`
 }
 
-var resetPasswordSigDef = NewSignalDef[ResetPasswordForm]()
+var resetPasswordSigDef = signals.NewSignalDef[ResetPasswordForm]()
 
 func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			NewPage("Verification Failed", AppLayout(r), invalidTokenContent()).Render(w)
+			HomeLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
 			return
 		}
 		sigs := resetPasswordSigDef.New()
 		sigs.Token.Value = token
-		NewPage("Reset Password", AppLayout(r), resetPasswordContent(sigs)).Render(w)
+		HomeLayout(r, "Reset Password", resetPasswordContent(sigs)).Render(w)
 	}
 }
 

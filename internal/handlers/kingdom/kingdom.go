@@ -13,18 +13,20 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	"bahago/internal/hub"
+	. "bahago/internal/layout"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Signal definitions ────────────────────────────────────────────────────────
 
 type kingdomCreateForm struct {
-	Name Signal[string] `json:"kingdom_name"`
+	Name signals.Signal[string] `json:"kingdom_name"`
 }
 
-var createFormSignals = NewSignalDef[kingdomCreateForm]()
+var createFormSignals = signals.NewSignalDef[kingdomCreateForm]()
 
 // ── Component IDs ─────────────────────────────────────────────────────────────
 
@@ -33,25 +35,25 @@ const kingdomCreateErrorID = "kingdom-create-error"
 // ── Route registration ────────────────────────────────────────────────────────
 
 func RegisterSetupRoutes(r router.Router, queries *db.Queries) {
-	h := newHandler(queries)
+	h := newHandler(queries, nil)
 
 	r.HandleFunc("GET "+routes.KingdomPath, h.handleKingdomPage())
 	r.HandleFunc("POST "+routes.KingdomCreatePath, h.handleCreateKingdom())
 }
 
-func RegisterRoutes(r router.Router, queries *db.Queries) {
-	h := newHandler(queries)
+func RegisterRoutes(r router.Router, queries *db.Queries, tickHub *hub.Hub) {
+	h := newHandler(queries, tickHub)
 
-	r.HandleFunc("GET "+routes.KingdomAllocationPath, h.handleAllocationPage())
-	r.HandleFunc("POST "+routes.KingdomAllocationSavePath, h.handleSaveAllocation())
+	r.HandleFunc("GET "+routes.KingdomRefreshPath, h.handleKingdomRefresh())
 }
 
 type handler struct {
 	queries *db.Queries
+	hub     *hub.Hub
 }
 
-func newHandler(queries *db.Queries) *handler {
-	return &handler{queries: queries}
+func newHandler(queries *db.Queries, tickHub *hub.Hub) *handler {
+	return &handler{queries: queries, hub: tickHub}
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -63,7 +65,7 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 		if kingdom != nil {
 			title = kingdom.Name
 		}
-		NewPage(title, AppLayout(r), kingdomContent(kingdom)).Render(w)
+		KingdomLayout(r, title, kingdom, kingdomContent(kingdom)).Render(w)
 	}
 }
 
@@ -99,7 +101,28 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 	}
 }
 
-// ── Pages ─────────────────────────────────────────────────────────────────────
+func (h *handler) handleKingdomRefresh() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+		ch, cleanup := h.hub.Subscribe(kingdom.ID)
+		defer cleanup()
+
+		sse := datastar.NewSSE(w, r)
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case k := <-ch:
+				page := KingdomLayout(r, k.Name, &k, kingdomContent(&k))
+				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+					log.Printf("kingdom refresh: patch: %v", err)
+					return
+				}
+			}
+		}
+	}
+}
 
 func kingdomContent(kingdom *db.Kingdom) Node {
 	if kingdom == nil {
@@ -112,7 +135,7 @@ func kingdomContent(kingdom *db.Kingdom) Node {
 
 func kingdomCreateSection(sigs kingdomCreateForm) Node {
 	return Div(
-		ds.Signals(SignalMap(sigs)),
+		ds.Signals(signals.SignalMap(sigs)),
 		H1(Text("Found Your Kingdom")),
 		P(Text("Give your kingdom a name to begin your reign.")),
 		Div(ID(kingdomCreateErrorID)),
@@ -137,6 +160,7 @@ func kingdomCreateErrorComponent(msg string) Node {
 
 func kingdomOverviewSection(kingdom *db.Kingdom) Node {
 	return Div(
+		Div(ds.Init(datastar.GetSSE(routes.KingdomRefreshPath))),
 		H1(Text(kingdom.Name)),
 		P(Text(fmt.Sprintf("Population: %d", kingdom.Population))),
 	)

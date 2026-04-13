@@ -14,22 +14,23 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
+	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Register ────────────────────────────────────────────────────────
 
 type RegisterForm struct {
-	Email    Signal[string] `json:"email"`
-	Password Signal[string] `json:"password"`
+	Email    signals.Signal[string] `json:"email"`
+	Password signals.Signal[string] `json:"password"`
 }
 
-var registerSigDef = NewSignalDef[RegisterForm]()
+var registerSigDef = signals.NewSignalDef[RegisterForm]()
 
 func (h *handler) registerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		NewPage("Register", AppLayout(r), registerContent(registerSigDef.New())).Render(w)
+		HomeLayout(r, "Register", registerContent(registerSigDef.New())).Render(w)
 	}
 }
 
@@ -37,7 +38,7 @@ func registerContent(sigs RegisterForm) Node {
 	return Group([]Node{
 		H1(Text("Create an account")),
 		Div(
-			ds.Signals(SignalMap(sigs)),
+			ds.Signals(signals.SignalMap(sigs)),
 			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("Email"),

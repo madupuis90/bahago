@@ -71,20 +71,21 @@ All code lives under `internal/` — nothing is intended to be imported external
 - `internal/database/migrations/` — goose migration files
 - `internal/database/queries/` — SQL query files for sqlc
 - `internal/email/` — email sending
+- `internal/layout/` — shared gomponents: layout shell (`HomeLayout`, `KingdomLayout`) and nav components used across all handlers. Dot-imported.
 - `internal/middleware/` — HTTP middleware (auth, and future: logging, CSRF, etc.)
-- `internal/pages/<feature>/` — one package per feature; contains HTTP handlers, page functions, and components specific to that feature
+- `internal/handlers/<feature>/` — one package per feature; contains HTTP handlers, page functions, and components specific to that feature
 - `internal/router/` — router interface (avoids circular imports when injecting middleware)
 - `internal/server/` — application wiring: routes, middleware registration, static file serving
-- `internal/ui/` — shared gomponents: layout shell and components used by 2+ feature packages
+- `internal/signals/` — Signal[T], SignalDef[T], NewSignalDef, SignalMap — generic datastar signal utilities. Regular import (not dot-imported).
 - `web/static/` — static assets (CSS, JS)
 
 ### Feature Package Structure
 
-Each feature in `internal/pages/<feature>/` follows this pattern:
+Each feature in `internal/handlers/<feature>/` follows this pattern:
 - One file (typically `<feature>.go`) exports route constants **in `internal/routes/`**, registers routes, and defines the `handler` struct
 - Handler methods return `http.HandlerFunc` and are kept thin — they read input, call queries, and render responses
 - Content functions are pure functions returning `Node` — they take only domain data as parameters, never user, path, or request. Co-located with their handlers.
-- Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
+- Reusable components stay in the feature package until a second package needs them, then move to `internal/layout/`
 
 ### Handlers
 
@@ -94,12 +95,14 @@ Handlers return `http.HandlerFunc` closures, which allows pre-computation outsid
 func (h *handler) handleKingdomPage() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-        NewPage("Kingdom", AppLayout(r), kingdomContent(kingdom)).Render(w)
+        KingdomLayout(r, "Kingdom", kingdomContent(kingdom)).Render(w)
     }
 }
 ```
 
-- Full-page responses call `NewPage(AppLayout(r), title, content...).Render(w)` — `AppLayout(r)` resolves user/kingdom/path from context; no explicit `Content-Type` needed (gomponents sets it)
+- Full-page responses call `HomeLayout(r, title, content...)` or `KingdomLayout(r, title, content...)` — these read user/kingdom/path from the request context directly; no explicit `Content-Type` needed (gomponents sets it)
+- `internal/layout` is dot-imported in all handler packages so `HomeLayout` and `KingdomLayout` are used without a prefix
+- `internal/signals` is a **regular import** (not dot-imported) — use `signals.Signal[T]`, `signals.NewSignalDef[T]()`, `signals.SignalMap(sigs)`
 - SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
 - Log errors server-side; return generic messages to clients
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)

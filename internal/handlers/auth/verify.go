@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
 )
 
 // ── Verify ──────────────────────────────────────────────────────────
@@ -13,13 +13,13 @@ func (h *handler) verify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			NewPage("Verification Failed", AppLayout(r), invalidTokenContent()).Render(w)
+			HomeLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
 			return
 		}
 
 		userID, err := h.queries.ConsumeEmailVerification(r.Context(), token)
 		if err != nil {
-			NewPage("Verification Failed", AppLayout(r), invalidTokenContent()).Render(w)
+			HomeLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
 			return
 		}
 

@@ -13,21 +13,22 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
+	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Forgot password ─────────────────────────────────────────────────
 
 type ForgotPasswordForm struct {
-	Email Signal[string] `json:"email"`
+	Email signals.Signal[string] `json:"email"`
 }
 
-var forgotPasswordSigDef = NewSignalDef[ForgotPasswordForm]()
+var forgotPasswordSigDef = signals.NewSignalDef[ForgotPasswordForm]()
 
 func (h *handler) forgotPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		NewPage("Forgot Password", AppLayout(r), forgotPasswordContent(forgotPasswordSigDef.New())).Render(w)
+		HomeLayout(r, "Forgot Password", forgotPasswordContent(forgotPasswordSigDef.New())).Render(w)
 	}
 }
 

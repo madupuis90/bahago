@@ -70,6 +70,12 @@ tasks:
     cmds:
       - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} status'
 
+  db:reset:
+    desc: Roll back all migrations and re-apply them (local dev only)
+    cmds:
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} reset'
+      - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} postgres {{.DB_URL}} up'
+
   db:create:
     desc: Create a new migration file (e.g., task db:create -- add_users_table)
     cmds:

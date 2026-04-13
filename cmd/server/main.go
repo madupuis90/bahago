@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"bahago/internal/email"
-	"bahago/internal/game"
 	"bahago/internal/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,8 +67,7 @@ func main() {
 	// --- start ---
 	fmt.Println("Server running at http://localhost:8080")
 
-	// go game.StartTicker(ctx, pool, 15*time.Minute)
-	go game.StartTicker(ctx, pool, 15*time.Second)
+	go srv.StartGameTicker(ctx)
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)

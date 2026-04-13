@@ -13,13 +13,13 @@ import (
 
 	"bahago/internal/database/db"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Resend verification ─────────────────────────────────────────────
 
 type ResendVerificationForm struct {
-	Email Signal[string] `json:"email"`
+	Email signals.Signal[string] `json:"email"`
 }
 
 func resendVerificationComponent() Node {

@@ -3,15 +3,20 @@ package server
 import (
 	"bahago/internal/database/db"
 	"bahago/internal/email"
+	"bahago/internal/game"
+	"bahago/internal/handlers/allocation"
+	"bahago/internal/handlers/auth"
+	"bahago/internal/handlers/chat"
+	"bahago/internal/handlers/home"
+	"bahago/internal/handlers/kingdom"
+	"bahago/internal/hub"
 	"bahago/internal/middleware"
-	"bahago/internal/pages/auth"
-	"bahago/internal/pages/chat"
-	"bahago/internal/pages/home"
-	"bahago/internal/pages/kingdom"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 	"bahago/web"
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,6 +27,7 @@ type Server struct {
 	queries *db.Queries
 	sender  *email.Sender
 	appURL  string
+	tickHub *hub.Hub
 }
 
 func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
@@ -31,6 +37,7 @@ func New(pool *pgxpool.Pool, sender *email.Sender, appURL string) *Server {
 		queries: db.New(pool),
 		sender:  sender,
 		appURL:  appURL,
+		tickHub: hub.New(),
 	}
 
 	s.registerRoutes()
@@ -57,7 +64,8 @@ func (s *Server) registerRoutes() {
 	kingdomRouter := kingdomLoadRouter.Chain(middleware.RequireKingdom)
 
 	kingdom.RegisterSetupRoutes(kingdomLoadRouter, s.queries)
-	kingdom.RegisterRoutes(kingdomRouter, s.queries)
+	kingdom.RegisterRoutes(kingdomRouter, s.queries, s.tickHub)
+	allocation.RegisterRoutes(kingdomRouter, s.queries, s.tickHub)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
@@ -69,4 +77,10 @@ func (s *Server) registerRoutes() {
 // implements http.Handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
+}
+
+// StartGameTicker begins the game tick loop. It blocks until ctx is cancelled.
+// Call as a goroutine from main.
+func (s *Server) StartGameTicker(ctx context.Context) {
+	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 15*time.Second)
 }

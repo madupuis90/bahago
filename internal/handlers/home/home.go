@@ -6,9 +6,9 @@ import (
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
 
+	. "bahago/internal/layout"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
 )
 
 func RegisterRoutes(router router.Router) {
@@ -25,7 +25,7 @@ func newHandler() *handler {
 
 func (h *handler) handleHomePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		NewPage("Home", AppLayout(r), homeContent()).Render(w)
+		HomeLayout(r, "Home", homeContent()).Render(w)
 	}
 }
 

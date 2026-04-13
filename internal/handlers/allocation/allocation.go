@@ -1,4 +1,4 @@
-package kingdom
+package allocation
 
 import (
 	"errors"
@@ -15,23 +15,44 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
+	"bahago/internal/hub"
+	. "bahago/internal/layout"
+	"bahago/internal/router"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Signal struct ────────────────────────────────────────────────────────────
 
 type allocationSignals struct {
-	IdlePct      Signal[int] `json:"idle_pct"`
-	WoodPct      Signal[int] `json:"wood_pct"`
-	StonePct     Signal[int] `json:"stone_pct"`
-	FoodPct      Signal[int] `json:"food_pct"`
-	ManaPct      Signal[int] `json:"mana_pct"`
-	DevotionPct  Signal[int] `json:"devotion_pct"`
-	KnowledgePct Signal[int] `json:"knowledge_pct"`
+	IdlePct      signals.Signal[int] `json:"idle_pct"`
+	WoodPct      signals.Signal[int] `json:"wood_pct"`
+	StonePct     signals.Signal[int] `json:"stone_pct"`
+	FoodPct      signals.Signal[int] `json:"food_pct"`
+	ManaPct      signals.Signal[int] `json:"mana_pct"`
+	DevotionPct  signals.Signal[int] `json:"devotion_pct"`
+	KnowledgePct signals.Signal[int] `json:"knowledge_pct"`
 }
 
-var sigDef = NewSignalDef[allocationSignals]()
+var sigDef = signals.NewSignalDef[allocationSignals]()
+
+// ── Route registration ────────────────────────────────────────────────────────
+
+func RegisterRoutes(r router.Router, queries *db.Queries, tickHub *hub.Hub) {
+	h := newHandler(queries, tickHub)
+	r.HandleFunc("GET "+routes.KingdomAllocationPath, h.handleAllocationPage())
+	r.HandleFunc("POST "+routes.KingdomAllocationSavePath, h.handleSaveAllocation())
+	r.HandleFunc("GET "+routes.KingdomAllocationRefreshPath, h.handleAllocationRefresh())
+}
+
+type handler struct {
+	queries *db.Queries
+	hub     *hub.Hub
+}
+
+func newHandler(queries *db.Queries, tickHub *hub.Hub) *handler {
+	return &handler{queries: queries, hub: tickHub}
+}
 
 // ── Component IDs ─────────────────────────────────────────────────────────────
 
@@ -47,7 +68,31 @@ func (h *handler) handleAllocationPage() http.HandlerFunc {
 		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		rates := game.ComputeRates(*kingdom)
 		sigs := sigsFromKingdom(*kingdom)
-		NewPage("Allocation", AppLayout(r), allocationContent(sigs, rates)).Render(w)
+		KingdomLayout(r, "Allocation", kingdom, allocationContent(sigs, rates)).Render(w)
+	}
+}
+
+func (h *handler) handleAllocationRefresh() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+		ch, cleanup := h.hub.Subscribe(kingdom.ID)
+		defer cleanup()
+
+		sse := datastar.NewSSE(w, r)
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case k := <-ch:
+				rates := game.ComputeRates(k)
+				page := KingdomLayout(r, "Allocation", &k, allocationContent(sigsFromKingdom(k), rates))
+				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+					log.Printf("allocation refresh: patch: %v", err)
+					return
+				}
+			}
+		}
 	}
 }
 
@@ -121,7 +166,8 @@ func sigsFromKingdom(k db.Kingdom) allocationSignals {
 
 func allocationContent(sigs allocationSignals, rates game.ResourceRates) Node {
 	return Div(ID(allocationContentID),
-		ds.Signals(SignalMap(sigs)),
+		Div(ds.Init(datastar.GetSSE(routes.KingdomAllocationRefreshPath))),
+		ds.Signals(signals.SignalMap(sigs)),
 		Div(Class("allocation-card panel"),
 			Table(Class("allocation-table"),
 				THead(
@@ -164,7 +210,7 @@ func allocationErrorComponent(err error) Node {
 	return Div(ID(allocationErrorID), Text(msg))
 }
 
-func allocationRow(roleName string, sig Signal[int], resourceLabel string, production, upkeep int) Node {
+func allocationRow(roleName string, sig signals.Signal[int], resourceLabel string, production, upkeep int) Node {
 	net := production - upkeep
 	return Tr(
 		Td(Class("allocation-role"), Text(roleName)),

@@ -10,8 +10,8 @@ import (
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	. "bahago/internal/layout"
 	"bahago/internal/router"
-	. "bahago/internal/ui"
 )
 
 // PROOF OF CONCEPT — DO NOT USE AS A REFERENCE
@@ -34,7 +34,7 @@ func newHandler() *handler {
 
 func (h *handler) handleChatPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		NewPage("Chat Page", AppLayout(r), chatContent()).Render(w)
+		HomeLayout(r, "Chat Page", chatContent()).Render(w)
 	}
 }
 

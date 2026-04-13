@@ -1,4 +1,4 @@
-package ui
+package signals
 
 import (
 	"encoding/json"
@@ -121,4 +121,3 @@ func (s *Signal[T]) setKey(key string) {
 type signalValuer interface{ signalValue() any }
 
 func (s Signal[T]) signalValue() any { return s.Value }
-

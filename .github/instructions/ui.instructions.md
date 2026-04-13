@@ -15,7 +15,8 @@ import (
     . "maragu.dev/gomponents/html"         // Div(), P(), Input(), Class(), Href(), etc.
     ds "maragu.dev/gomponents-datastar"    // reactive attributes — kept aliased for clarity
     "github.com/starfederation/datastar-go/datastar" // SSE + ReadSignals
-    . "bahago/internal/ui"                // Layout(), shared components — dot-imported
+    . "bahago/internal/layout"            // HomeLayout(), KingdomLayout(), shared components — dot-imported
+    "bahago/internal/signals"             // signals.Signal[T], signals.NewSignalDef[T](), signals.SignalMap() — regular import
 )
 ```
 
@@ -106,25 +107,27 @@ Classes{
 
 ## Project Layout convention
 
-- All pages use `NewPage(AppLayout(r), title, content...)` — `AppLayout(r)` resolves user/kingdom/path from the request context
+- Home/auth/chat pages use `HomeLayout(r, title, content...)` — reads user from context
+- Kingdom game pages use `KingdomLayout(r, title, content...)` — reads user and kingdom from context
 - Content functions return `Node` with only domain data as parameters — no user, path, or request
-- Handlers call `NewPage(AppLayout(r), title, contentFn(data...)).Render(w)` for full-page responses
-- Components extracted to `internal/ui/` only when used by 2+ pages
-- **Internal UI packages (`internal/ui/`) are dot-imported** — their exported functions (`Layout`, `NewPage`, `AppLayout`, shared components) are used without a package prefix, just like the gomponents html functions
+- Handlers call the appropriate layout function directly and chain `.Render(w)` for full-page responses
+- Components extracted to `internal/layout/` only when used by 2+ handler packages
+- **`internal/layout` is dot-imported** — `HomeLayout`, `KingdomLayout`, nav components, and shared helpers are used without a package prefix
+- **`internal/signals` is a regular import** — always reference as `signals.Signal[T]`, `signals.NewSignalDef[T]()`, `signals.SignalMap(sigs)`
 
 ```go
 // A content function — takes domain data, returns just the body
 func myContent(data SomeData) Node {
     return Group([]Node{
         H1(Text("Hello")),
-        myCard(data),  // reusable component in same or ui package
+        myCard(data),  // reusable component in same or layout package
     })
 }
 
 // Handler assembles the full page
 func (h *handler) handleMyPage() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        NewPage("My Page", AppLayout(r), myContent(data)).Render(w)
+        KingdomLayout(r, "My Page", myContent(data)).Render(w)
     }
 }
 
@@ -150,7 +153,7 @@ func alertBanner(msg string) Node {
 }
 ```
 
-If a component is used only within one feature package, keep it in that package. Move it to `internal/ui/` only when a second package needs it.
+If a component is used only within one feature package, keep it in that package. Move it to `internal/layout/` only when a second package needs it.
 
 ## Styling
 

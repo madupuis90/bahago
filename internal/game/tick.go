@@ -14,7 +14,8 @@ import (
 // ProcessTick runs one full game tick across all kingdoms.
 // It fetches all kingdoms, computes fresh rates and starvation in Go, then
 // bulk-updates all stockpiles in a single query.
-func ProcessTick(ctx context.Context, pool *pgxpool.Pool) error {
+// After a successful DB write it calls notify for each updated kingdom.
+func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom)) error {
 	q := db.New(pool)
 
 	kingdoms, err := q.ListAllKingdoms(ctx)
@@ -53,12 +54,23 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("tick: bulk update: %w", err)
 	}
 
+	// Notify after a successful DB write — values already computed in params.
+	for i, k := range kingdoms {
+		k.Wood = params.Wood[i]
+		k.Stone = params.Stone[i]
+		k.Food = params.Food[i]
+		k.Mana = params.Mana[i]
+		k.Devotion = params.Devotion[i]
+		k.Knowledge = params.Knowledge[i]
+		k.Population = params.Population[i]
+		notify(k)
+	}
 	return nil
 }
 
 // StartTicker starts the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
-func StartTicker(ctx context.Context, pool *pgxpool.Pool, interval time.Duration) {
+func StartTicker(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom), interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -69,7 +81,7 @@ func StartTicker(ctx context.Context, pool *pgxpool.Pool, interval time.Duration
 		case <-ticker.C:
 			counter++
 			log.Printf("tick #%d", counter)
-			if err := ProcessTick(ctx, pool); err != nil {
+			if err := ProcessTick(ctx, pool, notify); err != nil {
 				log.Printf("tick error: %v", err)
 			}
 		case <-ctx.Done():

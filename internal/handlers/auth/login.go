@@ -17,8 +17,9 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	. "bahago/internal/ui"
+	"bahago/internal/signals"
 )
 
 // ── Login ───────────────────────────────────────────────────────────
@@ -27,16 +28,16 @@ func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		verified := r.URL.Query().Get(verifiedParam) == "true"
 		reset := r.URL.Query().Get(resetParam) == "true"
-		NewPage("Login", AppLayout(r), loginContent(verified, reset, loginSigDef.New())).Render(w)
+		HomeLayout(r, "Login", loginContent(verified, reset, loginSigDef.New())).Render(w)
 	}
 }
 
 type LoginForm struct {
-	Email    Signal[string] `json:"email"`
-	Password Signal[string] `json:"password"`
+	Email    signals.Signal[string] `json:"email"`
+	Password signals.Signal[string] `json:"password"`
 }
 
-var loginSigDef = NewSignalDef[LoginForm]()
+var loginSigDef = signals.NewSignalDef[LoginForm]()
 
 func loginContent(verified bool, reset bool, sigs LoginForm) Node {
 	return Group([]Node{

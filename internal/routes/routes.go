@@ -1,7 +1,7 @@
 package routes
 
 // Route paths for all feature packages.
-// Centralised here to break the import cycle between internal/ui and feature packages.
+// Centralised here to break the import cycle between internal/layout and handler packages.
 const (
 	HomePath = "/home"
 	ChatPath = "/chat"
@@ -10,6 +10,8 @@ const (
 	KingdomCreatePath         = "/kingdom/create"
 	KingdomAllocationPath     = "/kingdom/allocation"
 	KingdomAllocationSavePath = "/kingdom/allocation/save"
+	KingdomRefreshPath        = "/kingdom/refresh"
+	KingdomAllocationRefreshPath = "/kingdom/allocation/refresh"
 
 	LoginPath              = "/login"
 	RegisterPath           = "/register"
