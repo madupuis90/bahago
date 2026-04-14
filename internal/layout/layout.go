@@ -29,9 +29,8 @@ func HomeLayout(r *http.Request, title string, content ...Node) Node {
 }
 
 // KingdomLayout renders a full page with the kingdom top-nav active and kingdom side-nav.
-func KingdomLayout(r *http.Request, title string, kingdom *db.Kingdom, content ...Node) Node {
+func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *db.Kingdom, content ...Node) Node {
 	user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
-	currentPath := r.URL.Path
 
 	var sideNav Node
 	if kingdom != nil {

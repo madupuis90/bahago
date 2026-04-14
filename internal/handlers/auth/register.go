@@ -35,23 +35,25 @@ func (h *handler) registerPage() http.HandlerFunc {
 }
 
 func registerContent(sigs RegisterForm) Node {
-	return Group([]Node{
+	return Div(Class("auth-card panel"),
 		H1(Text("Create an account")),
-		Div(
+		Div(Class("form-fields"),
 			ds.Signals(signals.SignalMap(sigs)),
 			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("Email"),
-				Input(ds.Bind(sigs.Email.Key)),
+				Input(Type("email"), ds.Bind(sigs.Email.Key)),
 			),
 			Label(
 				Text("Password"),
-				Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
-			),
-			Button(Class("btn"),
-				Type("button"),
-				ds.Text("$showPassword ? 'Hide password' : 'Show password'"),
-				ds.On("click", "$showPassword = !$showPassword"),
+				Div(Class("password-field"),
+					Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+					Button(Class("btn-text"),
+						Type("button"),
+						ds.Text("$showPassword ? 'Hide' : 'Show'"),
+						ds.On("click", "$showPassword = !$showPassword"),
+					),
+				),
 			),
 		),
 		Button(Class("btn"),
@@ -62,8 +64,8 @@ func registerContent(sigs RegisterForm) Node {
 			Text("Already have an account? "),
 			A(Href(routes.LoginPath), Text("Login")),
 		),
-		errorComponent(nil),
-	})
+		alertComponent(nil),
+	)
 }
 
 func (h *handler) register() http.HandlerFunc {
@@ -80,21 +82,21 @@ func (h *handler) register() http.HandlerFunc {
 		validatePassword(&errs, data.Password.Value)
 
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("register: bcrypt hash: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
 			return
 		}
 
 		tx, err := h.pool.Begin(r.Context())
 		if err != nil {
 			log.Printf("register: begin transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
 			return
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
@@ -106,7 +108,7 @@ func (h *handler) register() http.HandlerFunc {
 			PwHash: string(hashedPassword),
 		})
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("email already in use")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("email already in use")})))
 			return
 		}
 
@@ -120,7 +122,7 @@ func (h *handler) register() http.HandlerFunc {
 
 		if err := qtx.CreateEmailVerification(r.Context(), verifyEmail); err != nil {
 			log.Printf("register: create email verification: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
 			return
 		}
 
@@ -129,18 +131,18 @@ func (h *handler) register() http.HandlerFunc {
 
 		if err := h.sender.Send(r.Context(), data.Email.Value, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("send verification email: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to send verification email — please try again")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to send verification email — please try again")})))
 			return
 		}
 
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("register: commit transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to create account")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
 			return
 		}
 
 		datastar.NewSSE(w, r).PatchElementGostar(
-			Div(ID(errorComponentID), P(Text("Account created! Check your email to verify your account."))),
+			alertComponent(successComponent("Account created! Check your email to verify your account.")),
 		)
 	}
 }

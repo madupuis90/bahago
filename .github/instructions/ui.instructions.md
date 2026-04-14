@@ -159,6 +159,24 @@ If a component is used only within one feature package, keep it in that package.
 
 All styles are hand-written in `web/static/styles.css`. There are no CSS frameworks (no Tailwind, Bootstrap, etc.). Classes applied via `Class("foo")` must exist in that file.
 
+### CSS file structure
+
+`styles.css` is organized into numbered sections, ordered from most general to most specific. Always add new rules in the correct section:
+
+```
+1. Reset          — *, box-sizing
+2. Tokens         — :root custom properties
+3. Base           — html, body, a, input (element selectors only)
+4. Layout         — top-nav, content-area, side-nav, nav-group
+5. Shared         — .panel, .btn, .btn-text, .form-fields, .password-field, .alert-*
+6. Auth           — .auth-card and auth-specific styles
+7. Kingdom        — .kingdom-* styles
+8. Allocation     — .allocation-* styles
+9. Utilities      — .text-positive, .text-negative (single-purpose overrides)
+```
+
+New feature modules get their own numbered section between Allocation and Utilities. Shared components (used by 2+ features) belong in section 5.
+
 **When generating new UI**, omit styles unless explicitly asked — focus on structure and correctness. When styles are needed later, they go in `web/static/styles.css`. Do not suggest inline styles or CSS-in-Go approaches.
 
 **Use CSS variables** for any value that appears more than once or is likely to be reused — especially spacing sizes, colors, dimensions, and border definitions. Define them in `:root` in `styles.css`. For example, prefer `var(--spacing-md)` over a hardcoded `1rem`, and `var(--border)` over a repeated `1px solid var(--border-color)`.
@@ -445,22 +463,43 @@ Signals prefixed with `_` are excluded from SSE requests by default.
 
 ## Common patterns
 
-### Error feedback via SSE
+### Alert feedback via SSE
+
+Use a three-function pattern so that a single SSE patch always replaces any previous alert — error clears success, success clears error:
 
 ```go
-// Component must have a stable ID for morphing to work
-func errorComponent(errs []error) g.Node {
-    return Div(
-        ID("error-msg"),
-        g.Map(errs, func(e error) g.Node {
-            return P(Text(e.Error()))
-        }),
+// Declare one ID per feature
+const myAlertID = "my-alert"
+
+// alertComponent is the single patch target — always patch this, never the inner components
+func alertComponent(inner Node) Node {
+    return Div(ID(myAlertID), inner)
+}
+
+// Inner content — pass nil to clear
+func errorComponent(errs []error) Node {
+    if len(errs) == 0 {
+        return nil
+    }
+    return Div(Class("alert-error"),
+        Map(errs, func(e error) Node { return P(Text(e.Error())) }),
     )
 }
 
-// In SSE handler:
-sse.PatchElementGostar(errorComponent(errs))
+func successComponent(msg string) Node {
+    return Div(Class("alert-success"), P(Text(msg)))
+}
+
+// In page content — placeholder so the element exists in DOM before any patch
+alertComponent(nil)
+
+// In SSE handlers — always patch alertComponent
+sse.PatchElementGostar(alertComponent(errorComponent(errs)))
+sse.PatchElementGostar(alertComponent(successComponent("Done!")))
+sse.PatchElementGostar(alertComponent(nil)) // clear
 ```
+
+CSS classes `alert-success` and `alert-error` are defined in section 5 of `styles.css`.
 
 ### Redirect after action
 

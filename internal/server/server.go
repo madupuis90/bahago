@@ -9,6 +9,7 @@ import (
 	"bahago/internal/handlers/chat"
 	"bahago/internal/handlers/home"
 	"bahago/internal/handlers/kingdom"
+	"bahago/internal/handlers/kingdomsetup"
 	"bahago/internal/hub"
 	"bahago/internal/middleware"
 	"bahago/internal/router"
@@ -59,13 +60,13 @@ func (s *Server) registerRoutes() {
 	chat.RegisterRoutes(globalRouter) // Experiment
 
 	// routes requiring an authenticated user
-	authRouter := globalRouter.Chain(middleware.RequireAuth)
-	kingdomLoadRouter := authRouter.Chain(middleware.LoadKingdom(s.queries))
-	kingdomRouter := kingdomLoadRouter.Chain(middleware.RequireKingdom)
+	reqAuthRouter := globalRouter.Chain(middleware.RequireAuth)
+	loadKingdomRouter := reqAuthRouter.Chain(middleware.LoadKingdom(s.queries))
+	reqKingdomRouter := loadKingdomRouter.Chain(middleware.RequireKingdom)
 
-	kingdom.RegisterSetupRoutes(kingdomLoadRouter, s.queries)
-	kingdom.RegisterRoutes(kingdomRouter, s.queries, s.tickHub)
-	allocation.RegisterRoutes(kingdomRouter, s.queries, s.tickHub)
+	kingdomsetup.RegisterRoutes(loadKingdomRouter, s.queries)
+	kingdom.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
+	allocation.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))

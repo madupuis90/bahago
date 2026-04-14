@@ -40,18 +40,21 @@ type LoginForm struct {
 var loginSigDef = signals.NewSignalDef[LoginForm]()
 
 func loginContent(verified bool, reset bool, sigs LoginForm) Node {
-	return Group([]Node{
+	return Div(Class("auth-card panel"),
 		H1(Text("Login")),
-		If(verified, P(Text("Your email has been verified. You can now log in."))),
-		If(reset, P(Text("Your password has been reset. You can now log in."))),
-		Div(
+		If(verified, P(Class("alert-success"), Text("Your email has been verified. You can now log in."))),
+		If(reset, P(Class("alert-success"), Text("Your password has been reset. You can now log in."))),
+		Div(Class("form-fields"),
+			ds.Signals(signals.SignalMap(sigs)),
 			Label(
 				Text("Email"),
-				Input(ds.Bind(sigs.Email.Key)),
+				Input(Type("email"), ds.Bind(sigs.Email.Key)),
 			),
 			Label(
 				Text("Password"),
-				Input(Type("password"), ds.Bind(sigs.Password.Key)),
+				Div(Class("password-field"),
+					Input(Type("password"), ds.Bind(sigs.Password.Key)),
+				),
 			),
 		),
 		Button(Class("btn"),
@@ -65,9 +68,9 @@ func loginContent(verified bool, reset bool, sigs LoginForm) Node {
 		P(
 			A(Href(routes.ForgotPasswordPath), Text("Forgot your password?")),
 		),
-		errorComponent(nil),
+		alertComponent(nil),
 		Div(ID(resendVerificationID)),
-	})
+	)
 }
 
 func (h *handler) login() http.HandlerFunc {
@@ -90,7 +93,7 @@ func (h *handler) login() http.HandlerFunc {
 		validateEmail(&errs, data.Email.Value)
 
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
@@ -103,13 +106,13 @@ func (h *handler) login() http.HandlerFunc {
 		}
 
 		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password.Value)); err != nil || dbErr != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("invalid email or password")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid email or password")})))
 			return
 		}
 
 		if !user.IsVerified {
 			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(errorComponent([]error{errors.New("please verify your email before logging in")}))
+			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("please verify your email before logging in")})))
 			sse.PatchElementGostar(resendVerificationComponent())
 			return
 		}
@@ -123,7 +126,7 @@ func (h *handler) login() http.HandlerFunc {
 		ip, err := netip.ParseAddr(host)
 		if err != nil {
 			log.Printf("login: parse remote addr %q: %v", host, err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("could not process request")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("could not process request")})))
 			return
 		}
 
@@ -139,12 +142,12 @@ func (h *handler) login() http.HandlerFunc {
 
 		if _, err := h.queries.CreateSession(r.Context(), s); err != nil {
 			log.Printf("login: create session: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
 			return
 		}
 
 		if err := h.queries.UpdateLastLogin(r.Context(), user.ID); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
 			return
 		}
 
@@ -160,7 +163,7 @@ func (h *handler) login() http.HandlerFunc {
 
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(routes.KingdomPath); err != nil {
-			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to login")}))
+			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
 		}
 	}
 }

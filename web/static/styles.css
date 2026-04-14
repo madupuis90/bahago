@@ -1,3 +1,7 @@
+/* =============================================================================
+   1. Reset
+   ============================================================================= */
+
 *,
 *::before,
 *::after {
@@ -5,6 +9,10 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* =============================================================================
+   2. Tokens
+   ============================================================================= */
 
 :root {
   /* Link colors (used outside panels) */
@@ -14,17 +22,15 @@
   /* Panels */
   --panel-bg: #e8d9a0;
   --panel-text: #1a1008;
-  --panel-link-color: #1a1008;
+  --panel-link-color: #7a4a00;
   --panel-link-hover-color: #5c3a00;
   --panel-radius: 0.5rem;
+  --panel-border: 1px solid rgba(0, 0, 0, 0.2);
+  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 
   /* Value colors */
   --color-positive: #2d7a3a;
   --color-negative: #a02020;
-
-  /* Panels */
-  --panel-border: 1px solid rgba(0, 0, 0, 0.2);
-  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 
   /* Buttons */
   --btn-bg: #c9a84c;
@@ -34,6 +40,10 @@
   --shadow-btn-hover: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   --shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.15);
 }
+
+/* =============================================================================
+   3. Base
+   ============================================================================= */
 
 html {
   font-family: system-ui, -apple-system, sans-serif;
@@ -71,25 +81,28 @@ a {
   }
 }
 
-.panel {
-  background: var(--panel-bg);
-  border-radius: var(--panel-radius);
-  border: var(--panel-border);
-  box-shadow: var(--panel-shadow);
+input:not([type="range"]) {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--panel-text);
+  font-size: 0.9rem;
+  font-family: inherit;
 
-  & a {
-    color: var(--panel-link-color);
-
-    &:hover {
-      color: var(--panel-link-hover-color);
-    }
-
-    &[aria-current="page"] {
-      color: var(--panel-link-hover-color);
-    }
+  &:focus-visible {
+    outline: 2px solid var(--btn-bg);
+    outline-offset: 1px;
   }
 }
+
+input[type="range"] {
+  accent-color: var(--btn-bg);
+}
+
+/* =============================================================================
+   4. Layout
+   ============================================================================= */
 
 .top-nav {
   display: flex;
@@ -98,14 +111,12 @@ a {
   height: 3rem;
   padding: 0 1rem;
 
-
   .top-nav-left,
   .top-nav-right {
     display: flex;
     align-items: center;
     gap: 1rem;
   }
-
 }
 
 .content-area {
@@ -152,15 +163,27 @@ a {
   }
 }
 
-.flex {
-  display: flex;
+/* =============================================================================
+   5. Shared components
+   ============================================================================= */
 
-  & .row {
-    flex-direction: row;
-  }
+.panel {
+  background: var(--panel-bg);
+  border-radius: var(--panel-radius);
+  border: var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  color: var(--panel-text);
 
-  & .col {
-    flex-direction: column;
+  & a {
+    color: var(--panel-link-color);
+
+    &:hover {
+      color: var(--panel-link-hover-color);
+    }
+
+    &[aria-current="page"] {
+      color: var(--panel-link-hover-color);
+    }
   }
 }
 
@@ -196,24 +219,120 @@ a {
   }
 }
 
-input:not([type="range"]) {
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.4rem;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--panel-text);
-  font-size: 0.9rem;
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--panel-link-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
   font-family: inherit;
+  white-space: nowrap;
 
-  &:focus-visible {
-    outline: 2px solid var(--btn-bg);
-    outline-offset: 1px;
+  &:hover {
+    text-decoration: underline;
+    color: var(--panel-link-hover-color);
   }
 }
 
-input[type="range"] {
-  accent-color: var(--btn-bg);
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  & label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-weight: 500;
+  }
+
+  & input {
+    width: 100%;
+  }
 }
+
+.password-field {
+  position: relative;
+
+  & input {
+    width: 100%;
+    padding-right: 3.5rem;
+  }
+
+  & .btn-text {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+.alert-success {
+  background: #d4edda;
+  border: 1px solid #28a745;
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  color: #155724;
+}
+
+.alert-error {
+  background: #f8d7da;
+  border: 1px solid #dc3545;
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  color: #721c24;
+}
+
+/* =============================================================================
+   6. Auth
+   ============================================================================= */
+
+.auth-card {
+  max-width: 24rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* =============================================================================
+   7. Kingdom
+   ============================================================================= */
+
+.kingdom-overview {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-top: 0.5rem;
+
+  .kingdom-name {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.kingdom-stat {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+
+  .kingdom-stat-label {
+    font-weight: 600;
+    min-width: 7rem;
+  }
+
+  .kingdom-stat-value {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* =============================================================================
+   8. Allocation
+   ============================================================================= */
 
 .allocation-card {
   display: inline-block;
@@ -263,6 +382,10 @@ input[type="range"] {
     font-size: 0.75rem;
   }
 }
+
+/* =============================================================================
+   9. Utilities
+   ============================================================================= */
 
 .text-positive {
   color: var(--color-positive);

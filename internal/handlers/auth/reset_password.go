@@ -40,52 +40,55 @@ func (h *handler) resetPasswordPage() http.HandlerFunc {
 }
 
 func resetPasswordContent(sigs ResetPasswordForm) Node {
-	return Group([]Node{
+	return Div(Class("auth-card panel"),
+		ds.Signals(signals.SignalMap(sigs)),
 		H1(Text("Choose a new password")),
-		Div(
+		Div(Class("form-fields"),
 			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("New password"),
-				Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+				Div(Class("password-field"),
+					Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+					Button(Class("btn-text"),
+						Type("button"),
+						ds.Text("$showPassword ? 'Hide' : 'Show'"),
+						ds.On("click", "$showPassword = !$showPassword"),
+					),
+				),
 			),
-			Button(Class("btn"),
-				Type("button"),
-				ds.Text("$showPassword ? 'Hide password' : 'Show password'"),
-				ds.On("click", "$showPassword = !$showPassword"),
-			),
-			Button(Class("btn"),
-				Text("Reset password"),
-				ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
-			),
-			errorComponent(nil),
 		),
-	})
+		Button(Class("btn"),
+			Text("Reset password"),
+			ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
+		),
+		alertComponent(nil),
+	)
 }
 
 func (h *handler) resetPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ResetPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("invalid request")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid request")})))
 			return
 		}
 
 		if data.Token.Value == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("missing token")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("missing token")})))
 			return
 		}
 
 		var errs []error
 		validatePassword(&errs, data.Password.Value)
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
 		tx, err := h.pool.Begin(r.Context())
 		if err != nil {
 			log.Printf("reset-password: begin transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to reset password")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
 			return
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
@@ -94,14 +97,14 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token.Value)
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("reset link is invalid or has expired")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("reset link is invalid or has expired")})))
 			return
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("reset-password: bcrypt hash: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to reset password")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
 			return
 		}
 
@@ -110,7 +113,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 			PwHash: string(hashedPassword),
 		}); err != nil {
 			log.Printf("reset-password: update password: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to reset password")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
 			return
 		}
 
@@ -120,13 +123,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("reset-password: commit transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("failed to reset password")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
 			return
 		}
 
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(routes.LoginPath + "?" + resetParam + "=true"); err != nil {
-			sse.PatchElementGostar(errorComponent([]error{errors.New("failed to redirect")}))
+			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to redirect")})))
 		}
 	}
 }

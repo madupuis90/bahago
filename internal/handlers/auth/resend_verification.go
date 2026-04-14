@@ -74,6 +74,6 @@ func (h *handler) resendVerification() http.HandlerFunc {
 
 func genericResendMessage(w http.ResponseWriter, r *http.Request) {
 	datastar.NewSSE(w, r).PatchElementGostar(
-		Div(ID(resendVerificationID), P(Text("If that email is registered and unverified, a new verification link has been sent."))),
+		Div(ID(resendVerificationID), Class("alert-success"), P(Text("If that email is registered and unverified, a new verification link has been sent."))),
 	)
 }

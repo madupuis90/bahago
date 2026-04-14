@@ -33,18 +33,18 @@ func (h *handler) forgotPasswordPage() http.HandlerFunc {
 }
 
 func forgotPasswordContent(sigs ForgotPasswordForm) Node {
-	return Group([]Node{
+	return Div(Class("auth-card panel"),
 		H1(Text("Reset your password")),
-		Div(
-			Label(Text("Email"), Input(ds.Bind(sigs.Email.Key))),
+		Div(Class("form-fields"),
+			ds.Signals(signals.SignalMap(sigs)),
+			Label(Text("Email"), Input(Type("email"), ds.Bind(sigs.Email.Key))),
 		),
 		Button(Class("btn"),
 			Text("Send reset link"),
 			ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
 		),
-		errorComponent(nil),
-		Div(ID(forgotResultID)),
-	})
+		alertComponent(nil),
+	)
 }
 
 func (h *handler) forgotPassword() http.HandlerFunc {
@@ -52,14 +52,14 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ForgotPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent([]error{errors.New("invalid request")}))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid request")})))
 			return
 		}
 
 		var errs []error
 		validateEmail(&errs, data.Email.Value)
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(errorComponent(errs))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
@@ -97,6 +97,6 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 
 func genericMessage(w http.ResponseWriter, r *http.Request) {
 	datastar.NewSSE(w, r).PatchElementGostar(
-		Div(ID(forgotResultID), P(Text("If that email is registered, you'll receive a reset link shortly."))),
+		alertComponent(successComponent("If that email is registered, you'll receive a reset link shortly.")),
 	)
 }

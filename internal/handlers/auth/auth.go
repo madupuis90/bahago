@@ -66,25 +66,41 @@ func newHandler(queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, a
 // ── Shared templates & helpers ──────────────────────────────────────
 
 const (
-	errorComponentID     = "errors"
-	forgotResultID       = "forgot-result"
+	authAlertID          = "auth-alert"
 	resendVerificationID = "resend-verification"
 )
 
-func errorComponent(errors []error) Node {
-	return Div(
-		ID(errorComponentID),
-		Map(errors, func(e error) Node {
+// alertComponent is the single SSE patch target for all auth feedback.
+// Always patch this — never patch errorComponent or successComponent directly.
+func alertComponent(inner Node) Node {
+	return Div(ID(authAlertID), inner)
+}
+
+// errorComponent returns the inner error content for use inside alertComponent.
+// Returns nil when errs is empty, producing a clean empty placeholder.
+func errorComponent(errs []error) Node {
+	if len(errs) == 0 {
+		return nil
+	}
+	return Div(Class("alert-error"),
+		Map(errs, func(e error) Node {
 			return P(Text(e.Error()))
 		}),
 	)
 }
 
+// successComponent returns the inner success content for use inside alertComponent.
+func successComponent(msg string) Node {
+	return Div(Class("alert-success"),
+		P(Text(msg)),
+	)
+}
+
 func invalidTokenContent() Node {
-	return Group([]Node{
+	return Div(Class("auth-card panel"),
 		H1(Text("Verification link invalid or expired")),
 		P(Text("Please register again to receive a new link.")),
-	})
+	)
 }
 
 func verificationEmail(verifyURL string) Node {

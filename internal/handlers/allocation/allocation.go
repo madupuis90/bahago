@@ -68,7 +68,7 @@ func (h *handler) handleAllocationPage() http.HandlerFunc {
 		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		rates := game.ComputeRates(*kingdom)
 		sigs := sigsFromKingdom(*kingdom)
-		KingdomLayout(r, "Allocation", kingdom, allocationContent(sigs, rates)).Render(w)
+		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(sigs, rates)).Render(w)
 	}
 }
 
@@ -86,7 +86,7 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 				return
 			case k := <-ch:
 				rates := game.ComputeRates(k)
-				page := KingdomLayout(r, "Allocation", &k, allocationContent(sigsFromKingdom(k), rates))
+				page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &k, allocationContent(sigsFromKingdom(k), rates))
 				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
 					return

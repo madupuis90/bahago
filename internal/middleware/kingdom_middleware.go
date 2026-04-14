@@ -41,11 +41,11 @@ func LoadKingdom(queries *db.Queries) func(http.Handler) http.Handler {
 }
 
 // RequireKingdom runs after LoadKingdom on routes that need a kingdom to exist.
-// If no kingdom is in context, it redirects the user to /kingdom to create one.
+// If no kingdom is in context, it redirects the user to /kingdom/setup to create one.
 func RequireKingdom(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom); !ok {
-			http.Redirect(w, r, routes.KingdomPath, http.StatusSeeOther)
+			http.Redirect(w, r, routes.KingdomSetupPath, http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
