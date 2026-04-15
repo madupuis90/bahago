@@ -44,19 +44,21 @@ const (
 	popIdleDivisor    = 25 * 100 // 25 idle -> 1 Pop/tick
 )
 
-// woodProduction returns wood produced per tick for the given population and allocation percentage.
-func woodProduction(population, pct int) int {
-	return population * pct / woodDivisor
+// woodProduction returns wood produced per tick for the given population, allocation percentage,
+// and building bonus percentage. The bonus is folded into the numerator before the single
+// integer division to avoid double truncation.
+func woodProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (woodDivisor * 100)
 }
 
 // stoneProduction returns stone produced per tick.
-func stoneProduction(population, pct int) int {
-	return population * pct / stoneDivisor
+func stoneProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (stoneDivisor * 100)
 }
 
 // foodProduction returns food produced per tick.
-func foodProduction(population, pct int) int {
-	return population * pct / foodProdDivisor
+func foodProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (foodProdDivisor * 100)
 }
 
 // foodUpkeep returns food consumed per tick (one unit per 30 population).
@@ -65,18 +67,18 @@ func foodUpkeep(population int) int {
 }
 
 // manaProduction returns mana produced per tick.
-func manaProduction(population, pct int) int {
-	return population * pct / manaDivisor
+func manaProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (manaDivisor * 100)
 }
 
 // devotionProduction returns devotion produced per tick.
-func devotionProduction(population, pct int) int {
-	return population * pct / devotionDivisor
+func devotionProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (devotionDivisor * 100)
 }
 
 // knowledgeProduction returns knowledge produced per tick.
-func knowledgeProduction(population, pct int) int {
-	return population * pct / knowDivisor
+func knowledgeProduction(population, pct, bonusPct int) int {
+	return population * pct * (100 + bonusPct) / (knowDivisor * 100)
 }
 
 // populationProduction returns population growth per tick.
@@ -86,9 +88,12 @@ func populationProduction(population, pct int) int {
 
 // ComputeRates calculates production and upkeep for all resources based on kingdom state.
 // This is a pure function with no side effects; it is safe to call in tests.
-// Building bonuses, skill modifiers, and other multipliers will be added as parameters later.
-func ComputeRates(k db.Kingdom) ResourceRates {
-	fp := foodProduction(k.Population, k.FoodPct)
+// Building bonus percentages are folded into the single integer division inside each production
+// function to avoid double truncation from two separate integer divisions.
+func ComputeRates(k db.Kingdom, buildings []db.KingdomBuilding) ResourceRates {
+	bonus := BuildingBonusPct(BuildingCountMap(buildings))
+
+	fp := foodProduction(k.Population, k.FoodPct, bonus["food"])
 	fu := foodUpkeep(k.Population)
 	popLoss := starvationLoss(k.Population, k.Food, fp, fu)
 	// Population does not grow while starving — a food deficit suppresses births entirely.
@@ -97,17 +102,17 @@ func ComputeRates(k db.Kingdom) ResourceRates {
 		popProd = 0
 	}
 	return ResourceRates{
-		WoodProduction:       woodProduction(k.Population, k.WoodPct),
+		WoodProduction:       woodProduction(k.Population, k.WoodPct, bonus["wood"]),
 		WoodUpkeep:           0,
-		StoneProduction:      stoneProduction(k.Population, k.StonePct),
+		StoneProduction:      stoneProduction(k.Population, k.StonePct, bonus["stone"]),
 		StoneUpkeep:          0,
 		FoodProduction:       fp,
 		FoodUpkeep:           fu,
-		ManaProduction:       manaProduction(k.Population, k.ManaPct),
+		ManaProduction:       manaProduction(k.Population, k.ManaPct, bonus["mana"]),
 		ManaUpkeep:           0,
-		DevotionProduction:   devotionProduction(k.Population, k.DevotionPct),
+		DevotionProduction:   devotionProduction(k.Population, k.DevotionPct, bonus["devotion"]),
 		DevotionUpkeep:       0,
-		KnowledgeProduction:  knowledgeProduction(k.Population, k.KnowledgePct),
+		KnowledgeProduction:  knowledgeProduction(k.Population, k.KnowledgePct, bonus["knowledge"]),
 		KnowledgeUpkeep:      0,
 		PopulationProduction: popProd,
 		PopulationUpkeep:     popLoss,

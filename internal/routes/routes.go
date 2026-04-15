@@ -14,6 +14,10 @@ const (
 	KingdomRefreshPath           = "/kingdom/refresh"
 	KingdomAllocationRefreshPath = "/kingdom/allocation/refresh"
 
+	KingdomBuildingsPath         = "/kingdom/buildings"
+	KingdomBuildingsRefreshPath  = "/kingdom/buildings/refresh"
+	KingdomConstructionStartPath = "/kingdom/buildings/start"
+
 	LoginPath              = "/login"
 	RegisterPath           = "/register"
 	VerifyPath             = "/verify"

@@ -66,7 +66,13 @@ const (
 func (h *handler) handleAllocationPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-		rates := game.ComputeRates(*kingdom)
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("allocation page: get buildings: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		rates := game.ComputeRates(*kingdom, buildings)
 		sigs := sigsFromKingdom(*kingdom)
 		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(sigs, rates)).Render(w)
 	}
@@ -85,7 +91,13 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			case k := <-ch:
-				rates := game.ComputeRates(k)
+				buildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
+				if err != nil {
+					log.Printf("allocation refresh: get buildings: %v", err)
+					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					return
+				}
+				rates := game.ComputeRates(k, buildings)
 				page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &k, allocationContent(sigsFromKingdom(k), rates))
 				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
@@ -142,7 +154,13 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			return
 		}
 
-		rates := game.ComputeRates(updatedKingdom)
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), updatedKingdom.ID)
+		if err != nil {
+			log.Printf("save-allocation: get buildings: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			return
+		}
+		rates := game.ComputeRates(updatedKingdom, buildings)
 		sse := datastar.NewSSE(w, r)
 		sse.PatchElementGostar(allocationContent(sigsFromKingdom(updatedKingdom), rates))
 		sse.PatchElementGostar(allocationErrorComponent(nil))

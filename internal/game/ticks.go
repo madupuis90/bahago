@@ -14,6 +14,7 @@ import (
 // ProcessTick runs one full game tick across all kingdoms.
 // It fetches all kingdoms, computes fresh rates and starvation in Go, then
 // bulk-updates all stockpiles in a single query.
+// It also decrements active constructions and completes any that have finished.
 // After a successful DB write it calls notify for each updated kingdom.
 func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom)) error {
 	q := db.New(pool)
@@ -24,6 +25,14 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	}
 	if len(kingdoms) == 0 {
 		return nil
+	}
+
+	// Fetch buildings and compute resources first, using the state at the START of
+	// this tick — before any construction completes. This ensures the rates shown
+	// in the UI (which reflect current buildings) match what is actually applied.
+	allBuildings, err := fetchAllKingdomBuildings(ctx, q, kingdoms)
+	if err != nil {
+		return fmt.Errorf("tick: fetch buildings: %w", err)
 	}
 
 	params := db.BulkTickKingdomsParams{
@@ -38,7 +47,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	}
 
 	for i, k := range kingdoms {
-		r := ComputeRates(k)
+		r := ComputeRates(k, allBuildings[k.ID])
 
 		params.Ids[i] = k.ID
 		params.Wood[i] = max(0, k.Wood+r.WoodProduction-r.WoodUpkeep)
@@ -54,6 +63,18 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		return fmt.Errorf("tick: bulk update: %w", err)
 	}
 
+	// Complete constructions after resource allocation — buildings that finish
+	// this tick contribute their bonus starting next tick.
+	completed, err := q.DecrementAndListCompleted(ctx)
+	if err != nil {
+		return fmt.Errorf("tick: decrement constructions: %w", err)
+	}
+	for _, c := range completed {
+		if err := completeConstruction(ctx, pool, c); err != nil {
+			return fmt.Errorf("tick: complete construction for kingdom %d: %w", c.KingdomID, err)
+		}
+	}
+
 	// Notify after a successful DB write — values already computed in params.
 	for i, k := range kingdoms {
 		k.Wood = params.Wood[i]
@@ -66,6 +87,45 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		notify(k)
 	}
 	return nil
+}
+
+// completeConstruction atomically increments the building count and removes the
+// construction row. Using a transaction prevents a double-increment if the process
+// dies between the two writes — the row would otherwise remain at ticks_remaining=0
+// and be picked up again on the next tick.
+func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.DecrementAndListCompletedRow) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	txq := db.New(tx)
+	params := db.IncrementKingdomBuildingParams{
+		KingdomID:    c.KingdomID,
+		BuildingType: c.BuildingType,
+	}
+	if err := txq.IncrementKingdomBuilding(ctx, params); err != nil {
+		return fmt.Errorf("increment building %s: %w", c.BuildingType, err)
+	}
+	if err := txq.DeleteConstruction(ctx, c.KingdomID); err != nil {
+		return fmt.Errorf("delete construction: %w", err)
+	}
+	return tx.Commit(ctx)
+}
+
+// fetchAllKingdomBuildings returns a map from kingdom ID to its buildings.
+// Uses a single query for all kingdoms to avoid N+1 queries during the tick.
+func fetchAllKingdomBuildings(ctx context.Context, q *db.Queries, kingdoms []db.Kingdom) (map[int][]db.KingdomBuilding, error) {
+	all, err := q.GetAllKingdomBuildings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int][]db.KingdomBuilding, len(kingdoms))
+	for _, b := range all {
+		m[b.KingdomID] = append(m[b.KingdomID], b)
+	}
+	return m, nil
 }
 
 // StartTicker starts the game tick loop. It blocks until ctx is cancelled.

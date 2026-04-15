@@ -38,8 +38,10 @@ g.El("div", html.Class("container"), g.Text("Hello"))
 | `Attr(name, value...)` | Create any attribute not in html package |
 | `Text(s)` | HTML-escaped text node |
 | `Raw(s)` | Unescaped HTML (use carefully) |
-| `If(bool, Node)` | Render node only if true |
-| `Iff(bool, func() Node)` | Lazy conditional — avoids evaluating node when false |
+| `If(bool, Node)` | Render node only if true — arguments are always evaluated |
+| `Iff(bool, func() Node)` | Lazy conditional — node is only evaluated when condition is true |
+
+> **`If` vs `Iff`**: Use `Iff` when the condition guards a nil pointer — i.e., the pattern is `x != nil` and the node expression dereferences `x`. Using `If` there will panic because Go evaluates all arguments before calling the function. For conditions that don't involve nil-guarding (e.g., `len(slice) > 0`, a plain bool), `If` is fine and is less verbose.
 | `Map(slice, func(T) Node)` | Map a slice to nodes |
 | `Group([]Node)` | Flatten multiple nodes into one |
 

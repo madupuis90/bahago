@@ -217,6 +217,40 @@ input[type="range"] {
     outline: 2px solid var(--btn-color);
     outline-offset: 2px;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+
+    &:hover {
+      background: var(--btn-bg);
+      box-shadow: none;
+    }
+  }
+
+  &.btn-locked {
+    background: rgba(0, 0, 0, 0.12);
+    background-image: none;
+    color: rgba(26, 16, 8, 0.5);
+    border-color: rgba(0, 0, 0, 0.15);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.12);
+      box-shadow: none;
+    }
+  }
+
+  &.btn-insufficient {
+    background: #c9844c;
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.1));
+
+    &:hover {
+      background: #c9844c;
+      box-shadow: none;
+    }
+  }
 }
 
 .btn-text {
@@ -384,7 +418,51 @@ input[type="range"] {
 }
 
 /* =============================================================================
-   9. Utilities
+   9. Buildings
+   ============================================================================= */
+
+.buildings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.building-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  & h3 {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+  }
+
+  & .btn {
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+}
+
+.building-locked {
+  opacity: 0.65;
+  filter: saturate(0.5);
+}
+
+.construction-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 0.5rem;
+  background: #d4c070;
+}
+
+/* =============================================================================
+   10. Utilities
    ============================================================================= */
 
 .text-positive {
