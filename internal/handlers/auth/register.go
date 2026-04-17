@@ -16,38 +16,36 @@ import (
 	"bahago/internal/database/db"
 	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
 // ── Register ────────────────────────────────────────────────────────
 
 type RegisterForm struct {
-	Email    signals.Signal[string] `json:"email"`
-	Password signals.Signal[string] `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
-
-var registerSigDef = signals.NewSignalDef[RegisterForm]()
 
 func (h *handler) registerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		HomeLayout(r, "Register", registerContent(registerSigDef.New())).Render(w)
+		HomeLayout(r, "Register", registerContent()).Render(w)
 	}
 }
 
-func registerContent(sigs RegisterForm) Node {
+func registerContent() Node {
 	return Div(Class("auth-card panel"),
 		H1(Text("Create an account")),
 		Div(Class("form-fields"),
-			ds.Signals(signals.SignalMap(sigs)),
-			ds.Signals(map[string]any{"showPassword": false}),
+			ds.Signals(map[string]any{
+				"showPassword": false,
+			}),
 			Label(
 				Text("Email"),
-				Input(Type("email"), ds.Bind(sigs.Email.Key)),
+				Input(Type("email"), ds.Bind("email")),
 			),
 			Label(
 				Text("Password"),
 				Div(Class("password-field"),
-					Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+					Input(ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 					Button(Class("btn-text"),
 						Type("button"),
 						ds.Text("$showPassword ? 'Hide' : 'Show'"),
@@ -78,15 +76,15 @@ func (h *handler) register() http.HandlerFunc {
 			errs = append(errs, errors.New("invalid request"))
 		}
 
-		validateEmail(&errs, data.Email.Value)
-		validatePassword(&errs, data.Password.Value)
+		validateEmail(&errs, data.Email)
+		validatePassword(&errs, data.Password)
 
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("register: bcrypt hash: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
@@ -104,7 +102,7 @@ func (h *handler) register() http.HandlerFunc {
 		qtx := h.queries.WithTx(tx)
 
 		userID, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
-			Email:  data.Email.Value,
+			Email:  data.Email,
 			PwHash: string(hashedPassword),
 		})
 		if err != nil {
@@ -129,7 +127,7 @@ func (h *handler) register() http.HandlerFunc {
 		verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
 		fmt.Println(verifyURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
 
-		if err := h.sender.Send(r.Context(), data.Email.Value, "Verify your email", verificationEmail(verifyURL)); err != nil {
+		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("send verification email: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to send verification email — please try again")})))
 			return

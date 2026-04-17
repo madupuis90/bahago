@@ -19,7 +19,6 @@ import (
 	"bahago/internal/database/db"
 	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
 // ── Login ───────────────────────────────────────────────────────────
@@ -28,32 +27,29 @@ func (h *handler) loginPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		verified := r.URL.Query().Get(verifiedParam) == "true"
 		reset := r.URL.Query().Get(resetParam) == "true"
-		HomeLayout(r, "Login", loginContent(verified, reset, loginSigDef.New())).Render(w)
+		HomeLayout(r, "Login", loginContent(verified, reset)).Render(w)
 	}
 }
 
 type LoginForm struct {
-	Email    signals.Signal[string] `json:"email"`
-	Password signals.Signal[string] `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-var loginSigDef = signals.NewSignalDef[LoginForm]()
-
-func loginContent(verified bool, reset bool, sigs LoginForm) Node {
+func loginContent(verified bool, reset bool) Node {
 	return Div(Class("auth-card panel"),
 		H1(Text("Login")),
 		If(verified, P(Class("alert-success"), Text("Your email has been verified. You can now log in."))),
 		If(reset, P(Class("alert-success"), Text("Your password has been reset. You can now log in."))),
 		Div(Class("form-fields"),
-			ds.Signals(signals.SignalMap(sigs)),
 			Label(
 				Text("Email"),
-				Input(Type("email"), ds.Bind(sigs.Email.Key)),
+				Input(Type("email"), ds.Bind("email")),
 			),
 			Label(
 				Text("Password"),
 				Div(Class("password-field"),
-					Input(Type("password"), ds.Bind(sigs.Password.Key)),
+					Input(Type("password"), ds.Bind("password")),
 				),
 			),
 		),
@@ -69,7 +65,7 @@ func loginContent(verified bool, reset bool, sigs LoginForm) Node {
 			A(Href(routes.ForgotPasswordPath), Text("Forgot your password?")),
 		),
 		alertComponent(nil),
-		Div(ID(resendVerificationID)),
+		Div(ID("resend-verification")),
 	)
 }
 
@@ -90,7 +86,7 @@ func (h *handler) login() http.HandlerFunc {
 			errs = append(errs, errors.New("invalid request"))
 		}
 
-		validateEmail(&errs, data.Email.Value)
+		validateEmail(&errs, data.Email)
 
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
@@ -99,13 +95,13 @@ func (h *handler) login() http.HandlerFunc {
 
 		// Look up user. If not found, run a dummy bcrypt comparison against the
 		// sentinel hash to prevent user-enumeration via timing side-channel.
-		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email.Value)
+		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email)
 		hashToCompare := []byte(user.PwHash)
 		if dbErr != nil {
 			hashToCompare = sentinelHash
 		}
 
-		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password.Value)); err != nil || dbErr != nil {
+		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password)); err != nil || dbErr != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid email or password")})))
 			return
 		}

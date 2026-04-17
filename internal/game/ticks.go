@@ -75,6 +75,17 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		}
 	}
 
+	// Complete training batches — units arrive at the end of the tick they finish.
+	completedTraining, err := q.DecrementAndListCompletedTraining(ctx)
+	if err != nil {
+		return fmt.Errorf("tick: decrement training: %w", err)
+	}
+	for _, t := range completedTraining {
+		if err := completeTraining(ctx, pool, t); err != nil {
+			return fmt.Errorf("tick: complete training for kingdom %d: %w", t.KingdomID, err)
+		}
+	}
+
 	// Notify after a successful DB write — values already computed in params.
 	for i, k := range kingdoms {
 		k.Wood = params.Wood[i]
@@ -110,6 +121,28 @@ func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.Decremen
 	}
 	if err := txq.DeleteConstruction(ctx, c.KingdomID); err != nil {
 		return fmt.Errorf("delete construction: %w", err)
+	}
+	return tx.Commit(ctx)
+}
+
+// completeTraining atomically adds the trained units and removes the training row.
+func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAndListCompletedTrainingRow) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	txq := db.New(tx)
+	if err := txq.UpsertKingdomUnits(ctx, db.UpsertKingdomUnitsParams{
+		KingdomID: t.KingdomID,
+		UnitType:  t.UnitType,
+		Count:     t.Count,
+	}); err != nil {
+		return fmt.Errorf("upsert units %s: %w", t.UnitType, err)
+	}
+	if err := txq.DeleteTraining(ctx, t.KingdomID); err != nil {
+		return fmt.Errorf("delete training: %w", err)
 	}
 	return tx.Commit(ctx)
 }

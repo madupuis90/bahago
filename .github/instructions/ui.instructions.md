@@ -16,7 +16,6 @@ import (
     ds "maragu.dev/gomponents-datastar"    // reactive attributes — kept aliased for clarity
     "github.com/starfederation/datastar-go/datastar" // SSE + ReadSignals
     . "bahago/internal/layout"            // HomeLayout(), KingdomLayout(), shared components — dot-imported
-    "bahago/internal/signals"             // signals.Signal[T], signals.NewSignalDef[T](), signals.SignalMap() — regular import
 )
 ```
 
@@ -115,7 +114,6 @@ Classes{
 - Handlers call the appropriate layout function directly and chain `.Render(w)` for full-page responses
 - Components extracted to `internal/layout/` only when used by 2+ handler packages
 - **`internal/layout` is dot-imported** — `HomeLayout`, `KingdomLayout`, nav components, and shared helpers are used without a package prefix
-- **`internal/signals` is a regular import** — always reference as `signals.Signal[T]`, `signals.NewSignalDef[T]()`, `signals.SignalMap(sigs)`
 
 ```go
 // A content function — takes domain data, returns just the body
@@ -242,53 +240,64 @@ Layout(LayoutArgs{...},
 
 The same applies to `ds.Signals`, `ds.On`, `ds.Bind`, and all other `ds.*` attributes — they belong on an element you define in the same call expression.
 
-## No string literals for element IDs
+## Element IDs
 
-Any element ID that is targeted by SSE (`PatchElementGostar`, `WithSelectorID`) or referenced from Go code must be declared as a `const` near the component that owns it. Never write ID strings inline in two places.
+Only add an `ID()` to an element when it will be **explicitly targeted** — either:
+- by Datastar SSE (`PatchElementGostar` uses the root element's ID to find its DOM target, `WithSelectorID` references it explicitly)
+- by a CSS rule with an `#id` selector
+
+With fat-morph (`WithSelector("html")`), the entire page is morphed without needing individual IDs on content containers. Do not add an ID just because an element is a major section or landmark.
+
+When an ID is needed, write it as a plain string literal inline — do not declare a `const`. The ID string only needs to appear in the component function that owns the element (and the SSE patch call passes the component, not the ID string).
 
 ```go
-// Declare next to the component that owns the element
-const errorComponentID = "errors"
-
-func errorComponent(errs []error) Node {
-    return Div(ID(errorComponentID), ...)
+// Wrong — ID not targeted by SSE or CSS; const is unnecessary overhead
+const contentID = "my-content"
+func myContent(...) Node {
+    return Div(ID(contentID), ...)
 }
 
-// SSE handler targets the same const — compiler catches typos
-sse.PatchElementGostar(errorComponent(errs))                          // morphs by ID automatically
-sse.PatchElementGostar(myNode, datastar.WithSelectorID(someOtherID))  // explicit selector
+// Wrong — ID needed for SSE target but wrapped in a const
+const errorID = "my-error"
+func errorComponent(err error) Node {
+    return Div(ID(errorID), Text(msg))
+}
+
+// Correct — ID only where needed, inline string
+func errorComponent(err error) Node {
+    return Div(ID("my-error"), Text(msg))
+}
+// SSE handler passes the component — ID string never repeated
+sse.PatchElementGostar(errorComponent(err))
 ```
 
-## No string literals for signal names
+## Signals and input structs
 
-Define a struct where every field is `Signal[T]` with a `json` tag. Use `NewSignalDef` to create a package-level definition — this populates `Key` and `Ref` on every field at startup. In handlers, call `.New()` to get a value copy you can set `.Value` on, then pass it to content functions. For reading signals from the client, use a plain zero-value struct.
+Use a plain struct with `json` tags for reading client signals via `datastar.ReadSignals`. Field types are the raw Go types (`string`, `int`, `bool`, etc.).
 
 ```go
-// Define once per page/feature
-type PageSignals struct {
-    WoodPct Signal[int]    `json:"wood_pct"`
-    Name    Signal[string] `json:"name"`
+// Input struct — plain types, json tags define signal names
+type pageInput struct {
+    WoodPct int    `json:"wood_pct"`
+    Name    string `json:"name"`
 }
-var sigDef = NewSignalDef[PageSignals]()
-
-// Handler — populate values and render
-sigs := sigDef.New()
-sigs.WoodPct.Value = kingdom.WoodPct
-pageContent(sigs)
 
 // Handler — read values from client
-input := &PageSignals{}
+input := &pageInput{}
 datastar.ReadSignals(r, input)
-// use input.WoodPct.Value
+// use input.WoodPct, input.Name directly
 
-// Content function — initialise datastar signals and bind inputs
-ds.Signals(SignalMap(sigs))           // initialise all signals from the struct
-ds.Bind(sigs.WoodPct.Key)             // two-way bind
-ds.Text(sigs.WoodPct.Ref)             // reactive JS expression
-ds.On("click", sigs.WoodPct.Ref+"++") // JS expression in event handler
+// Content function — initialise signals with a map literal
+ds.Signals(map[string]any{
+    "wood_pct": kingdom.WoodPct,
+    "name":     "",
+})
+ds.Bind("wood_pct")           // two-way bind
+ds.Text("$wood_pct")          // reactive text
+ds.On("click", "$wood_pct++") // JS expression
 ```
 
-The `json` tags define the signal name on the wire. `Key` and `Ref` are derived from them at startup — no string literals anywhere in the template.
+Signal name strings appear in two places: the `json` tag and the `ds.Bind`/`ds.Text`/`ds.On` call. Keep them adjacent inside a single file; this is always the case for self-contained page components.
 
 ## gomponents-datastar (`ds`) — reactive attributes
 
@@ -298,22 +307,34 @@ Signals use `$signalName` syntax in expressions. Signal names cannot start with 
 
 ```go
 // Initialize signals on an element (values defined later in DOM override earlier)
-ds.Signals(map[string]any{"count": 0, "open": false})
+// Always use multi-line map literals, even for a single entry.
+ds.Signals(map[string]any{
+    "count": 0,
+    "open":  false,
+})
 
 // Two-way bind input/select/textarea to a signal
 ds.Bind("signalName")
 ```
 
-**Signal naming pattern** — use `Signal[T]` fields and `NewSignalDef`:
+**Do not use `ds.Signals` to initialize signals that are already covered by `ds.Bind`.** `ds.Bind` on an input creates the signal automatically with the element's current value. Only use `ds.Signals` when:
+- The signal has a non-zero/non-empty initial value (e.g. a token pre-populated from the URL)
+- The signal has no corresponding `ds.Bind` (e.g. a `showPassword` bool toggled by a button)
+
 ```go
-type PageSignals struct {
-    WoodPct Signal[int] `json:"wood_pct"`
-    Name    Signal[string] `json:"name"`
-}
-var sigDef = NewSignalDef[PageSignals]()
-// In handler: sigs := sigDef.New(); sigs.WoodPct.Value = x
-// In template: ds.Bind(sigs.WoodPct.Key), ds.Text(sigs.WoodPct.Ref)
-// Init signals: ds.Signals(SignalMap(sigs))
+// Wrong — email/password are initialized to "" by ds.Bind; ds.Signals is redundant
+ds.Signals(map[string]any{
+    "email":    "",
+    "password": "",
+}),
+Input(Type("email"), ds.Bind("email")),
+
+// Correct — only declare signals that ds.Bind won't create, or have real initial values
+ds.Signals(map[string]any{
+    "token":        token,  // real value from URL
+    "showPassword": false,  // no ds.Bind for this one
+}),
+Input(ds.Bind("password"), ...),
 ```
 
 ### Reactivity
@@ -513,7 +534,9 @@ sse.ExecuteScript(`window.location = '/dashboard'`)
 ### Toggle password visibility
 
 ```go
-ds.Signals(map[string]any{"showPass": false}),
+ds.Signals(map[string]any{
+    "showPass": false,
+}),
 Input(ds.Bind("password"), ds.Attr("type", "$showPass ? 'text' : 'password'")),
 Button(
     Type("button"),

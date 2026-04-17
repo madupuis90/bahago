@@ -6,14 +6,16 @@ import (
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
 
+	"bahago/internal/contextkeys"
 	. "bahago/internal/layout"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )
 
-func RegisterRoutes(router router.Router) {
+func RegisterRoutes(r router.Router) {
 	h := newHandler()
-	router.HandleFunc("GET "+routes.HomePath, h.handleHomePage())
+	r.HandleFunc("GET /", h.handleRoot())
+	r.HandleFunc("GET "+routes.HomePath, h.handleHomePage())
 }
 
 type handler struct {
@@ -21,6 +23,17 @@ type handler struct {
 
 func newHandler() *handler {
 	return &handler{}
+}
+
+func (h *handler) handleRoot() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		if user != nil {
+			http.Redirect(w, r, routes.KingdomPath, http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, routes.HomePath, http.StatusFound)
+	}
 }
 
 func (h *handler) handleHomePage() http.HandlerFunc {

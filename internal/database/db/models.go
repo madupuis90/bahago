@@ -57,6 +57,24 @@ type KingdomConstruction struct {
 	StartedAt      time.Time
 }
 
+type KingdomTraining struct {
+	ID             int
+	KingdomID      int
+	UnitType       string
+	Count          int
+	TicksRemaining int
+	TicksTotal     int
+	StartedAt      time.Time
+}
+
+type KingdomUnit struct {
+	KingdomID int
+	UnitType  string
+	Count     int
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type PasswordResetToken struct {
 	Token     string
 	UserID    int

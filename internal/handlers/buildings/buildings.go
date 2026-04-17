@@ -44,13 +44,6 @@ func newHandler(queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) *hand
 	return &handler{queries: queries, pool: pool, hub: tickHub}
 }
 
-// ── Component IDs ─────────────────────────────────────────────────────────────
-
-const (
-	buildingsContentID = "buildings-content"
-	buildingsErrorID   = "buildings-error"
-)
-
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func (h *handler) handleBuildingsPage() http.HandlerFunc {
@@ -241,7 +234,7 @@ func loadConstruction(r *http.Request, queries *db.Queries, kingdomID int) (*db.
 
 func buildingsContent(kingdom *db.Kingdom, buildings []db.KingdomBuilding, construction *db.KingdomConstruction) Node {
 	counts := game.BuildingCountMap(buildings)
-	return Div(ID(buildingsContentID),
+	return Div(
 		Div(ds.Init(datastar.GetSSE(routes.KingdomBuildingsRefreshPath))),
 		buildingsErrorComponent(nil),
 		Iff(construction != nil, func() Node { return activeConstructionBanner(construction) }),
@@ -296,7 +289,6 @@ func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.K
 		H3(Text(def.Name)),
 		P(Text(fmt.Sprintf("%d / %d", count, def.MaxCount))),
 		If(len(def.BonusPctPer) > 0, P(Text(bonusText(def)))),
-		If(len(def.UnlocksUnits) > 0, P(Text("Unlocks: "+strings.Join(def.UnlocksUnits, ", ")))),
 		If(locked, P(Text(prereqText(def)))),
 		If(!atMax, Group([]Node{
 			P(Text(costText(def.Cost) + " · " + fmt.Sprintf("%d ticks", def.Ticks))),
@@ -318,7 +310,7 @@ func buildingsErrorComponent(err error) Node {
 	if err != nil {
 		msg = err.Error()
 	}
-	return Div(ID(buildingsErrorID), Text(msg))
+	return Div(ID("buildings-alert"), Text(msg))
 }
 
 func bonusText(def game.BuildingDef) string {
@@ -332,7 +324,7 @@ func bonusText(def game.BuildingDef) string {
 func prereqText(def game.BuildingDef) string {
 	parts := make([]string, 0, len(def.Prerequisites))
 	for _, p := range def.Prerequisites {
-		d := game.BuildingDefs[p.BuildingType]
+		d := game.BuildingDefs[p.Type]
 		parts = append(parts, d.Name)
 	}
 	return "Requires: " + strings.Join(parts, " and ")

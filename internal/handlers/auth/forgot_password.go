@@ -15,29 +15,25 @@ import (
 	"bahago/internal/database/db"
 	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
 // ── Forgot password ─────────────────────────────────────────────────
 
 type ForgotPasswordForm struct {
-	Email signals.Signal[string] `json:"email"`
+	Email string `json:"email"`
 }
-
-var forgotPasswordSigDef = signals.NewSignalDef[ForgotPasswordForm]()
 
 func (h *handler) forgotPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		HomeLayout(r, "Forgot Password", forgotPasswordContent(forgotPasswordSigDef.New())).Render(w)
+		HomeLayout(r, "Forgot Password", forgotPasswordContent()).Render(w)
 	}
 }
 
-func forgotPasswordContent(sigs ForgotPasswordForm) Node {
+func forgotPasswordContent() Node {
 	return Div(Class("auth-card panel"),
 		H1(Text("Reset your password")),
 		Div(Class("form-fields"),
-			ds.Signals(signals.SignalMap(sigs)),
-			Label(Text("Email"), Input(Type("email"), ds.Bind(sigs.Email.Key))),
+			Label(Text("Email"), Input(Type("email"), ds.Bind("email"))),
 		),
 		Button(Class("btn"),
 			Text("Send reset link"),
@@ -57,14 +53,14 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 		}
 
 		var errs []error
-		validateEmail(&errs, data.Email.Value)
+		validateEmail(&errs, data.Email)
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
 		}
 
 		// Always respond with the same generic message regardless of outcome to prevent enumeration.
-		user, err := h.queries.GetUserByEmail(r.Context(), data.Email.Value)
+		user, err := h.queries.GetUserByEmail(r.Context(), data.Email)
 		if err != nil {
 			genericMessage(w, r)
 			return
@@ -88,7 +84,7 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 
 		resetURL := h.appURL + routes.ResetPasswordPath + "?" + tokenParam + "=" + token
 		fmt.Println(resetURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
-		if err := h.sender.Send(r.Context(), data.Email.Value, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
+		if err := h.sender.Send(r.Context(), data.Email, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
 			log.Printf("forgot-password: send email: %v", err)
 		}
 		genericMessage(w, r)

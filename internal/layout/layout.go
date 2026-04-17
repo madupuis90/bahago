@@ -39,7 +39,8 @@ func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *d
 		sideNav = Nav(Class("side-nav panel"))
 	}
 
-	return shell(title,
+	return shell(
+		title,
 		kingdomTopNav(user, currentPath),
 		sideNav,
 		content...,
@@ -157,6 +158,7 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
 			NavItem(routes.KingdomPath, "Overview", currentPath),
 			NavItem(routes.KingdomAllocationPath, "Allocation", currentPath),
 			NavItem(routes.KingdomBuildingsPath, "Buildings", currentPath),
+			NavItem(routes.KingdomUnitsPath, "Units", currentPath),
 		),
 	})
 }

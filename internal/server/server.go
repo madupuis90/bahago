@@ -11,10 +11,10 @@ import (
 	"bahago/internal/handlers/home"
 	"bahago/internal/handlers/kingdom"
 	"bahago/internal/handlers/kingdomsetup"
+	"bahago/internal/handlers/units"
 	"bahago/internal/hub"
 	"bahago/internal/middleware"
 	"bahago/internal/router"
-	"bahago/internal/routes"
 	"bahago/web"
 	"context"
 	"net/http"
@@ -69,12 +69,11 @@ func (s *Server) registerRoutes() {
 	kingdom.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 	allocation.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 	buildings.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
+	units.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
 
-	// redirect to home
-	s.mux.Handle("/", http.RedirectHandler(routes.HomePath, http.StatusMovedPermanently))
 }
 
 // implements http.Handler

@@ -1,6 +1,7 @@
 package kingdomsetup
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -15,20 +16,13 @@ import (
 	. "bahago/internal/layout"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
-// ── Signal definitions ────────────────────────────────────────────────────────
+// ── Input struct ─────────────────────────────────────────────────────────────
 
 type kingdomCreateForm struct {
-	Name signals.Signal[string] `json:"kingdom_name"`
+	Name string `json:"kingdom_name"`
 }
-
-var createFormSignals = signals.NewSignalDef[kingdomCreateForm]()
-
-// ── Component IDs ─────────────────────────────────────────────────────────────
-
-const alertID = "kingdom-alert"
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -51,7 +45,7 @@ func (h *handler) handleSetupPage() http.HandlerFunc {
 			http.Redirect(w, r, routes.KingdomPath, http.StatusSeeOther)
 			return
 		}
-		KingdomLayout(r, "Found Your Kingdom", r.URL.Path, nil, setupContent(createFormSignals.New())).Render(w)
+		KingdomLayout(r, "Found Your Kingdom", r.URL.Path, nil, setupContent()).Render(w)
 	}
 }
 
@@ -65,9 +59,9 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 			return
 		}
 
-		name := strings.TrimSpace(form.Name.Value)
+		name := strings.TrimSpace(form.Name)
 		if name == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent("Kingdom name is required")))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("kingdom name is required")})))
 			return
 		}
 
@@ -77,7 +71,7 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 		})
 		if err != nil {
 			log.Printf("create kingdom: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent("Failed to create kingdom")))
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create kingdom")})))
 			return
 		}
 
@@ -90,9 +84,8 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-func setupContent(sigs kingdomCreateForm) Node {
+func setupContent() Node {
 	return Div(Class("auth-card panel"),
-		ds.Signals(signals.SignalMap(sigs)),
 		H1(Text("Found Your Kingdom")),
 		P(Text("Give your kingdom a name to begin your reign.")),
 		Div(Class("form-fields"),
@@ -100,7 +93,7 @@ func setupContent(sigs kingdomCreateForm) Node {
 				Text("Kingdom Name"),
 				Input(
 					Type("text"),
-					ds.Bind(sigs.Name.Key),
+					ds.Bind("kingdom_name"),
 					Placeholder("Enter your kingdom name"),
 				),
 			),
@@ -115,9 +108,16 @@ func setupContent(sigs kingdomCreateForm) Node {
 }
 
 func alertComponent(inner Node) Node {
-	return Div(ID(alertID), inner)
+	return Div(ID("kingdom-alert"), inner)
 }
 
-func errorComponent(msg string) Node {
-	return Div(Class("alert-error"), P(Text(msg)))
+func errorComponent(errs []error) Node {
+	if len(errs) == 0 {
+		return nil
+	}
+	return Div(Class("alert-error"),
+		Map(errs, func(e error) Node {
+			return P(Text(e.Error()))
+		}),
+	)
 }

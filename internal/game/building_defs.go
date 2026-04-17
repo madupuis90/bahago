@@ -25,8 +25,8 @@ type ResourceCost struct {
 
 // Prerequisite requires that a given building type has at least MinCount instances built.
 type Prerequisite struct {
-	BuildingType string
-	MinCount     int
+	Type     string
+	MinCount int
 }
 
 // BuildingDef describes a building type. All values are static config — nothing is stored in the DB.
@@ -50,9 +50,6 @@ type BuildingDef struct {
 	// Prerequisites lists buildings that must have at least MinCount instances
 	// before this building becomes available. All must be satisfied (AND).
 	Prerequisites []Prerequisite
-
-	// UnlocksUnits lists unit types that become available once count >= 1.
-	UnlocksUnits []string
 }
 
 // BuildingDefs is the authoritative static configuration for all building types.
@@ -70,7 +67,7 @@ var BuildingDefs = map[string]BuildingDef{
 		Cost:          ResourceCost{Wood: 100, Stone: 20},
 		Ticks:         5,
 		BonusPctPer:   map[string]int{"wood": 25},
-		Prerequisites: []Prerequisite{{BuildingType: BuildingMill, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingMill, MinCount: 1}},
 	},
 	BuildingQuarry: {
 		Name:        "Quarry",
@@ -85,7 +82,7 @@ var BuildingDefs = map[string]BuildingDef{
 		Cost:          ResourceCost{Wood: 40, Stone: 60},
 		Ticks:         5,
 		BonusPctPer:   map[string]int{"stone": 25},
-		Prerequisites: []Prerequisite{{BuildingType: BuildingQuarry, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingQuarry, MinCount: 1}},
 	},
 	BuildingFarm: {
 		Name:        "Farm",
@@ -100,7 +97,7 @@ var BuildingDefs = map[string]BuildingDef{
 		Cost:          ResourceCost{Wood: 60, Stone: 40},
 		Ticks:         5,
 		BonusPctPer:   map[string]int{"food": 25},
-		Prerequisites: []Prerequisite{{BuildingType: BuildingFarm, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingFarm, MinCount: 1}},
 	},
 	BuildingArmory: {
 		Name:     "Armory",
@@ -108,10 +105,9 @@ var BuildingDefs = map[string]BuildingDef{
 		Cost:     ResourceCost{Wood: 80, Stone: 80},
 		Ticks:    10,
 		Prerequisites: []Prerequisite{
-			{BuildingType: BuildingFactory, MinCount: 1},
-			{BuildingType: BuildingBlacksmith, MinCount: 1},
+			{Type: BuildingFactory, MinCount: 1},
+			{Type: BuildingBlacksmith, MinCount: 1},
 		},
-		UnlocksUnits: []string{"footman"},
 	},
 }
 
@@ -137,7 +133,7 @@ func CanBuild(btype string, counts map[string]int) bool {
 		return false
 	}
 	for _, p := range def.Prerequisites {
-		if counts[p.BuildingType] < p.MinCount {
+		if counts[p.Type] < p.MinCount {
 			return false
 		}
 	}

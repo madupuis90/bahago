@@ -81,7 +81,8 @@ a {
   }
 }
 
-input:not([type="range"]) {
+input:not([type="range"]),
+select {
   padding: 0.4rem 0.6rem;
   border-radius: 0.4rem;
   border: 1px solid rgba(0, 0, 0, 0.25);
@@ -462,7 +463,73 @@ input[type="range"] {
 }
 
 /* =============================================================================
-   10. Utilities
+   10. Units
+   ============================================================================= */
+
+.units-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+
+  & h2 {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.units-table {
+  border-collapse: collapse;
+  width: 100%;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  th {
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .unit-row-locked {
+    opacity: 0.5;
+    filter: saturate(0.4);
+  }
+}
+
+.units-train-form {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  display: inline-block;
+
+  & h2 {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.units-train-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.units-train-cost {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--panel-link-color);
+}
+
+/* =============================================================================
+   11. Utilities
    ============================================================================= */
 
 .text-positive {

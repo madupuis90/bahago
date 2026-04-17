@@ -76,7 +76,6 @@ All code lives under `internal/` — nothing is intended to be imported external
 - `internal/handlers/<feature>/` — one package per feature; contains HTTP handlers, page functions, and components specific to that feature
 - `internal/router/` — router interface (avoids circular imports when injecting middleware)
 - `internal/server/` — application wiring: routes, middleware registration, static file serving
-- `internal/signals/` — Signal[T], SignalDef[T], NewSignalDef, SignalMap — generic datastar signal utilities. Regular import (not dot-imported).
 - `web/static/` — static assets (CSS, JS)
 
 ### Feature Package Structure
@@ -102,7 +101,6 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 
 - Full-page responses call `HomeLayout(r, title, content...)` or `KingdomLayout(r, title, content...)` — these read user/kingdom/path from the request context directly; no explicit `Content-Type` needed (gomponents sets it)
 - `internal/layout` is dot-imported in all handler packages so `HomeLayout` and `KingdomLayout` are used without a prefix
-- `internal/signals` is a **regular import** (not dot-imported) — use `signals.Signal[T]`, `signals.NewSignalDef[T]()`, `signals.SignalMap(sigs)`
 - SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
 - Log errors server-side; return generic messages to clients
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)

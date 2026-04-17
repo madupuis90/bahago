@@ -120,7 +120,7 @@ func chatContent() Node {
 	return Group([]Node{
 		H1(Text("Let's chat!")),
 		Div(ID(containerId), ds.Init(datastar.GetSSE("/chat/read")),
-			Div(ID("messages"), Text("Waiting for messages...")),
+			Text("Waiting for messages..."),
 		),
 		Form(
 			ds.On("submit", datastar.PostSSE("/chat/write")),

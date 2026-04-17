@@ -94,18 +94,18 @@ TODO (design): Is the alignment unlocked a bit later?
 ## Unit Attributes
 
 - Worshipper - boosted by devotion
-- Appartion - does not require food
+- Summun - does not have food upkeep
 - Pacifism - can't attack
 - Raiders - can't block
 - Flying - bonus vs melee
 - Archer - bonus vs Flying 20%
 - Melee - no bonus
 - Siege Engine - survives until the end of the round
-- ghoulish - take 50% less damage
-- deathtouch - 50% more damage to non-undead
+- Undead - take 30% less damage from non-worshipper
+- deathtouch - 50% more damage to non-summun
 - enrage - 30% more power when outnumbered
 - shields - 40% less damage from archer
-- Gluttony - 30% more food consumed
+- Gluttony - 30% more food upkeep
 
 
 # Army

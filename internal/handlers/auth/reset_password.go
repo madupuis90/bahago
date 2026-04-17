@@ -14,17 +14,14 @@ import (
 	"bahago/internal/database/db"
 	. "bahago/internal/layout"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
 // ── Reset password ──────────────────────────────────────────────────
 
 type ResetPasswordForm struct {
-	Token    signals.Signal[string] `json:"token"`
-	Password signals.Signal[string] `json:"password"`
+	Token    string `json:"token"`
+	Password string `json:"password"`
 }
-
-var resetPasswordSigDef = signals.NewSignalDef[ResetPasswordForm]()
 
 func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -33,22 +30,22 @@ func (h *handler) resetPasswordPage() http.HandlerFunc {
 			HomeLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
 			return
 		}
-		sigs := resetPasswordSigDef.New()
-		sigs.Token.Value = token
-		HomeLayout(r, "Reset Password", resetPasswordContent(sigs)).Render(w)
+		HomeLayout(r, "Reset Password", resetPasswordContent(token)).Render(w)
 	}
 }
 
-func resetPasswordContent(sigs ResetPasswordForm) Node {
+func resetPasswordContent(token string) Node {
 	return Div(Class("auth-card panel"),
-		ds.Signals(signals.SignalMap(sigs)),
+		ds.Signals(map[string]any{
+			"token":        token,
+			"showPassword": false,
+		}),
 		H1(Text("Choose a new password")),
 		Div(Class("form-fields"),
-			ds.Signals(map[string]any{"showPassword": false}),
 			Label(
 				Text("New password"),
 				Div(Class("password-field"),
-					Input(ds.Bind(sigs.Password.Key), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+					Input(ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 					Button(Class("btn-text"),
 						Type("button"),
 						ds.Text("$showPassword ? 'Hide' : 'Show'"),
@@ -73,13 +70,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 			return
 		}
 
-		if data.Token.Value == "" {
+		if data.Token == "" {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("missing token")})))
 			return
 		}
 
 		var errs []error
-		validatePassword(&errs, data.Password.Value)
+		validatePassword(&errs, data.Password)
 		if len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
 			return
@@ -95,13 +92,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		qtx := h.queries.WithTx(tx)
 
-		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token.Value)
+		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token)
 		if err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("reset link is invalid or has expired")})))
 			return
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password.Value), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("reset-password: bcrypt hash: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))

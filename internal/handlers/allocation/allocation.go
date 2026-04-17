@@ -19,22 +19,19 @@ import (
 	. "bahago/internal/layout"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-	"bahago/internal/signals"
 )
 
-// ── Signal struct ────────────────────────────────────────────────────────────
+// ── Input struct ─────────────────────────────────────────────────────────────
 
 type allocationSignals struct {
-	IdlePct      signals.Signal[int] `json:"idle_pct"`
-	WoodPct      signals.Signal[int] `json:"wood_pct"`
-	StonePct     signals.Signal[int] `json:"stone_pct"`
-	FoodPct      signals.Signal[int] `json:"food_pct"`
-	ManaPct      signals.Signal[int] `json:"mana_pct"`
-	DevotionPct  signals.Signal[int] `json:"devotion_pct"`
-	KnowledgePct signals.Signal[int] `json:"knowledge_pct"`
+	IdlePct      int `json:"idle_pct"`
+	WoodPct      int `json:"wood_pct"`
+	StonePct     int `json:"stone_pct"`
+	FoodPct      int `json:"food_pct"`
+	ManaPct      int `json:"mana_pct"`
+	DevotionPct  int `json:"devotion_pct"`
+	KnowledgePct int `json:"knowledge_pct"`
 }
-
-var sigDef = signals.NewSignalDef[allocationSignals]()
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -54,13 +51,6 @@ func newHandler(queries *db.Queries, tickHub *hub.Hub) *handler {
 	return &handler{queries: queries, hub: tickHub}
 }
 
-// ── Component IDs ─────────────────────────────────────────────────────────────
-
-const (
-	allocationContentID = "allocation-content"
-	allocationErrorID   = "allocation-error"
-)
-
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func (h *handler) handleAllocationPage() http.HandlerFunc {
@@ -73,8 +63,7 @@ func (h *handler) handleAllocationPage() http.HandlerFunc {
 			return
 		}
 		rates := game.ComputeRates(*kingdom, buildings)
-		sigs := sigsFromKingdom(*kingdom)
-		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(sigs, rates)).Render(w)
+		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(*kingdom, rates)).Render(w)
 	}
 }
 
@@ -98,7 +87,7 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 					return
 				}
 				rates := game.ComputeRates(k, buildings)
-				page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &k, allocationContent(sigsFromKingdom(k), rates))
+				page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &k, allocationContent(k, rates))
 				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
 					return
@@ -120,8 +109,8 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		}
 
 		values := []int{
-			input.WoodPct.Value, input.StonePct.Value, input.FoodPct.Value,
-			input.ManaPct.Value, input.DevotionPct.Value, input.KnowledgePct.Value,
+			input.WoodPct, input.StonePct, input.FoodPct,
+			input.ManaPct, input.DevotionPct, input.KnowledgePct,
 		}
 		for _, v := range values {
 			if v < 0 || v > 100 {
@@ -130,8 +119,8 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			}
 		}
 
-		total := input.WoodPct.Value + input.StonePct.Value + input.FoodPct.Value +
-			input.ManaPct.Value + input.DevotionPct.Value + input.KnowledgePct.Value
+		total := input.WoodPct + input.StonePct + input.FoodPct +
+			input.ManaPct + input.DevotionPct + input.KnowledgePct
 		if total > 100 {
 			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("allocation cannot exceed 100%")))
 			return
@@ -139,12 +128,12 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 
 		params := db.UpdateKingdomAllocationsParams{
 			UserID:       user.ID,
-			WoodPct:      input.WoodPct.Value,
-			StonePct:     input.StonePct.Value,
-			FoodPct:      input.FoodPct.Value,
-			ManaPct:      input.ManaPct.Value,
-			DevotionPct:  input.DevotionPct.Value,
-			KnowledgePct: input.KnowledgePct.Value,
+			WoodPct:      input.WoodPct,
+			StonePct:     input.StonePct,
+			FoodPct:      input.FoodPct,
+			ManaPct:      input.ManaPct,
+			DevotionPct:  input.DevotionPct,
+			KnowledgePct: input.KnowledgePct,
 			IdlePct:      100 - total,
 		}
 		updatedKingdom, err := h.queries.UpdateKingdomAllocations(r.Context(), params)
@@ -161,31 +150,28 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			return
 		}
 		rates := game.ComputeRates(updatedKingdom, buildings)
+		page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &updatedKingdom, allocationContent(updatedKingdom, rates))
 		sse := datastar.NewSSE(w, r)
-		sse.PatchElementGostar(allocationContent(sigsFromKingdom(updatedKingdom), rates))
-		sse.PatchElementGostar(allocationErrorComponent(nil))
+		if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+			log.Printf("save-allocation: patch: %v", err)
+		}
 	}
-}
-
-// sigsFromKingdom builds an allocationSignals from stored kingdom percentages.
-func sigsFromKingdom(k db.Kingdom) allocationSignals {
-	sigs := sigDef.New()
-	sigs.WoodPct.Value = k.WoodPct
-	sigs.StonePct.Value = k.StonePct
-	sigs.FoodPct.Value = k.FoodPct
-	sigs.ManaPct.Value = k.ManaPct
-	sigs.DevotionPct.Value = k.DevotionPct
-	sigs.KnowledgePct.Value = k.KnowledgePct
-	sigs.IdlePct.Value = k.IdlePct
-	return sigs
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-func allocationContent(sigs allocationSignals, rates game.ResourceRates) Node {
-	return Div(ID(allocationContentID),
+func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
+	return Div(
 		Div(ds.Init(datastar.GetSSE(routes.KingdomAllocationRefreshPath))),
-		ds.Signals(signals.SignalMap(sigs)),
+		ds.Signals(map[string]any{
+			"idle_pct":      kingdom.IdlePct,
+			"wood_pct":      kingdom.WoodPct,
+			"stone_pct":     kingdom.StonePct,
+			"food_pct":      kingdom.FoodPct,
+			"mana_pct":      kingdom.ManaPct,
+			"devotion_pct":  kingdom.DevotionPct,
+			"knowledge_pct": kingdom.KnowledgePct,
+		}),
 		Div(Class("allocation-card panel"),
 			Table(Class("allocation-table"),
 				THead(
@@ -200,13 +186,13 @@ func allocationContent(sigs allocationSignals, rates game.ResourceRates) Node {
 					),
 				),
 				TBody(
-					allocationRow("Woodcutter", sigs.WoodPct, "Wood", rates.WoodProduction, rates.WoodUpkeep),
-					allocationRow("Miner", sigs.StonePct, "Stone", rates.StoneProduction, rates.StoneUpkeep),
-					allocationRow("Farmer", sigs.FoodPct, "Food", rates.FoodProduction, rates.FoodUpkeep),
-					allocationRow("Clergy", sigs.DevotionPct, "Devotion", rates.DevotionProduction, rates.DevotionUpkeep),
-					allocationRow("Disciple", sigs.ManaPct, "Mana", rates.ManaProduction, rates.ManaUpkeep),
-					allocationRow("Scholar", sigs.KnowledgePct, "Knowledge", rates.KnowledgeProduction, rates.KnowledgeUpkeep),
-					idleRow(sigs, rates.PopulationProduction, rates.PopulationUpkeep),
+					allocationRow("Woodcutter", "wood_pct", "Wood", rates.WoodProduction, rates.WoodUpkeep),
+					allocationRow("Miner", "stone_pct", "Stone", rates.StoneProduction, rates.StoneUpkeep),
+					allocationRow("Farmer", "food_pct", "Food", rates.FoodProduction, rates.FoodUpkeep),
+					allocationRow("Clergy", "devotion_pct", "Devotion", rates.DevotionProduction, rates.DevotionUpkeep),
+					allocationRow("Disciple", "mana_pct", "Mana", rates.ManaProduction, rates.ManaUpkeep),
+					allocationRow("Scholar", "knowledge_pct", "Knowledge", rates.KnowledgeProduction, rates.KnowledgeUpkeep),
+					idleRow(rates.PopulationProduction, rates.PopulationUpkeep),
 				),
 			),
 			Div(Class("allocation-footer"),
@@ -225,22 +211,23 @@ func allocationErrorComponent(err error) Node {
 	if err != nil {
 		msg = err.Error()
 	}
-	return Div(ID(allocationErrorID), Text(msg))
+	return Div(ID("allocation-alert"), Text(msg))
 }
 
-func allocationRow(roleName string, sig signals.Signal[int], resourceLabel string, production, upkeep int) Node {
+func allocationRow(roleName string, key string, resourceLabel string, production, upkeep int) Node {
+	ref := "$" + key
 	net := production - upkeep
 	return Tr(
 		Td(Class("allocation-role"), Text(roleName)),
 		Td(Class("allocation-assignment"),
-			Button(Class("btn allocation-btn plus-five"), ds.On("click", sig.Ref+" = Math.max(0, "+sig.Ref+" - 5)"), Text("−5")),
-			Button(Class("btn allocation-btn"), ds.On("click", sig.Ref+" = Math.max(0, "+sig.Ref+" - 1)"), Text("−")),
-			Input(Type("range"), Min("0"), Max("100"), ds.Bind(sig.Key)),
-			Button(Class("btn allocation-btn"), ds.On("click", sig.Ref+" = Math.min(100, "+sig.Ref+" + 1)"), Text("+")),
-			Button(Class("btn allocation-btn plus-five"), ds.On("click", sig.Ref+" = Math.min(100, "+sig.Ref+" + 5)"), Text("+5")),
+			Button(Class("btn allocation-btn plus-five"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 5)", ref, ref)), Text("−5")),
+			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 1)", ref, ref)), Text("−")),
+			Input(Type("range"), Min("0"), Max("100"), ds.Bind(key)),
+			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 1)", ref, ref)), Text("+")),
+			Button(Class("btn allocation-btn plus-five"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 5)", ref, ref)), Text("+5")),
 		),
 		Td(Class("allocation-percentage"),
-			Span(ds.Text(sig.Ref)),
+			Span(ds.Text(ref)),
 			Span(Text("%")),
 		),
 		Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),
@@ -250,16 +237,9 @@ func allocationRow(roleName string, sig signals.Signal[int], resourceLabel strin
 	)
 }
 
-func idleRow(sigs allocationSignals, production, upkeep int) Node {
+func idleRow(production, upkeep int) Node {
 	net := production - upkeep
-	idleExpr := fmt.Sprintf("100 - (%s + %s + %s + %s + %s + %s)",
-		sigs.WoodPct.Ref,
-		sigs.StonePct.Ref,
-		sigs.KnowledgePct.Ref,
-		sigs.DevotionPct.Ref,
-		sigs.ManaPct.Ref,
-		sigs.FoodPct.Ref,
-	)
+	idleExpr := "100 - ($wood_pct + $stone_pct + $knowledge_pct + $devotion_pct + $mana_pct + $food_pct)"
 	return Group([]Node{
 		Tr(
 			Td(Text("---------")),
@@ -271,11 +251,11 @@ func idleRow(sigs allocationSignals, production, upkeep int) Node {
 			Td(Text("---------")),
 		),
 		Tr(
-			ds.Computed(sigs.IdlePct.Key, idleExpr),
+			ds.Computed("idle_pct", idleExpr),
 			Td(Class("allocation-role"), Text("Idle")),
 			Td(Class("allocation-assignment")),
 			Td(Class("allocation-percentage"),
-				Span(ds.Text(sigs.IdlePct.Ref)),
+				Span(ds.Text("$idle_pct")),
 				Span(Text("%")),
 			),
 			Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),

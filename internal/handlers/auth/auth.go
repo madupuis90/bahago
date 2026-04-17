@@ -65,15 +65,10 @@ func newHandler(queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, a
 
 // ── Shared templates & helpers ──────────────────────────────────────
 
-const (
-	authAlertID          = "auth-alert"
-	resendVerificationID = "resend-verification"
-)
-
 // alertComponent is the single SSE patch target for all auth feedback.
 // Always patch this — never patch errorComponent or successComponent directly.
 func alertComponent(inner Node) Node {
-	return Div(ID(authAlertID), inner)
+	return Div(ID("auth-alert"), inner)
 }
 
 // errorComponent returns the inner error content for use inside alertComponent.
