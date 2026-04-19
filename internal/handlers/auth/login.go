@@ -39,8 +39,8 @@ type LoginForm struct {
 func loginContent(verified bool, reset bool) Node {
 	return Div(Class("auth-card panel"),
 		H1(Text("Login")),
-		If(verified, P(Class("alert-success"), Text("Your email has been verified. You can now log in."))),
-		If(reset, P(Class("alert-success"), Text("Your password has been reset. You can now log in."))),
+		If(verified, P(Class("alert--success"), Text("Your email has been verified. You can now log in."))),
+		If(reset, P(Class("alert--success"), Text("Your password has been reset. You can now log in."))),
 		Div(Class("form-fields"),
 			Label(
 				Text("Email"),

@@ -82,6 +82,11 @@ tasks:
       - '{{.GOOSE}} -dir {{.MIGRATIONS_DIR}} create {{.CLI_ARGS}} sql'
 
   # --- Tool Aliases ---
+  seed:
+    desc: Seed the database with fake users and kingdoms for local development (e.g. task seed -- --count=500)
+    cmds:
+      - go run ./cmd/seed/main.go {{.CLI_ARGS}}
+
   air:
     desc: Alias for air
     cmds:

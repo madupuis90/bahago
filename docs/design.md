@@ -121,6 +121,12 @@ TODO (design): Is the alignment unlocked a bit later?
 - A successful combat outcome is determined based on who has the strongest army
 - The winner of a successful attack steals population from the loser
 
+# Game world
+
+## Map
+
+- The map is a 2d grid
+- Players have x and y position on the grid
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 

@@ -38,6 +38,8 @@ type Kingdom struct {
 	Knowledge    int
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	X            int
+	Y            int
 }
 
 type KingdomBuilding struct {

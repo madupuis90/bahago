@@ -322,7 +322,7 @@ func unitsTable(counts map[string]int, buildingCounts map[string]int) Node {
 }
 
 func unitRow(def game.UnitDef, count int, locked bool) Node {
-	return Tr(Classes{"unit-row-locked": locked},
+	return Tr(Classes{"unit-row--locked": locked},
 		Td(Text(def.Name)),
 		Td(Text(strconv.Itoa(count))),
 		Td(Text(strconv.Itoa(def.Cost.Wood))),
@@ -360,7 +360,7 @@ func summonTable(counts map[string]int, buildingCounts map[string]int) Node {
 }
 
 func summonRow(def game.UnitDef, count int, locked bool) Node {
-	return Tr(Classes{"unit-row-locked": locked},
+	return Tr(Classes{"unit-row--locked": locked},
 		Td(Text(def.Name)),
 		Td(Text(strconv.Itoa(count))),
 		Td(Text(strconv.Itoa(def.Cost.Mana))),

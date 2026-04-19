@@ -7,9 +7,14 @@ SELECT * FROM kingdoms
 WHERE id = $1;
 
 -- name: CreateKingdom :one
-INSERT INTO kingdoms (user_id, name)
-VALUES ($1, $2)
+INSERT INTO kingdoms (user_id, name, x, y)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
+
+-- name: GetKingdomsInViewport :many
+SELECT id, name, x, y FROM kingdoms
+WHERE x >= $1 AND x <= $2
+  AND y >= $3 AND y <= $4;
 
 -- name: UpdateKingdomAllocations :one
 UPDATE kingdoms

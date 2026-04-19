@@ -60,18 +60,25 @@ func (q *Queries) BulkTickKingdoms(ctx context.Context, arg BulkTickKingdomsPara
 }
 
 const createKingdom = `-- name: CreateKingdom :one
-INSERT INTO kingdoms (user_id, name)
-VALUES ($1, $2)
-RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at
+INSERT INTO kingdoms (user_id, name, x, y)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y
 `
 
 type CreateKingdomParams struct {
 	UserID int
 	Name   string
+	X      int
+	Y      int
 }
 
 func (q *Queries) CreateKingdom(ctx context.Context, arg CreateKingdomParams) (Kingdom, error) {
-	row := q.db.QueryRow(ctx, createKingdom, arg.UserID, arg.Name)
+	row := q.db.QueryRow(ctx, createKingdom,
+		arg.UserID,
+		arg.Name,
+		arg.X,
+		arg.Y,
+	)
 	var i Kingdom
 	err := row.Scan(
 		&i.ID,
@@ -93,12 +100,14 @@ func (q *Queries) CreateKingdom(ctx context.Context, arg CreateKingdomParams) (K
 		&i.Knowledge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.X,
+		&i.Y,
 	)
 	return i, err
 }
 
 const getKingdomByID = `-- name: GetKingdomByID :one
-SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
 WHERE id = $1
 `
 
@@ -125,12 +134,14 @@ func (q *Queries) GetKingdomByID(ctx context.Context, id int) (Kingdom, error) {
 		&i.Knowledge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.X,
+		&i.Y,
 	)
 	return i, err
 }
 
 const getKingdomByUserID = `-- name: GetKingdomByUserID :one
-SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
 WHERE user_id = $1
 `
 
@@ -157,12 +168,64 @@ func (q *Queries) GetKingdomByUserID(ctx context.Context, userID int) (Kingdom, 
 		&i.Knowledge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.X,
+		&i.Y,
 	)
 	return i, err
 }
 
+const getKingdomsInViewport = `-- name: GetKingdomsInViewport :many
+SELECT id, name, x, y FROM kingdoms
+WHERE x >= $1 AND x <= $2
+  AND y >= $3 AND y <= $4
+`
+
+type GetKingdomsInViewportParams struct {
+	X   int
+	X_2 int
+	Y   int
+	Y_2 int
+}
+
+type GetKingdomsInViewportRow struct {
+	ID   int
+	Name string
+	X    int
+	Y    int
+}
+
+func (q *Queries) GetKingdomsInViewport(ctx context.Context, arg GetKingdomsInViewportParams) ([]GetKingdomsInViewportRow, error) {
+	rows, err := q.db.Query(ctx, getKingdomsInViewport,
+		arg.X,
+		arg.X_2,
+		arg.Y,
+		arg.Y_2,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetKingdomsInViewportRow
+	for rows.Next() {
+		var i GetKingdomsInViewportRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.X,
+			&i.Y,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllKingdoms = `-- name: ListAllKingdoms :many
-SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at FROM kingdoms
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
 `
 
 func (q *Queries) ListAllKingdoms(ctx context.Context) ([]Kingdom, error) {
@@ -194,6 +257,8 @@ func (q *Queries) ListAllKingdoms(ctx context.Context) ([]Kingdom, error) {
 			&i.Knowledge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.X,
+			&i.Y,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +282,7 @@ SET
     idle_pct      = $8,
     updated_at    = NOW()
 WHERE user_id = $1
-RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at
+RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y
 `
 
 type UpdateKingdomAllocationsParams struct {
@@ -263,6 +328,8 @@ func (q *Queries) UpdateKingdomAllocations(ctx context.Context, arg UpdateKingdo
 		&i.Knowledge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.X,
+		&i.Y,
 	)
 	return i, err
 }

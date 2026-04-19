@@ -39,6 +39,11 @@
   --shadow-btn: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   --shadow-btn-hover: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   --shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.15);
+
+  /* World map — --map-page-size must match game.PageSize in internal/game/world.go */
+  --map-page-size: 8;
+  --map-cell-size: 4rem;
+  --map-wall-size: 3rem;
 }
 
 /* =============================================================================
@@ -231,7 +236,7 @@ input[type="range"] {
     }
   }
 
-  &.btn-locked {
+  &.btn--locked {
     background: rgba(0, 0, 0, 0.12);
     background-image: none;
     color: rgba(26, 16, 8, 0.5);
@@ -243,7 +248,7 @@ input[type="range"] {
     }
   }
 
-  &.btn-insufficient {
+  &.btn--insufficient {
     background: #c9844c;
     background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.1));
 
@@ -304,7 +309,7 @@ input[type="range"] {
   }
 }
 
-.alert-success {
+.alert--success {
   background: #d4edda;
   border: 1px solid #28a745;
   border-radius: 0.4rem;
@@ -312,7 +317,7 @@ input[type="range"] {
   color: #155724;
 }
 
-.alert-error {
+.alert--error {
   background: #f8d7da;
   border: 1px solid #dc3545;
   border-radius: 0.4rem;
@@ -410,7 +415,7 @@ input[type="range"] {
     box-shadow: var(--shadow-btn-hover);
   }
 
-  &.plus-five {
+  &.allocation-btn--plus-five {
     width: auto;
     padding: 0 0.35rem;
     border-radius: 0.7rem;
@@ -448,7 +453,7 @@ input[type="range"] {
   }
 }
 
-.building-locked {
+.building-card--locked {
   opacity: 0.65;
   filter: saturate(0.5);
 }
@@ -497,7 +502,7 @@ input[type="range"] {
     border-bottom: none;
   }
 
-  .unit-row-locked {
+  .unit-row--locked {
     opacity: 0.5;
     filter: saturate(0.4);
   }
@@ -529,7 +534,222 @@ input[type="range"] {
 }
 
 /* =============================================================================
-   11. Utilities
+   11. World Map
+   ============================================================================= */
+
+.map-page {
+  padding: 1.25rem;
+}
+
+.map-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.map-coords {
+  font-size: 0.8rem;
+  color: var(--panel-link-color);
+  margin-bottom: 1.5rem;
+}
+
+/* Outer flex layout: N above, [W grid E] in middle, S below */
+.map-grid-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: fit-content;
+}
+
+.map-grid-middle {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/*
+ * Diamond isometric container.
+ * The transform makes the 8×8 grid appear as a flat diamond viewed from above.
+ * No perspective — pure orthographic isometric (no foreshortening).
+ * overflow: visible lets the rotated diamond bleed outside its box.
+ */
+/*
+ * Width = grid diagonal = --map-page-size × cell × √2 ≈ 8 × 3.5rem × 1.415 ≈ 39.6rem.
+ * Sizing the container to the actual diamond width keeps W/E nav links
+ * visually outside the diamond — without this they sit behind the grid.
+ */
+.map-iso-container {
+  width: calc(var(--map-cell-size) * var(--map-page-size) * 1.415);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/*
+ * The 3D scene root. The isometric transform lives here so that child elements
+ * (grid top face + box walls) share the same 3D space via transform-style: preserve-3d.
+ */
+.map-iso-stage {
+  position: relative;
+  width: calc(var(--map-cell-size) * var(--map-page-size));
+  height: calc(var(--map-cell-size) * var(--map-page-size));
+  transform: rotateX(60deg) rotateZ(45deg);
+  transform-style: preserve-3d;
+}
+
+/* Top face — no transform needed, the stage handles it. */
+.map-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--map-page-size), var(--map-cell-size));
+  grid-template-rows: repeat(var(--map-page-size), var(--map-cell-size));
+  transform-style: preserve-3d;
+  /* Continuous surface gradient — replace with background-image for a texture later. */
+  background: linear-gradient(135deg, #9aba70 0%, #8aaa60 50%, #6a9040 100%);
+}
+
+/*
+ * South wall: placed immediately below the stage (top: 100%), so its top edge
+ * is exactly the stage's bottom edge — the hinge. transform-origin 0% 0%
+ * anchors rotation to that shared edge. rotateX(-90deg) swings the bottom
+ * away from the viewer, creating a face that drops straight down in 3D.
+ * Width extends by --map-wall-size to cover the bottom-right corner where
+ * the two walls meet.
+ */
+.map-box-wall--s {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: var(--map-wall-size);
+  background: #5c7a40;
+  transform-origin: 0% 0%;
+  transform: rotateX(-90deg);
+}
+
+/*
+ * East wall: placed immediately to the right of the stage (left: 100%), so
+ * its left edge is the stage's right edge — the hinge. rotateY(-90deg)
+ * swings the right side away from the viewer, creating a face flush with
+ * the south wall at the corner.
+ */
+.map-box-wall--e {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: var(--map-wall-size);
+  height: 100%;
+  background: #4a6830;
+  transform-origin: 0% 0%;
+  transform: rotateY(90deg);
+}
+
+.map-cell {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  transform-style: preserve-3d;
+  cursor: default;
+
+  &:hover {
+    outline: 2px solid rgba(255, 255, 255, 0.7);
+    outline-offset: -2px;
+  }
+
+  &.map-cell--occupied {
+    background: rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      outline-color: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  &.map-cell--own {
+    background: rgba(0, 0, 0, 0.2);
+    outline: 2px solid #ffdf60;
+    outline-offset: -2px;
+  }
+}
+
+/* Counter-transform: undoes rotateX(60deg)rotateZ(45deg) so icons are upright.
+   rotateZ(-45deg)rotateX(-60deg) is the exact inverse in CSS transform order. */
+.map-cell-content {
+  /* translateZ lifts the content above the top face in 3D before the counter-rotation. */
+  transform: translateZ(10px) rotateZ(-45deg) rotateX(-60deg);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.map-cell-tooltip {
+  display: none;
+  position: absolute;
+  left: calc(100% + 0.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: var(--panel-bg);
+  border: var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--panel-link-color);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.map-cell:hover .map-cell-tooltip {
+  display: block;
+}
+
+.map-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+  user-select: none;
+
+  &.map-icon--own {
+    color: #ffdf60;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Navigation links — shared base styles for both <a> and disabled <span> */
+.map-nav-btn {
+  display: inline-block;
+  background: var(--panel-bg);
+  border: var(--border);
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  font-size: 1rem;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--panel-link-color);
+
+  &:hover:not(.map-nav-btn--disabled) {
+    background: var(--panel-link-color);
+    color: #fff;
+  }
+
+  &.map-nav-btn--disabled {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  &.map-nav-btn--N,
+  &.map-nav-btn--S {
+    align-self: center;
+  }
+}
+
+/* =============================================================================
+   12. Utilities
    ============================================================================= */
 
 .text-positive {

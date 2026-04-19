@@ -285,7 +285,7 @@ func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.K
 		btnText = "Build"
 	}
 
-	return Div(Classes{"building-card": true, "panel": true, "building-locked": locked},
+	return Div(Classes{"building-card": true, "panel": true, "building-card--locked": locked},
 		H3(Text(def.Name)),
 		P(Text(fmt.Sprintf("%d / %d", count, def.MaxCount))),
 		If(len(def.BonusPctPer) > 0, P(Text(bonusText(def)))),
@@ -293,9 +293,9 @@ func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.K
 		If(!atMax, Group([]Node{
 			P(Text(costText(def.Cost) + " · " + fmt.Sprintf("%d ticks", def.Ticks))),
 			Button(Classes{
-				"btn":              true,
-				"btn-locked":       locked,
-				"btn-insufficient": !locked && !canAfford,
+				"btn":               true,
+				"btn--locked":       locked,
+				"btn--insufficient": !locked && !canAfford,
 			},
 				If(buildDisabled, Disabled()),
 				If(!buildDisabled, ds.On("click", startBuild(btype))),

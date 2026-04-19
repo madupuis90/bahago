@@ -77,7 +77,7 @@ func errorComponent(errs []error) Node {
 	if len(errs) == 0 {
 		return nil
 	}
-	return Div(Class("alert-error"),
+	return Div(Class("alert--error"),
 		Map(errs, func(e error) Node {
 			return P(Text(e.Error()))
 		}),
@@ -86,7 +86,7 @@ func errorComponent(errs []error) Node {
 
 // successComponent returns the inner success content for use inside alertComponent.
 func successComponent(msg string) Node {
-	return Div(Class("alert-success"),
+	return Div(Class("alert--success"),
 		P(Text(msg)),
 	)
 }

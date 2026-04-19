@@ -12,6 +12,7 @@ import (
 	"bahago/internal/handlers/kingdom"
 	"bahago/internal/handlers/kingdomsetup"
 	"bahago/internal/handlers/units"
+	"bahago/internal/handlers/worldmap"
 	"bahago/internal/hub"
 	"bahago/internal/middleware"
 	"bahago/internal/router"
@@ -70,6 +71,7 @@ func (s *Server) registerRoutes() {
 	allocation.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 	buildings.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	units.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
+	worldmap.RegisterRoutes(reqKingdomRouter, s.queries)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))

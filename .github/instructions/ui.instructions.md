@@ -197,6 +197,14 @@ New feature modules get their own numbered section between Allocation and Utilit
 .allocation-btn:active { transform: translateY(1px); }
 ```
 
+**CSS naming follows BEM modifier convention** — use double-dash (`--`) for state and variant modifiers, single-dash (`-`) for sub-elements and structural parts:
+- `.btn` — block
+- `.btn--locked` — modifier (state/variant of the block) ✓
+- `.building-card--locked` — modifier of `.building-card` ✓
+- `.map-cell-content` — sub-element of `.map-cell` (structural part, single-dash) ✓
+- `.map-nav-btn--disabled` — modifier (state) ✓
+- Never `.btn-locked` or `.building-locked` for modifiers — those look like separate blocks
+
 ## No string literals for paths
 
 All route path constants live in `internal/routes/`. Never write path strings inline in `Href`, `Action`, `ds.On`, `datastar.GetSSE`/`PostSSE`, or route registration — always reference the constant.

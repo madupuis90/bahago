@@ -22,6 +22,8 @@ const (
 	KingdomUnitsRefreshPath = "/kingdom/units/refresh"
 	KingdomUnitsTrainPath   = "/kingdom/units/train"
 
+	KingdomMapPath = "/kingdom/map"
+
 	LoginPath              = "/login"
 	RegisterPath           = "/register"
 	VerifyPath             = "/verify"

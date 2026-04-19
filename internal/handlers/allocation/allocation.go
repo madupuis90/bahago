@@ -220,11 +220,11 @@ func allocationRow(roleName string, key string, resourceLabel string, production
 	return Tr(
 		Td(Class("allocation-role"), Text(roleName)),
 		Td(Class("allocation-assignment"),
-			Button(Class("btn allocation-btn plus-five"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 5)", ref, ref)), Text("−5")),
+			Button(Class("btn allocation-btn allocation-btn--plus-five"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 5)", ref, ref)), Text("−5")),
 			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 1)", ref, ref)), Text("−")),
 			Input(Type("range"), Min("0"), Max("100"), ds.Bind(key)),
 			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 1)", ref, ref)), Text("+")),
-			Button(Class("btn allocation-btn plus-five"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 5)", ref, ref)), Text("+5")),
+			Button(Class("btn allocation-btn allocation-btn--plus-five"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 5)", ref, ref)), Text("+5")),
 		),
 		Td(Class("allocation-percentage"),
 			Span(ds.Text(ref)),

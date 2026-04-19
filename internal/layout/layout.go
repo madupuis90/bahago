@@ -159,6 +159,7 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
 			NavItem(routes.KingdomAllocationPath, "Allocation", currentPath),
 			NavItem(routes.KingdomBuildingsPath, "Buildings", currentPath),
 			NavItem(routes.KingdomUnitsPath, "Units", currentPath),
+			NavItem(routes.KingdomMapPath, "World Map", currentPath),
 		),
 	})
 }
