@@ -162,6 +162,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 
 func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 	return Div(
+		H1(Class("page-title"), Text("Allocation")),
 		Div(ds.Init(datastar.GetSSE(routes.KingdomAllocationRefreshPath))),
 		ds.Signals(map[string]any{
 			"idle_pct":      kingdom.IdlePct,
@@ -186,13 +187,13 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					),
 				),
 				TBody(
-					allocationRow("Woodcutter", "wood_pct", "Wood", rates.WoodProduction, rates.WoodUpkeep),
-					allocationRow("Miner", "stone_pct", "Stone", rates.StoneProduction, rates.StoneUpkeep),
-					allocationRow("Farmer", "food_pct", "Food", rates.FoodProduction, rates.FoodUpkeep),
-					allocationRow("Clergy", "devotion_pct", "Devotion", rates.DevotionProduction, rates.DevotionUpkeep),
-					allocationRow("Disciple", "mana_pct", "Mana", rates.ManaProduction, rates.ManaUpkeep),
-					allocationRow("Scholar", "knowledge_pct", "Knowledge", rates.KnowledgeProduction, rates.KnowledgeUpkeep),
-					idleRow(rates.PopulationProduction, rates.PopulationUpkeep),
+					allocationRow("Woodcutter", "wood_pct", "Wood", kingdom.WoodPct, rates.WoodProduction, rates.WoodUpkeep),
+					allocationRow("Miner", "stone_pct", "Stone", kingdom.StonePct, rates.StoneProduction, rates.StoneUpkeep),
+					allocationRow("Farmer", "food_pct", "Food", kingdom.FoodPct, rates.FoodProduction, rates.FoodUpkeep),
+					allocationRow("Clergy", "devotion_pct", "Devotion", kingdom.DevotionPct, rates.DevotionProduction, rates.DevotionUpkeep),
+					allocationRow("Disciple", "mana_pct", "Mana", kingdom.ManaPct, rates.ManaProduction, rates.ManaUpkeep),
+					allocationRow("Scholar", "knowledge_pct", "Knowledge", kingdom.KnowledgePct, rates.KnowledgeProduction, rates.KnowledgeUpkeep),
+					idleRow(kingdom.IdlePct, rates.PopulationProduction, rates.PopulationUpkeep),
 				),
 			),
 			Div(Class("allocation-footer"),
@@ -214,7 +215,7 @@ func allocationErrorComponent(err error) Node {
 	return Div(ID("allocation-alert"), Text(msg))
 }
 
-func allocationRow(roleName string, key string, resourceLabel string, production, upkeep int) Node {
+func allocationRow(roleName string, key string, resourceLabel string, initialValue int, production, upkeep int) Node {
 	ref := "$" + key
 	net := production - upkeep
 	return Tr(
@@ -222,12 +223,12 @@ func allocationRow(roleName string, key string, resourceLabel string, production
 		Td(Class("allocation-assignment"),
 			Button(Class("btn allocation-btn allocation-btn--plus-five"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 5)", ref, ref)), Text("−5")),
 			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 1)", ref, ref)), Text("−")),
-			Input(Type("range"), Min("0"), Max("100"), ds.Bind(key)),
+			Input(Type("range"), Min("0"), Max("100"), Value(fmt.Sprintf("%d", initialValue)), ds.Bind(key)),
 			Button(Class("btn allocation-btn"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 1)", ref, ref)), Text("+")),
 			Button(Class("btn allocation-btn allocation-btn--plus-five"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 5)", ref, ref)), Text("+5")),
 		),
 		Td(Class("allocation-percentage"),
-			Span(ds.Text(ref)),
+			Span(ds.Text(ref), Text(fmt.Sprintf("%d", initialValue))),
 			Span(Text("%")),
 		),
 		Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),
@@ -237,7 +238,7 @@ func allocationRow(roleName string, key string, resourceLabel string, production
 	)
 }
 
-func idleRow(production, upkeep int) Node {
+func idleRow(initialValue int, production, upkeep int) Node {
 	net := production - upkeep
 	idleExpr := "100 - ($wood_pct + $stone_pct + $knowledge_pct + $devotion_pct + $mana_pct + $food_pct)"
 	return Group([]Node{
@@ -255,7 +256,7 @@ func idleRow(production, upkeep int) Node {
 			Td(Class("allocation-role"), Text("Idle")),
 			Td(Class("allocation-assignment")),
 			Td(Class("allocation-percentage"),
-				Span(ds.Text("$idle_pct")),
+				Span(ds.Text("$idle_pct"), Text(fmt.Sprintf("%d", initialValue))),
 				Span(Text("%")),
 			),
 			Td(Classes{"allocation-production": true, "text-positive": production > 0}, Text(fmt.Sprintf("+%d", production))),

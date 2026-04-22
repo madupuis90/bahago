@@ -2,10 +2,10 @@
 CREATE TABLE kingdoms (
     id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id),
-    name    TEXT NOT NULL,
+    name    CITEXT NOT NULL UNIQUE,
 
     -- Population
-    population BIGINT NOT NULL DEFAULT 100,
+    population BIGINT NOT NULL DEFAULT 100 CHECK (population >= 0),
 
     -- Population allocation (must sum to 100; each value 0–100 enforced by constraint)
     wood_pct      INT NOT NULL DEFAULT 20 CHECK (wood_pct      BETWEEN 0 AND 100),
@@ -17,12 +17,12 @@ CREATE TABLE kingdoms (
     idle_pct      INT NOT NULL DEFAULT  5 CHECK (idle_pct      BETWEEN 0 AND 100),
 
     -- Resources
-    wood      BIGINT NOT NULL DEFAULT 0,
-    stone     BIGINT NOT NULL DEFAULT 0,
-    food      BIGINT NOT NULL DEFAULT 0,
-    mana      BIGINT NOT NULL DEFAULT 0,
-    devotion  BIGINT NOT NULL DEFAULT 0,
-    knowledge BIGINT NOT NULL DEFAULT 0,
+    wood      BIGINT NOT NULL DEFAULT 0 CHECK (wood      >= 0),
+    stone     BIGINT NOT NULL DEFAULT 0 CHECK (stone     >= 0),
+    food      BIGINT NOT NULL DEFAULT 0 CHECK (food      >= 0),
+    mana      BIGINT NOT NULL DEFAULT 0 CHECK (mana      >= 0),
+    devotion  BIGINT NOT NULL DEFAULT 0 CHECK (devotion  >= 0),
+    knowledge BIGINT NOT NULL DEFAULT 0 CHECK (knowledge >= 0),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

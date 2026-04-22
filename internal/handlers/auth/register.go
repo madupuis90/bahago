@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
@@ -106,7 +108,12 @@ func (h *handler) register() http.HandlerFunc {
 			PwHash: string(hashedPassword),
 		})
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("email already in use")})))
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+				datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("email already in use")})))
+				return
+			}
+			log.Printf("register: create user: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
 			return
 		}
 

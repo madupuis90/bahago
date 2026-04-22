@@ -7,7 +7,7 @@ applyTo: "**/*.go,**/go.mod,**/go.sum"
 
 Follow idiomatic Go practices based on [Effective Go](https://go.dev/doc/effective_go), [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments), and [Google's Go Style Guide](https://google.github.io/styleguide/go/).
 
-This project uses **Go 1.25**.
+This project uses **Go 1.26.1**. Always prefer features available in this version over legacy patterns — e.g. `errors.AsType[T]()` over manual `errors.As`, `range N` over `for i := 0; i < N; i++`, `slices`/`maps` stdlib packages over hand-rolled loops where appropriate.
 
 ## General Style
 
@@ -38,6 +38,7 @@ This project uses **Go 1.25**.
 - Short but descriptive names; single-letter variables only in very short scopes
 - Exported names start with a capital letter; unexported with lowercase
 - Avoid stuttering: prefer `http.Server` over `http.HTTPServer`
+- When looking up a `UnitDef` from `UnitDefs`, name the variable `unit` — never `def` (which shadows the built-in and is ambiguous)
 
 ### Interfaces
 - Use `-er` suffix when possible: `Reader`, `Writer`, `Formatter`
@@ -70,7 +71,7 @@ This project uses **Go 1.25**.
 - Always handle errors explicitly — never ignore with `_` without a documented reason
 - Check errors immediately after the call
 - Wrap with context: `fmt.Errorf("context: %w", err)`
-- Use `errors.Is()` and `errors.As()` for checking
+- Use `errors.Is()` and `errors.As()` for checking; use `errors.AsType[T]()` (Go 1.26+) when the target type is known at the call site — it's more concise than the `var target T; errors.As(err, &target)` pattern
 - Error variables named `err`; error messages lowercase with no trailing punctuation
 - Return errors rather than panicking (except init or truly unrecoverable situations)
 - Don't both log and return an error — choose one

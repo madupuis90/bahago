@@ -10,7 +10,31 @@ import (
 	"time"
 )
 
-const decrementAndListCompletedTraining = `-- name: DecrementAndListCompletedTraining :many
+const bulkDeductKingdomUnitsCasualties = `-- name: BulkDeductKingdomUnitsCasualties :exec
+UPDATE kingdom_units
+SET count = GREATEST(0, count - data.casualties), updated_at = NOW()
+FROM (
+    SELECT
+        unnest($1::bigint[]) AS kingdom_id,
+        unnest($2::text[])    AS unit_type,
+        unnest($3::int[])     AS casualties
+) AS data
+WHERE kingdom_units.kingdom_id = data.kingdom_id
+  AND kingdom_units.unit_type  = data.unit_type
+`
+
+type BulkDeductKingdomUnitsCasualtiesParams struct {
+	KingdomIds []int
+	UnitTypes  []string
+	Casualties []int
+}
+
+func (q *Queries) BulkDeductKingdomUnitsCasualties(ctx context.Context, arg BulkDeductKingdomUnitsCasualtiesParams) error {
+	_, err := q.db.Exec(ctx, bulkDeductKingdomUnitsCasualties, arg.KingdomIds, arg.UnitTypes, arg.Casualties)
+	return err
+}
+
+const decrementAndListTrainingAtZero = `-- name: DecrementAndListTrainingAtZero :many
 WITH decremented AS (
     UPDATE kingdom_training
     SET ticks_remaining = ticks_remaining - 1
@@ -20,7 +44,7 @@ WITH decremented AS (
 SELECT id, kingdom_id, unit_type, count, ticks_remaining, ticks_total, started_at FROM decremented WHERE ticks_remaining = 0
 `
 
-type DecrementAndListCompletedTrainingRow struct {
+type DecrementAndListTrainingAtZeroRow struct {
 	ID             int
 	KingdomID      int
 	UnitType       string
@@ -30,15 +54,15 @@ type DecrementAndListCompletedTrainingRow struct {
 	StartedAt      time.Time
 }
 
-func (q *Queries) DecrementAndListCompletedTraining(ctx context.Context) ([]DecrementAndListCompletedTrainingRow, error) {
-	rows, err := q.db.Query(ctx, decrementAndListCompletedTraining)
+func (q *Queries) DecrementAndListTrainingAtZero(ctx context.Context) ([]DecrementAndListTrainingAtZeroRow, error) {
+	rows, err := q.db.Query(ctx, decrementAndListTrainingAtZero)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DecrementAndListCompletedTrainingRow
+	var items []DecrementAndListTrainingAtZeroRow
 	for rows.Next() {
-		var i DecrementAndListCompletedTrainingRow
+		var i DecrementAndListTrainingAtZeroRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.KingdomID,
@@ -56,6 +80,24 @@ func (q *Queries) DecrementAndListCompletedTraining(ctx context.Context) ([]Decr
 		return nil, err
 	}
 	return items, nil
+}
+
+const deductKingdomUnitsCasualties = `-- name: DeductKingdomUnitsCasualties :exec
+UPDATE kingdom_units
+SET count = GREATEST(0, count - $1), updated_at = NOW()
+WHERE kingdom_id = $2
+  AND unit_type = $3
+`
+
+type DeductKingdomUnitsCasualtiesParams struct {
+	Casualties int
+	KingdomID  int
+	UnitType   string
+}
+
+func (q *Queries) DeductKingdomUnitsCasualties(ctx context.Context, arg DeductKingdomUnitsCasualtiesParams) error {
+	_, err := q.db.Exec(ctx, deductKingdomUnitsCasualties, arg.Casualties, arg.KingdomID, arg.UnitType)
+	return err
 }
 
 const deductUnitCost = `-- name: DeductUnitCost :one
@@ -121,6 +163,64 @@ func (q *Queries) GetAllKingdomUnits(ctx context.Context) ([]KingdomUnit, error)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAvailableKingdomUnits = `-- name: GetAvailableKingdomUnits :many
+SELECT unit_type, count FROM kingdom_available_units
+WHERE kingdom_id = $1
+`
+
+type GetAvailableKingdomUnitsRow struct {
+	UnitType string
+	Count    int
+}
+
+// Returns available unit counts for a kingdom via the kingdom_available_units view.
+// A unit is available if it is not committed to any campaign (any status).
+func (q *Queries) GetAvailableKingdomUnits(ctx context.Context, kingdomID int) ([]GetAvailableKingdomUnitsRow, error) {
+	rows, err := q.db.Query(ctx, getAvailableKingdomUnits, kingdomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAvailableKingdomUnitsRow
+	for rows.Next() {
+		var i GetAvailableKingdomUnitsRow
+		if err := rows.Scan(&i.UnitType, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAvailableKingdomUnitsByIDs = `-- name: GetAvailableKingdomUnitsByIDs :many
+SELECT kingdom_id, unit_type, count FROM kingdom_available_units
+WHERE kingdom_id = ANY($1::bigint[])
+`
+
+// Bulk version of GetAvailableKingdomUnits for the combat tick.
+func (q *Queries) GetAvailableKingdomUnitsByIDs(ctx context.Context, ids []int) ([]KingdomAvailableUnit, error) {
+	rows, err := q.db.Query(ctx, getAvailableKingdomUnitsByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []KingdomAvailableUnit
+	for rows.Next() {
+		var i KingdomAvailableUnit
+		if err := rows.Scan(&i.KingdomID, &i.UnitType, &i.Count); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -87,8 +87,8 @@ func tileURL(tileX, tileY int) string {
 }
 
 func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int) Node {
-	return Div(Class("map-page"),
-		H1(Class("map-title"), Text("World Map")),
+	return Group([]Node{
+		H1(Class("page-title"), Text("World Map")),
 		P(Class("map-coords"),
 			Text(fmt.Sprintf("Page %d, %d  —  Tiles %d-%d, %d-%d",
 				pageX+1, pageY+1,
@@ -97,7 +97,7 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 			)),
 		),
 		mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0),
-	)
+	})
 }
 
 // mapGrid renders the 8×8 diamond isometric tile grid with surrounding nav links.

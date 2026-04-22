@@ -106,6 +106,11 @@ input[type="range"] {
   accent-color: var(--btn-bg);
 }
 
+h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
 /* =============================================================================
    4. Layout
    ============================================================================= */
@@ -172,6 +177,10 @@ input[type="range"] {
 /* =============================================================================
    5. Shared components
    ============================================================================= */
+
+.page-title {
+  margin-bottom: 1.5rem;
+}
 
 .panel {
   background: var(--panel-bg);
@@ -309,6 +318,12 @@ input[type="range"] {
   }
 }
 
+.panel-title {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+}
+
 .alert--success {
   background: #d4edda;
   border: 1px solid #28a745;
@@ -368,6 +383,85 @@ input[type="range"] {
   .kingdom-stat-value {
     font-variant-numeric: tabular-nums;
   }
+}
+
+.kingdom-combat-log {
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.kingdom-combat-log-empty {
+  font-style: italic;
+  opacity: 0.55;
+}
+
+.kingdom-combat-log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.kingdom-combat-log-date {
+  text-align: center;
+  font-size: 0.8rem;
+  opacity: 0.55;
+}
+
+.kingdom-combat-log-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.5rem;
+  row-gap: 0.5rem;
+  align-items: start;
+}
+
+.kingdom-combat-log-side-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  opacity: 0.55;
+  text-align: center;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid transparent;
+
+  &.kingdom-combat-log-side-title--winner {
+    opacity: 1;
+    color: var(--color-positive);
+    border-bottom-color: var(--color-positive);
+  }
+}
+
+.kingdom-combat-log-side-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+}
+
+.kingdom-combat-log-section-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kingdom-combat-log-empty-note {
+  font-style: italic;
+  opacity: 0.45;
+  font-size: 0.85rem;
+}
+
+.kingdom-combat-log-footer {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-positive);
 }
 
 /* =============================================================================
@@ -440,7 +534,7 @@ input[type="range"] {
   flex-direction: column;
   gap: 0.5rem;
 
-  & h3 {
+  & .panel-title {
     font-size: 1rem;
     font-weight: bold;
     margin-bottom: 0.25rem;
@@ -475,7 +569,7 @@ input[type="range"] {
   margin-top: 1.5rem;
   padding: 1.25rem;
 
-  & h2 {
+  & .panel-title {
     font-size: 1rem;
     font-weight: bold;
     margin-bottom: 0.75rem;
@@ -513,7 +607,7 @@ input[type="range"] {
   padding: 1.25rem;
   display: inline-block;
 
-  & h2 {
+  & .panel-title {
     font-size: 1rem;
     font-weight: bold;
     margin-bottom: 0.75rem;
@@ -536,16 +630,6 @@ input[type="range"] {
 /* =============================================================================
    11. World Map
    ============================================================================= */
-
-.map-page {
-  padding: 1.25rem;
-}
-
-.map-title {
-  font-size: 1.25rem;
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-}
 
 .map-coords {
   font-size: 0.8rem;
@@ -595,6 +679,7 @@ input[type="range"] {
   position: relative;
   width: calc(var(--map-cell-size) * var(--map-page-size));
   height: calc(var(--map-cell-size) * var(--map-page-size));
+
   transform: rotateX(60deg) rotateZ(45deg);
   transform-style: preserve-3d;
 }
@@ -650,7 +735,7 @@ input[type="range"] {
 .map-cell {
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: transparent;
-  transform-style: preserve-3d;
+  transform-style: flat;
   cursor: default;
 
   &:hover {
@@ -673,11 +758,14 @@ input[type="range"] {
   }
 }
 
-/* Counter-transform: undoes rotateX(60deg)rotateZ(45deg) so icons are upright.
-   rotateZ(-45deg)rotateX(-60deg) is the exact inverse in CSS transform order. */
+/*
+ * 2D inverse of the isometric projection (rotateX(60deg) rotateZ(45deg)).
+ * CSS `rotate(-45deg) scaleY(2)` computes to the matrix M⁻¹; combined with the
+ * stage's M the net transform is identity, so content appears upright at natural
+ * scale in screen space — no 3D transforms involved, so Firefox handles it fine.
+ */
 .map-cell-content {
-  /* translateZ lifts the content above the top face in 3D before the counter-rotation. */
-  transform: translateZ(10px) rotateZ(-45deg) rotateX(-60deg);
+  transform: rotate(-45deg) scaleY(2) translateY(-10%);
   position: relative;
   display: flex;
   align-items: center;
@@ -749,7 +837,129 @@ input[type="range"] {
 }
 
 /* =============================================================================
-   12. Utilities
+   11. Army
+   ============================================================================= */
+
+.army-section {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+
+  & .panel-title {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.army-empty {
+  color: var(--panel-link-color);
+  opacity: 0.6;
+}
+
+.army-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  & th,
+  & td {
+    padding: 0.4rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  & th {
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+  }
+
+  & tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.army-form {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  max-width: 28rem;
+
+  & label {
+    font-weight: 600;
+  }
+
+  & select,
+  & input[type="number"] {
+    width: 100%;
+  }
+
+  & .btn {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 0.25rem;
+  }
+}
+
+/* =============================================================================
+   12. Home
+   ============================================================================= */
+
+.flip-scene {
+  width: 192px;
+  height: 288px;
+  perspective: 600px;
+  margin-top: 1.5rem;
+  cursor: pointer;
+}
+
+.flip-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 1s;
+  transform-style: preserve-3d;
+  transform-origin: center left;
+}
+
+.flip-card--flipped {
+  transform: translateX(100%) rotateY(-180deg);
+}
+
+.flip-card__face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #6b1010;
+  border-radius: 25px;
+  box-shadow: var(--panel-shadow);
+  backface-visibility: hidden;
+  user-select: none;
+  overflow: hidden;
+
+  &.flip-card__face--front {
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    & img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &.flip-card__face--back {
+    background-color: #1a1008;
+    background-image:
+      linear-gradient(to right, transparent calc(50% - 6px), #c9a84c calc(50% - 6px), #c9a84c calc(50% + 6px), transparent calc(50% + 6px)),
+      linear-gradient(to bottom, transparent calc(50% - 6px), #c9a84c calc(50% - 6px), #c9a84c calc(50% + 6px), transparent calc(50% + 6px));
+    transform: rotateY(180deg);
+  }
+}
+
+/* =============================================================================
+   13. Utilities
    ============================================================================= */
 
 .text-positive {

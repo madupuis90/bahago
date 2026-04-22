@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	. "maragu.dev/gomponents"
+	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
@@ -44,6 +45,23 @@ func (h *handler) handleHomePage() http.HandlerFunc {
 
 func homeContent() Node {
 	return Group([]Node{
-		H1(Text("Home Page")),
+		H1(Class("page-title"), Text("Home Page")),
+		flipCard(),
 	})
+}
+
+func flipCard() Node {
+	return Div(Class("flip-scene"),
+		ds.Signals(map[string]any{
+			"flipped": true,
+		}),
+		Div(Class("flip-card flip-card--flipped"),
+			ds.Class("'flip-card--flipped'", "$flipped"),
+			ds.On("click", "$flipped = !$flipped"),
+			Div(Class("flip-card__face flip-card__face--front"),
+				Img(Src("/static/swordman.png"), Alt("Knight")),
+			),
+			Div(Class("flip-card__face flip-card__face--back")),
+		),
+	)
 }

@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
@@ -112,9 +114,35 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 			return
 		}
 
-		// One active construction at a time — enforced here in Go, not at the DB level,
-		// so that a future perk can raise this limit without a schema change.
-		existing, err := loadConstruction(r, h.queries, kingdom.ID)
+		// Prerequisite check (outside tx — no concurrency concern here).
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("start construction: get buildings: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
+			return
+		}
+		counts := game.BuildingCountMap(buildings)
+		if !game.CanBuild(btype, counts) {
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("building is not available")))
+			return
+		}
+
+		// SERIALIZABLE transaction: the construction count read and the insert must
+		// share the same transaction so PostgreSQL SSI detects concurrent double-starts.
+		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+		if err != nil {
+			log.Printf("start construction: begin tx: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
+			return
+		}
+		defer tx.Rollback(r.Context()) //nolint:errcheck
+
+		txq := db.New(tx)
+
+		// One active construction at a time — enforced inside the serializable tx so
+		// concurrent requests cannot both pass the check simultaneously.
+		// A future perk can raise this limit without a schema change.
+		existing, err := loadConstruction(r, txq, kingdom.ID)
 		if err != nil {
 			log.Printf("start construction: get construction: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
@@ -124,29 +152,6 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("construction already in progress")))
 			return
 		}
-
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("start construction: get buildings: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
-			return
-		}
-
-		counts := game.BuildingCountMap(buildings)
-		if !game.CanBuild(btype, counts) {
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("building is not available")))
-			return
-		}
-
-		tx, err := h.pool.Begin(r.Context())
-		if err != nil {
-			log.Printf("start construction: begin tx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
-			return
-		}
-		defer tx.Rollback(r.Context()) //nolint:errcheck
-
-		txq := db.New(tx)
 		_, err = txq.DeductBuildingCost(r.Context(), db.DeductBuildingCostParams{
 			KingdomID:     kingdom.ID,
 			WoodCost:      def.Cost.Wood,
@@ -177,6 +182,10 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 		}
 
 		if err := tx.Commit(r.Context()); err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
+				datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("construction already in progress")))
+				return
+			}
 			log.Printf("start construction: commit: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
 			return
@@ -235,6 +244,7 @@ func loadConstruction(r *http.Request, queries *db.Queries, kingdomID int) (*db.
 func buildingsContent(kingdom *db.Kingdom, buildings []db.KingdomBuilding, construction *db.KingdomConstruction) Node {
 	counts := game.BuildingCountMap(buildings)
 	return Div(
+		H1(Class("page-title"), Text("Buildings")),
 		Div(ds.Init(datastar.GetSSE(routes.KingdomBuildingsRefreshPath))),
 		buildingsErrorComponent(nil),
 		Iff(construction != nil, func() Node { return activeConstructionBanner(construction) }),
@@ -286,7 +296,7 @@ func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.K
 	}
 
 	return Div(Classes{"building-card": true, "panel": true, "building-card--locked": locked},
-		H3(Text(def.Name)),
+		P(Class("panel-title"), Text(def.Name)),
 		P(Text(fmt.Sprintf("%d / %d", count, def.MaxCount))),
 		If(len(def.BonusPctPer) > 0, P(Text(bonusText(def)))),
 		If(locked, P(Text(prereqText(def)))),

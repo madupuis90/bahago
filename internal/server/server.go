@@ -5,6 +5,7 @@ import (
 	"bahago/internal/email"
 	"bahago/internal/game"
 	"bahago/internal/handlers/allocation"
+	"bahago/internal/handlers/army"
 	"bahago/internal/handlers/auth"
 	"bahago/internal/handlers/buildings"
 	"bahago/internal/handlers/chat"
@@ -71,6 +72,7 @@ func (s *Server) registerRoutes() {
 	allocation.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 	buildings.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	units.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
+	army.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	worldmap.RegisterRoutes(reqKingdomRouter, s.queries)
 
 	// static assets — embedded into the binary at compile time
@@ -86,5 +88,5 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // StartGameTicker begins the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func (s *Server) StartGameTicker(ctx context.Context) {
-	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 15*time.Second)
+	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 1*time.Second)
 }

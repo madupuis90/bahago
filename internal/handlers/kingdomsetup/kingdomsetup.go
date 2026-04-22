@@ -11,6 +11,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -93,6 +95,10 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 			X:      x,
 			Y:      y,
 		}); err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+				datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("that kingdom name is already taken")})))
+				return
+			}
 			log.Printf("create kingdom: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create kingdom")})))
 			return

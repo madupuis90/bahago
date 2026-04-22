@@ -48,6 +48,12 @@ See `.github/instructions/ui.instructions.md`. **Always read this file before ma
 - Use parameterized queries (never string concatenation)
 - Generated code goes in `internal/database/db/` - never edit it manually
 
+### Tick query performance
+- Avoid N queries inside the tick loop — each per-row query multiplies with player count
+- Prefer bulk queries: collect IDs/values in Go, then issue a single `WHERE id = ANY($1)` query
+- Use CTEs with `RETURNING` to decrement and collect completed rows in one round trip (see `DecrementAndList*AtZero` pattern)
+- When a loop update is unavoidable, document why a bulk alternative wasn't possible
+
 ### Migrations with goose
 - All migrations in `internal/database/migrations/`
 - Create migrations using task commands (see Taskfile.yml for available commands)
@@ -57,6 +63,15 @@ See `.github/instructions/ui.instructions.md`. **Always read this file before ma
 - Run migrations with `task db:up` and `task db:down`
 - Test migrations both up and down before committing
 - Never modify existing migrations that have been deployed
+
+### CHECK constraint style
+- **Inline** for simple single-column numeric bounds: `count INT NOT NULL CHECK (count >= 0)`
+- **Named constraint** for enumeration checks and multi-column checks — these are likely to be altered as the domain grows:
+  ```sql
+  CONSTRAINT missions_action_valid CHECK (action IN ('attack', 'defend')),
+  CONSTRAINT sessions_expiry_future CHECK (expires_at > created_at)
+  ```
+- Never mix both styles on the same column
 
 ## Project Structure
 

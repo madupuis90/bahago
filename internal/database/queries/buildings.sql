@@ -22,7 +22,7 @@ DO UPDATE SET
 INSERT INTO kingdom_constructions (kingdom_id, building_type, ticks_remaining, ticks_total)
 VALUES ($1, $2, $3, $3);
 
--- name: DecrementAndListCompleted :many
+-- name: DecrementAndListConstructionAtZero :many
 WITH decremented AS (
     UPDATE kingdom_constructions
     SET ticks_remaining = ticks_remaining - 1

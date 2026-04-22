@@ -6,6 +6,10 @@ WHERE user_id = $1;
 SELECT * FROM kingdoms
 WHERE id = $1;
 
+-- name: GetKingdomByName :one
+SELECT * FROM kingdoms
+WHERE name = $1;
+
 -- name: CreateKingdom :one
 INSERT INTO kingdoms (user_id, name, x, y)
 VALUES ($1, $2, $3, $4)
@@ -32,6 +36,29 @@ RETURNING *;
 
 -- name: ListAllKingdoms :many
 SELECT * FROM kingdoms;
+
+-- name: GetKingdomsByIDs :many
+SELECT * FROM kingdoms
+WHERE id = ANY(@ids::bigint[]);
+
+-- name: ListOtherKingdoms :many
+SELECT id, name FROM kingdoms
+WHERE id != $1
+ORDER BY name;
+
+-- name: BulkGainKingdomPopulation :exec
+UPDATE kingdoms
+SET population = population + data.gain
+FROM (
+    SELECT unnest(@ids::bigint[]) AS id,
+           unnest(@gains::int[])  AS gain
+) AS data
+WHERE kingdoms.id = data.id;
+
+-- name: StealKingdomPopulation :exec
+UPDATE kingdoms
+SET population = GREATEST(100, population - $2)
+WHERE id = $1;
 
 -- name: BulkTickKingdoms :exec
 UPDATE kingdoms

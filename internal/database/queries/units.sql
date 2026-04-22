@@ -2,6 +2,17 @@
 SELECT * FROM kingdom_units
 WHERE kingdom_id = $1;
 
+-- name: GetAvailableKingdomUnits :many
+-- Returns available unit counts for a kingdom via the kingdom_available_units view.
+-- A unit is available if it is not committed to any campaign (any status).
+SELECT unit_type, count FROM kingdom_available_units
+WHERE kingdom_id = $1;
+
+-- name: GetAvailableKingdomUnitsByIDs :many
+-- Bulk version of GetAvailableKingdomUnits for the combat tick.
+SELECT kingdom_id, unit_type, count FROM kingdom_available_units
+WHERE kingdom_id = ANY(@ids::bigint[]);
+
 -- name: GetAllKingdomUnits :many
 SELECT * FROM kingdom_units
 ORDER BY kingdom_id;
@@ -34,7 +45,7 @@ WHERE kingdom_id = $1;
 INSERT INTO kingdom_training (kingdom_id, unit_type, count, ticks_remaining, ticks_total)
 VALUES ($1, $2, $3, $4, $4);
 
--- name: DecrementAndListCompletedTraining :many
+-- name: DecrementAndListTrainingAtZero :many
 WITH decremented AS (
     UPDATE kingdom_training
     SET ticks_remaining = ticks_remaining - 1
@@ -46,3 +57,21 @@ SELECT * FROM decremented WHERE ticks_remaining = 0;
 -- name: DeleteTraining :exec
 DELETE FROM kingdom_training
 WHERE kingdom_id = $1;
+
+-- name: DeductKingdomUnitsCasualties :exec
+UPDATE kingdom_units
+SET count = GREATEST(0, count - @casualties), updated_at = NOW()
+WHERE kingdom_id = @kingdom_id
+  AND unit_type = @unit_type;
+
+-- name: BulkDeductKingdomUnitsCasualties :exec
+UPDATE kingdom_units
+SET count = GREATEST(0, count - data.casualties), updated_at = NOW()
+FROM (
+    SELECT
+        unnest(@kingdom_ids::bigint[]) AS kingdom_id,
+        unnest(@unit_types::text[])    AS unit_type,
+        unnest(@casualties::int[])     AS casualties
+) AS data
+WHERE kingdom_units.kingdom_id = data.kingdom_id
+  AND kingdom_units.unit_type  = data.unit_type;

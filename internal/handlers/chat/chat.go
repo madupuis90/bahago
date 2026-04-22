@@ -118,7 +118,7 @@ var containerId = "messages-container"
 
 func chatContent() Node {
 	return Group([]Node{
-		H1(Text("Let's chat!")),
+		H1(Class("page-title"), Text("Let's chat!")),
 		Div(ID(containerId), ds.Init(datastar.GetSSE("/chat/read")),
 			Text("Waiting for messages..."),
 		),

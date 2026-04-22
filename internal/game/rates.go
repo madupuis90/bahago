@@ -130,5 +130,8 @@ func starvationLoss(population, food, foodProduction, foodUpkeep int) int {
 	if deficit <= 0 {
 		return 0
 	}
-	return population * deficit / (foodUpkeep * starvationDivisor)
+	// Use float64 to avoid int64 overflow when population and deficit are both large.
+	// At ~47B population and ~1.6B upkeep, population*deficit ≈ 7.4×10¹⁹ which exceeds
+	// int64 max (9.2×10¹⁸). float64 precision is sufficient for game purposes.
+	return int(float64(population) * float64(deficit) / (float64(foodUpkeep) * float64(starvationDivisor)))
 }

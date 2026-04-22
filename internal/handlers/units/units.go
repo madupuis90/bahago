@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
@@ -145,25 +147,17 @@ func (h *handler) handleTrain() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("count must be at least 1")))
 			return
 		}
+		if count > game.MaxUnitInput {
+			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("count is too large")))
+			return
+		}
 
 		if unit.IsSummon && !game.CanTrainSummons(*kingdom) {
 			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("summons not unlocked")))
 			return
 		}
 
-		// One active training order at a time — enforced here in Go, not at the DB level,
-		// so that a future perk can raise this limit without a schema change.
-		existing, err := loadTraining(r, h.queries, kingdom.ID)
-		if err != nil {
-			log.Printf("train: check existing training: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-		if existing != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("training already in progress")))
-			return
-		}
-
+		// Prerequisite check (outside tx — no concurrency concern here).
 		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("train: get buildings: %v", err)
@@ -176,7 +170,9 @@ func (h *handler) handleTrain() http.HandlerFunc {
 			return
 		}
 
-		tx, err := h.pool.Begin(r.Context())
+		// SERIALIZABLE transaction: the training count read and the insert must
+		// share the same transaction so PostgreSQL SSI detects concurrent double-starts.
+		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
 		if err != nil {
 			log.Printf("train: begin tx: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
@@ -185,6 +181,20 @@ func (h *handler) handleTrain() http.HandlerFunc {
 		defer tx.Rollback(r.Context())
 
 		txq := db.New(tx)
+
+		// One active training order at a time — enforced inside the serializable tx so
+		// concurrent requests cannot both pass the check simultaneously.
+		// A future perk can raise this limit without a schema change.
+		existing, err := loadTraining(r, txq, kingdom.ID)
+		if err != nil {
+			log.Printf("train: check existing training: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			return
+		}
+		if existing != nil {
+			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("training already in progress")))
+			return
+		}
 		costParams := db.DeductUnitCostParams{
 			KingdomID: kingdom.ID,
 			WoodCost:  unit.Cost.Wood * count,
@@ -214,6 +224,10 @@ func (h *handler) handleTrain() http.HandlerFunc {
 		}
 
 		if err := tx.Commit(r.Context()); err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
+				datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("training already in progress")))
+				return
+			}
 			log.Printf("train: commit: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
 			return
@@ -276,6 +290,7 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 	canSummon := game.CanTrainSummons(*kingdom)
 
 	return Div(
+		H1(Class("page-title"), Text("Units")),
 		Div(ds.Init(datastar.GetSSE(routes.KingdomUnitsRefreshPath))),
 		unitsErrorComponent(nil),
 		Iff(training != nil, func() Node { return activeTrainingBanner(training) }),
@@ -288,7 +303,7 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 func activeTrainingBanner(t *db.KingdomTraining) Node {
 	def := game.UnitDefs[t.UnitType]
 	progress := fmt.Sprintf("%d / %d ticks remaining", t.TicksRemaining, t.TicksTotal)
-	return Div(Class("training-banner panel"),
+	return Div(Class("construction-banner panel"),
 		Span(Text(fmt.Sprintf("Training: %d × %s", t.Count, def.Name))),
 		Span(Text(progress)),
 	)
@@ -296,7 +311,7 @@ func activeTrainingBanner(t *db.KingdomTraining) Node {
 
 func unitsTable(counts map[string]int, buildingCounts map[string]int) Node {
 	return Div(Class("units-section panel"),
-		H2(Text("Units")),
+		P(Class("panel-title"), Text("Units")),
 		Table(Class("units-table"),
 			THead(
 				Tr(
@@ -335,7 +350,7 @@ func unitRow(def game.UnitDef, count int, locked bool) Node {
 
 func summonTable(counts map[string]int, buildingCounts map[string]int) Node {
 	return Div(Class("units-section panel"),
-		H2(Text("Summons")),
+		P(Class("panel-title"), Text("Summons")),
 		Table(Class("units-table"),
 			THead(
 				Tr(
@@ -384,8 +399,11 @@ func trainForm(buildingCounts map[string]int, canSummon bool, busy bool) Node {
 	}
 
 	return Div(Class("units-train-form panel"),
-		ds.Signals(map[string]any{"costs": costs}),
-		H2(Text("Train Units")),
+		ds.Signals(map[string]any{
+			"costs":     costs,
+			"unit_type": unitNames[0],
+		}),
+		P(Class("panel-title"), Text("Train Units")),
 		Div(Class("units-train-fields"),
 			Label(For("unit-type-select"), Text("Unit type")),
 			Select(

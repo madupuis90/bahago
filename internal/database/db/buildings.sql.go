@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const decrementAndListCompleted = `-- name: DecrementAndListCompleted :many
+const decrementAndListConstructionAtZero = `-- name: DecrementAndListConstructionAtZero :many
 WITH decremented AS (
     UPDATE kingdom_constructions
     SET ticks_remaining = ticks_remaining - 1
@@ -20,7 +20,7 @@ WITH decremented AS (
 SELECT id, kingdom_id, building_type, ticks_remaining, ticks_total, started_at FROM decremented WHERE ticks_remaining = 0
 `
 
-type DecrementAndListCompletedRow struct {
+type DecrementAndListConstructionAtZeroRow struct {
 	ID             int
 	KingdomID      int
 	BuildingType   string
@@ -29,15 +29,15 @@ type DecrementAndListCompletedRow struct {
 	StartedAt      time.Time
 }
 
-func (q *Queries) DecrementAndListCompleted(ctx context.Context) ([]DecrementAndListCompletedRow, error) {
-	rows, err := q.db.Query(ctx, decrementAndListCompleted)
+func (q *Queries) DecrementAndListConstructionAtZero(ctx context.Context) ([]DecrementAndListConstructionAtZeroRow, error) {
+	rows, err := q.db.Query(ctx, decrementAndListConstructionAtZero)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DecrementAndListCompletedRow
+	var items []DecrementAndListConstructionAtZeroRow
 	for rows.Next() {
-		var i DecrementAndListCompletedRow
+		var i DecrementAndListConstructionAtZeroRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.KingdomID,

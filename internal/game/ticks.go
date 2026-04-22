@@ -19,6 +19,14 @@ import (
 func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom)) error {
 	q := db.New(pool)
 
+	// Record this tick in the database first so every event in this tick can
+	// reference it. The returned ID is the authoritative tick number.
+	tickID, err := q.InsertTick(ctx)
+	if err != nil {
+		return fmt.Errorf("tick: insert tick: %w", err)
+	}
+	log.Printf("tick #%d", tickID)
+
 	kingdoms, err := q.ListAllKingdoms(ctx)
 	if err != nil {
 		return fmt.Errorf("tick: list kingdoms: %w", err)
@@ -65,7 +73,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 
 	// Complete constructions after resource allocation — buildings that finish
 	// this tick contribute their bonus starting next tick.
-	completed, err := q.DecrementAndListCompleted(ctx)
+	completed, err := q.DecrementAndListConstructionAtZero(ctx)
 	if err != nil {
 		return fmt.Errorf("tick: decrement constructions: %w", err)
 	}
@@ -76,7 +84,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	}
 
 	// Complete training batches — units arrive at the end of the tick they finish.
-	completedTraining, err := q.DecrementAndListCompletedTraining(ctx)
+	completedTraining, err := q.DecrementAndListTrainingAtZero(ctx)
 	if err != nil {
 		return fmt.Errorf("tick: decrement training: %w", err)
 	}
@@ -86,15 +94,26 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		}
 	}
 
-	// Notify after a successful DB write — values already computed in params.
-	for i, k := range kingdoms {
-		k.Wood = params.Wood[i]
-		k.Stone = params.Stone[i]
-		k.Food = params.Food[i]
-		k.Mana = params.Mana[i]
-		k.Devotion = params.Devotion[i]
-		k.Knowledge = params.Knowledge[i]
-		k.Population = params.Population[i]
+	// Advance campaign states (movement, status transitions).
+	if err := AdvanceCampaigns(ctx, q); err != nil {
+		return fmt.Errorf("tick: advance campaigns: %w", err)
+	}
+
+	// Resolve combat for all active campaigns on a 4-tick boundary.
+	// AdvanceCampaigns runs first, so freshly activated campaigns (ticks_remaining = action_ticks)
+	// fire their first combat round on the same tick they arrive. This is intentional:
+	// arrival and first strike are simultaneous.
+	if err := ResolveCombat(ctx, pool, q, tickID); err != nil {
+		return fmt.Errorf("tick: resolve combat: %w", err)
+	}
+
+	// Single authoritative notify — reads post-everything state from DB so
+	// values reflect resources, completed constructions/training, and combat.
+	finalKingdoms, err := q.ListAllKingdoms(ctx)
+	if err != nil {
+		return fmt.Errorf("tick: final notify fetch: %w", err)
+	}
+	for _, k := range finalKingdoms {
 		notify(k)
 	}
 	return nil
@@ -104,7 +123,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 // construction row. Using a transaction prevents a double-increment if the process
 // dies between the two writes — the row would otherwise remain at ticks_remaining=0
 // and be picked up again on the next tick.
-func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.DecrementAndListCompletedRow) error {
+func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.DecrementAndListConstructionAtZeroRow) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin: %w", err)
@@ -126,7 +145,7 @@ func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.Decremen
 }
 
 // completeTraining atomically adds the trained units and removes the training row.
-func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAndListCompletedTrainingRow) error {
+func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAndListTrainingAtZeroRow) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin: %w", err)
@@ -164,16 +183,22 @@ func fetchAllKingdomBuildings(ctx context.Context, q *db.Queries, kingdoms []db.
 // StartTicker starts the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func StartTicker(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom), interval time.Duration) {
+	q := db.New(pool)
+
+	// Restore tick counter from DB so logging is continuous across restarts.
+	latestTickID, err := q.GetLatestTickID(ctx)
+	if err != nil {
+		// No rows means the game is starting fresh — begin at tick 0.
+		latestTickID = 0
+	}
+	log.Printf("game ticker started at tick %d (interval: %s)", latestTickID, interval)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	log.Printf("game ticker started (interval: %s)", interval)
-	counter := 0
 	for {
 		select {
 		case <-ticker.C:
-			counter++
-			log.Printf("tick #%d", counter)
 			if err := ProcessTick(ctx, pool, notify); err != nil {
 				log.Printf("tick error: %v", err)
 			}

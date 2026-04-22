@@ -18,6 +18,11 @@ type EmailVerificationToken struct {
 	CreatedAt time.Time
 }
 
+type GameTick struct {
+	ID         int
+	OccurredAt time.Time
+}
+
 type Kingdom struct {
 	ID           int
 	UserID       int
@@ -42,12 +47,54 @@ type Kingdom struct {
 	Y            int
 }
 
+type KingdomAvailableUnit struct {
+	KingdomID int
+	UnitType  string
+	Count     int
+}
+
 type KingdomBuilding struct {
 	KingdomID    int
 	BuildingType string
 	Count        int
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+type KingdomCampaign struct {
+	ID              int
+	KingdomID       int
+	TargetKingdomID int
+	UnitType        string
+	Count           int
+	Action          string
+	Status          string
+	TicksRemaining  int
+	ActionTicks     int
+	TravelTicks     int
+	CreatedAt       time.Time
+}
+
+type KingdomCombatLog struct {
+	ID                 int
+	TickID             int
+	TargetKingdomID    int
+	AttackerUnits      []byte
+	DefenderUnits      []byte
+	AttackerPower      int
+	DefenderPower      int
+	Winner             string
+	AttackerCasualties int
+	DefenderCasualties int
+	PopulationStolen   int
+	OccurredAt         time.Time
+}
+
+type KingdomCombatLogParticipant struct {
+	CombatLogID      int
+	KingdomID        int
+	Role             string
+	PopulationGained int
 }
 
 type KingdomConstruction struct {

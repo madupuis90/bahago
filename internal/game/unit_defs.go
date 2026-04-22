@@ -2,6 +2,9 @@ package game
 
 import "bahago/internal/database/db"
 
+// MaxUnitInput is the upper bound on the unit count accepted in a single training or campaign order to prevent overflow
+const MaxUnitInput = 1<<31 - 1
+
 // Attribute is a conditional modifier applied to a unit during combat or upkeep calculation.
 type Attribute string
 

@@ -24,6 +24,11 @@ const (
 
 	KingdomMapPath = "/kingdom/map"
 
+	KingdomArmyPath        = "/kingdom/army"
+	KingdomArmyRefreshPath = "/kingdom/army/refresh"
+	KingdomArmySendPath    = "/kingdom/army/send"
+	KingdomArmyCancelPath  = "/kingdom/army/cancel"
+
 	LoginPath              = "/login"
 	RegisterPath           = "/register"
 	VerifyPath             = "/verify"

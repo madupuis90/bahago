@@ -1,0 +1,3 @@
+Code Review:
+
+I would like you to review the code of the last features we added. Related to campaigns and combat. You can use git to read the diffs we have made. You can use the instructions to make sure they are applied properly. Try to flag anything that we might have forgotten in terms of feature, error message, feedback to the user, design/architecture problems. discrepencies or illogical code path, anti-patterns, security concerns, unclear variable names etc. I will take the time with you to review even small details, although we will focus on bigger tasks  first. 

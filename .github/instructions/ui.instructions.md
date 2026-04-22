@@ -205,6 +205,27 @@ New feature modules get their own numbered section between Allocation and Utilit
 - `.map-nav-btn--disabled` — modifier (state) ✓
 - Never `.btn-locked` or `.building-locked` for modifiers — those look like separate blocks
 
+## Heading structure
+
+Each page has exactly one `H1` — the page title. Never use heading elements (`H2`–`H6`) purely for visual styling (bold label, larger font inside a panel). Use `P(Class("panel-title"), ...)` instead, styled via `.panel-title` in CSS.
+
+```go
+// Good — H1 once per page, panel sections use .panel-title
+H1(Text("Army")),
+Div(Class("army-section panel"),
+    P(Class("panel-title"), Text("Active Campaigns")),
+    ...
+)
+
+// Bad — H2 used only for visual weight, no semantic hierarchy
+Div(Class("army-section panel"),
+    H2(Text("Active Campaigns")),
+    ...
+)
+```
+
+Never skip levels: `H1` → `H2` → `H3`. If a nested element needs a label, check whether a semantic heading is actually appropriate before reaching for an `H` element.
+
 ## No string literals for paths
 
 All route path constants live in `internal/routes/`. Never write path strings inline in `Href`, `Action`, `ds.On`, `datastar.GetSSE`/`PostSSE`, or route registration — always reference the constant.
@@ -329,6 +350,14 @@ ds.Bind("signalName")
 - The signal has a non-zero/non-empty initial value (e.g. a token pre-populated from the URL)
 - The signal has no corresponding `ds.Bind` (e.g. a `showPassword` bool toggled by a button)
 
+> **`<select>` elements with string option values must always be pre-initialized in `ds.Signals`.** Datastar preserves the type of a pre-existing signal — if the signal is already a string, bound values stay strings. But if no signal exists yet, Datastar has no type to preserve and coerces the element's value numerically, turning `"recruit"` into `NaN`. Setting `Value("recruit")` as an HTML attribute does not help — the type comes from the signal store, not the element. Always declare the signal in `ds.Signals` before the select's `ds.Bind` is encountered in the DOM:
+> ```go
+> ds.Signals(map[string]any{
+>     "unit_type": unitNames[0], // seeds the signal as a string
+> }),
+> Select(ds.Bind("unit_type"), ...)
+> ```
+
 ```go
 // Wrong — email/password are initialized to "" by ds.Bind; ds.Signals is redundant
 ds.Signals(map[string]any{
@@ -351,7 +380,7 @@ Input(ds.Bind("password"), ...),
 ds.Show("$visible")                        // show/hide element
 ds.Text("$count")                          // reactive text content
 ds.Attr("disabled", "$loading", "title", "$tooltip")  // key-value pairs
-ds.Class("active", "$isActive", "hidden", "$hidden")  // key-value pairs
+ds.Class("active", "$isActive", "hidden", "$hidden")  // key-value pairs — wrap hyphenated names in single quotes: ds.Class("'flip-card--flipped'", "$flipped")
 ds.Style("color", "$usingRed ? 'red' : 'green'")      // key-value pairs
 ds.Computed("total", "$price * $quantity")             // read-only derived signal
 ds.Effect("$debug = $a + $b")             // side effects on signal change

@@ -5,7 +5,9 @@ CREATE TABLE sessions (
   ip_address INET NOT NULL,
   user_agent TEXT NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT sessions_expiry_future CHECK (expires_at > created_at)
 );
 
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);

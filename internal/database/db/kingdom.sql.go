@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const bulkGainKingdomPopulation = `-- name: BulkGainKingdomPopulation :exec
+UPDATE kingdoms
+SET population = population + data.gain
+FROM (
+    SELECT unnest($1::bigint[]) AS id,
+           unnest($2::int[])  AS gain
+) AS data
+WHERE kingdoms.id = data.id
+`
+
+type BulkGainKingdomPopulationParams struct {
+	Ids   []int
+	Gains []int
+}
+
+func (q *Queries) BulkGainKingdomPopulation(ctx context.Context, arg BulkGainKingdomPopulationParams) error {
+	_, err := q.db.Exec(ctx, bulkGainKingdomPopulation, arg.Ids, arg.Gains)
+	return err
+}
+
 const bulkTickKingdoms = `-- name: BulkTickKingdoms :exec
 UPDATE kingdoms
 SET
@@ -140,6 +160,40 @@ func (q *Queries) GetKingdomByID(ctx context.Context, id int) (Kingdom, error) {
 	return i, err
 }
 
+const getKingdomByName = `-- name: GetKingdomByName :one
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
+WHERE name = $1
+`
+
+func (q *Queries) GetKingdomByName(ctx context.Context, name string) (Kingdom, error) {
+	row := q.db.QueryRow(ctx, getKingdomByName, name)
+	var i Kingdom
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Population,
+		&i.WoodPct,
+		&i.StonePct,
+		&i.FoodPct,
+		&i.ManaPct,
+		&i.DevotionPct,
+		&i.KnowledgePct,
+		&i.IdlePct,
+		&i.Wood,
+		&i.Stone,
+		&i.Food,
+		&i.Mana,
+		&i.Devotion,
+		&i.Knowledge,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.X,
+		&i.Y,
+	)
+	return i, err
+}
+
 const getKingdomByUserID = `-- name: GetKingdomByUserID :one
 SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
 WHERE user_id = $1
@@ -172,6 +226,53 @@ func (q *Queries) GetKingdomByUserID(ctx context.Context, userID int) (Kingdom, 
 		&i.Y,
 	)
 	return i, err
+}
+
+const getKingdomsByIDs = `-- name: GetKingdomsByIDs :many
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
+WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) GetKingdomsByIDs(ctx context.Context, ids []int) ([]Kingdom, error) {
+	rows, err := q.db.Query(ctx, getKingdomsByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Kingdom
+	for rows.Next() {
+		var i Kingdom
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Population,
+			&i.WoodPct,
+			&i.StonePct,
+			&i.FoodPct,
+			&i.ManaPct,
+			&i.DevotionPct,
+			&i.KnowledgePct,
+			&i.IdlePct,
+			&i.Wood,
+			&i.Stone,
+			&i.Food,
+			&i.Mana,
+			&i.Devotion,
+			&i.Knowledge,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.X,
+			&i.Y,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getKingdomsInViewport = `-- name: GetKingdomsInViewport :many
@@ -268,6 +369,53 @@ func (q *Queries) ListAllKingdoms(ctx context.Context) ([]Kingdom, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listOtherKingdoms = `-- name: ListOtherKingdoms :many
+SELECT id, name FROM kingdoms
+WHERE id != $1
+ORDER BY name
+`
+
+type ListOtherKingdomsRow struct {
+	ID   int
+	Name string
+}
+
+func (q *Queries) ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error) {
+	rows, err := q.db.Query(ctx, listOtherKingdoms, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOtherKingdomsRow
+	for rows.Next() {
+		var i ListOtherKingdomsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const stealKingdomPopulation = `-- name: StealKingdomPopulation :exec
+UPDATE kingdoms
+SET population = GREATEST(100, population - $2)
+WHERE id = $1
+`
+
+type StealKingdomPopulationParams struct {
+	ID         int
+	Population int
+}
+
+func (q *Queries) StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error {
+	_, err := q.db.Exec(ctx, stealKingdomPopulation, arg.ID, arg.Population)
+	return err
 }
 
 const updateKingdomAllocations = `-- name: UpdateKingdomAllocations :one
