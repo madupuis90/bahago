@@ -31,7 +31,7 @@ func TravelTicks(x1, y1, x2, y2 int) int {
 
 // AdvanceCampaigns decrements all campaigns and transitions those that hit zero:
 // en_route → active → returning → deleted
-func AdvanceCampaigns(ctx context.Context, q *db.Queries) error {
+func AdvanceCampaigns(ctx context.Context, q db.Querier) error {
 	atZero, err := q.DecrementAndListCampaignsAtZero(ctx)
 	if err != nil {
 		return fmt.Errorf("campaigns: decrement: %w", err)

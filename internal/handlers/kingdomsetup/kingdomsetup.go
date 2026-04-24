@@ -36,14 +36,14 @@ type kingdomCreateForm struct {
 
 // ── Route registration ────────────────────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries) {
+func RegisterRoutes(r router.Router, queries db.Querier) {
 	h := &handler{queries: queries}
 	r.HandleFunc("GET "+routes.KingdomSetupPath, h.handleSetupPage())
 	r.HandleFunc("POST "+routes.KingdomCreatePath, h.handleCreateKingdom())
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 // distribution centred on WorldSize/2 with a sigma that grows with population
 // (sqrt-scaled, floored at 5) until it finds a tile that is free.
 // One DB round-trip; no error-code inspection; no retry on DB errors.
-func pickFreePosition(ctx context.Context, queries *db.Queries) (int, int, error) {
+func pickFreePosition(ctx context.Context, queries db.Querier) (int, int, error) {
 	const centre = float64(game.WorldSize) / 2
 
 	taken, err := queries.GetKingdomsInViewport(ctx, db.GetKingdomsInViewportParams{

@@ -54,6 +54,17 @@ func totalUnitPower(unitType string, count int) int {
 	return unit.Power * count
 }
 
+// computeLossRatios returns the fraction of units each side should lose given the
+// two power totals. Both ratios are zero when either side has no power (no combat).
+// Each ratio is capped at 0.9 so the losing side is never fully wiped in one round.
+func computeLossRatios(atkPow, defPow int) (atkLoss, defLoss float64) {
+	if atkPow > 0 && defPow > 0 {
+		atkLoss = min(float64(defPow)/float64(atkPow)*0.3, 0.9)
+		defLoss = min(float64(atkPow)/float64(defPow)*0.3, 0.9)
+	}
+	return
+}
+
 // resolveCombatAtKingdom runs one combat round between all attackers and defenders
 // (both campaign-based defenders and the target's home army) at the given kingdom.
 // All data is pre-fetched by the caller; this function only performs writes.
@@ -61,7 +72,7 @@ func totalUnitPower(unitType string, count int) int {
 // either side and combat is skipped.
 func resolveCombatAtKingdom(
 	ctx context.Context,
-	q *db.Queries,
+	q db.Querier,
 	targetKingdom db.Kingdom,
 	targetAvailableUnits []db.KingdomAvailableUnit,
 	attackers []db.KingdomCampaign,
@@ -88,20 +99,7 @@ func resolveCombatAtKingdom(
 	}
 
 	// Loss ratios: each side loses proportional to the opponent's power advantage.
-	atkLoss := 0.0
-	if defPow > 0 && atkPow > 0 {
-		atkLoss = float64(defPow) / float64(atkPow) * 0.3
-		if atkLoss > 0.9 {
-			atkLoss = 0.9
-		}
-	}
-	defLoss := 0.0
-	if atkPow > 0 && defPow > 0 {
-		defLoss = float64(atkPow) / float64(defPow) * 0.3
-		if defLoss > 0.9 {
-			defLoss = 0.9
-		}
-	}
+	atkLoss, defLoss := computeLossRatios(atkPow, defPow)
 
 	// ── Phase 1: compute all outcomes ────────────────────────────────────────
 
@@ -342,7 +340,7 @@ func resolveCombatAtKingdom(
 
 // ResolveCombat fires one combat round per target kingdom with active campaigns.
 // Each round runs in its own transaction — a failure rolls back that kingdom only.
-func ResolveCombat(ctx context.Context, pool *pgxpool.Pool, q *db.Queries, tickID int) error {
+func ResolveCombat(ctx context.Context, pool *pgxpool.Pool, q db.Querier, tickID int) error {
 	combatReady, err := q.GetActiveCampaignsReadyForCombat(ctx)
 	if err != nil {
 		return fmt.Errorf("combat: get combat-ready: %w", err)

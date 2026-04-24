@@ -101,7 +101,7 @@ func (h *handler) register() http.HandlerFunc {
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
 
-		qtx := h.queries.WithTx(tx)
+		qtx := db.New(tx)
 
 		userID, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
 			Email:  data.Email,

@@ -32,6 +32,20 @@ See `.github/instructions/go.instructions.md` — auto-loaded for all `.go` file
 
 See `.github/instructions/ui.instructions.md`. **Always read this file before making any change that involves gomponents, element IDs, signal names, SSE responses, or HTML templates.** The rules there (no string literals for IDs, paths, or signal names) must be applied proactively, not just when a violation is pointed out.
 
+## SQL & Migration Best Practices
+
+See `.github/instructions/sql.instructions.md`. **Always read this file before writing or reviewing SQL query files or migrations.** Covers sqlc naming conventions, bulk operation patterns, migration rules, and PostgreSQL type defaults.
+
+## Testing Best Practices
+
+See `.github/instructions/testing.instructions.md`. **Always read this file before writing or reviewing test files.** Covers the DB integration test pattern (`WithRollback`, `TestMain`), the stub querier pattern for handler tests, and `CaptureRouter` usage.
+
+## UI Test Plans
+
+See `.github/instructions/ui-test-plans.instructions.md`. **Always read this file when asked to run a UI test plan.** Test plan files live in `test/ui/<feature>.md`. When asked to run a plan, start `task dev` if needed, log in with the precondition account (password: `12345678`), then execute steps and report PASS/FAIL per step.
+
+When making changes to a feature that has a test plan file, run all plans in that file after the changes are complete. If any plan fails, stop and report the failure to the user — do not silently ignore it, do not auto-fix the plan, and do not proceed with further changes until the user decides how to handle it.
+
 ## Database Practices
 
 ### Connection Management
@@ -167,13 +181,14 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 
 ## Code Review Workflow
 
-When asked to do a code review, the expected workflow is:
+See `.github/instructions/review.instructions.md` for the full checklist. **Always read this file when asked to do a code review.**
+
+The workflow is:
 1. Run `git log --oneline` to identify the commits belonging to the feature being reviewed
 2. Run `git diff <first-commit>^..HEAD` to pull the full diff of those changes
 3. Read all changed files in full before forming any opinion
 4. Present a structured review: what looks good, what needs to change (with specific file/line references), and any questions
 5. Work through each issue with the user one at a time — do not batch-fix everything at once
-6. Check reviewed code against all active instructions (this file + `go.instructions.md` + `ui.instructions.md`)
 
 Note: the project currently commits directly to main (solo dev, one feature at a time). If branches are introduced in the future, use `git diff main...HEAD` instead.
 

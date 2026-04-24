@@ -20,13 +20,13 @@ import (
 )
 
 // RegisterRoutes wires the world map handler into the router.
-func RegisterRoutes(r router.Router, queries *db.Queries) {
+func RegisterRoutes(r router.Router, queries db.Querier) {
 	h := &handler{queries: queries}
 	r.HandleFunc("GET "+routes.KingdomMapPath, h.handleMapPage())
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 }
 
 // handleMapPage reads optional ?x=N&y=M tile-space query params.

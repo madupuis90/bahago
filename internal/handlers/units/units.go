@@ -37,7 +37,7 @@ type trainInput struct {
 
 // ── Route registration ────────────────────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) {
+func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) {
 	h := newHandler(queries, pool, tickHub)
 	r.HandleFunc("GET "+routes.KingdomUnitsPath, h.handleUnitsPage())
 	r.HandleFunc("GET "+routes.KingdomUnitsRefreshPath, h.handleUnitsRefresh())
@@ -45,12 +45,12 @@ func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, ti
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 	pool    *pgxpool.Pool
 	hub     *hub.Hub
 }
 
-func newHandler(queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) *handler {
+func newHandler(queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) *handler {
 	return &handler{queries: queries, pool: pool, hub: tickHub}
 }
 
@@ -271,7 +271,7 @@ func (h *handler) handleTrain() http.HandlerFunc {
 
 // loadTraining fetches the active training order for a kingdom.
 // Returns (nil, nil) if no training is active, (nil, err) on a real DB error.
-func loadTraining(r *http.Request, queries *db.Queries, kingdomID int) (*db.KingdomTraining, error) {
+func loadTraining(r *http.Request, queries db.Querier, kingdomID int) (*db.KingdomTraining, error) {
 	t, err := queries.GetKingdomTraining(r.Context(), kingdomID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

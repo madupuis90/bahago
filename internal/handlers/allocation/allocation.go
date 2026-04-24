@@ -35,7 +35,7 @@ type allocationSignals struct {
 
 // ── Route registration ────────────────────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries, tickHub *hub.Hub) {
+func RegisterRoutes(r router.Router, queries db.Querier, tickHub *hub.Hub) {
 	h := newHandler(queries, tickHub)
 	r.HandleFunc("GET "+routes.KingdomAllocationPath, h.handleAllocationPage())
 	r.HandleFunc("POST "+routes.KingdomAllocationSavePath, h.handleSaveAllocation())
@@ -43,11 +43,11 @@ func RegisterRoutes(r router.Router, queries *db.Queries, tickHub *hub.Hub) {
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 	hub     *hub.Hub
 }
 
-func newHandler(queries *db.Queries, tickHub *hub.Hub) *handler {
+func newHandler(queries db.Querier, tickHub *hub.Hub) *handler {
 	return &handler{queries: queries, hub: tickHub}
 }
 

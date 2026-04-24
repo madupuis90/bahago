@@ -32,7 +32,7 @@ const (
 
 // ── Routing & handler setup ─────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, appURL string) {
+func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, appURL string) {
 	h := newHandler(queries, pool, sender, appURL)
 	r.HandleFunc("GET "+routes.LoginPath, h.loginPage())
 	r.HandleFunc("GET "+routes.RegisterPath, h.registerPage())
@@ -48,13 +48,13 @@ func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, se
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 	pool    *pgxpool.Pool
 	sender  *email.Sender
 	appURL  string
 }
 
-func newHandler(queries *db.Queries, pool *pgxpool.Pool, sender *email.Sender, appURL string) *handler {
+func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, appURL string) *handler {
 	return &handler{
 		queries: queries,
 		pool:    pool,

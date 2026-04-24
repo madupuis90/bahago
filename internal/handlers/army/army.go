@@ -42,7 +42,7 @@ type cancelInput struct {
 
 // ── Route registration ────────────────────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) {
+func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) {
 	h := &handler{queries: queries, pool: pool, hub: tickHub}
 	r.HandleFunc("GET "+routes.KingdomArmyPath, h.handleArmyPage())
 	r.HandleFunc("GET "+routes.KingdomArmyRefreshPath, h.handleArmyRefresh())
@@ -51,7 +51,7 @@ func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, ti
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 	pool    *pgxpool.Pool
 	hub     *hub.Hub
 }
@@ -112,7 +112,6 @@ func (h *handler) handleSend() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid request")))
 			return
 		}
-		fmt.Println(input)
 		if _, ok := game.UnitDefs[input.UnitType]; !ok {
 			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("unknown unit type")))
 			return

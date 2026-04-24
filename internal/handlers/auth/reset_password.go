@@ -90,7 +90,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
 
-		qtx := h.queries.WithTx(tx)
+		qtx := db.New(tx)
 
 		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token)
 		if err != nil {

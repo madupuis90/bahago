@@ -29,7 +29,7 @@ import (
 
 // ── Route registration ────────────────────────────────────────────────────────
 
-func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) {
+func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) {
 	h := newHandler(queries, pool, tickHub)
 	r.HandleFunc("GET "+routes.KingdomBuildingsPath, h.handleBuildingsPage())
 	r.HandleFunc("GET "+routes.KingdomBuildingsRefreshPath, h.handleBuildingsRefresh())
@@ -37,12 +37,12 @@ func RegisterRoutes(r router.Router, queries *db.Queries, pool *pgxpool.Pool, ti
 }
 
 type handler struct {
-	queries *db.Queries
+	queries db.Querier
 	pool    *pgxpool.Pool
 	hub     *hub.Hub
 }
 
-func newHandler(queries *db.Queries, pool *pgxpool.Pool, tickHub *hub.Hub) *handler {
+func newHandler(queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) *handler {
 	return &handler{queries: queries, pool: pool, hub: tickHub}
 }
 
@@ -228,7 +228,7 @@ func startBuild(btype string) string {
 
 // loadConstruction fetches the active construction for a kingdom.
 // Returns (nil, nil) if no construction is active, (nil, err) on a real DB error.
-func loadConstruction(r *http.Request, queries *db.Queries, kingdomID int) (*db.KingdomConstruction, error) {
+func loadConstruction(r *http.Request, queries db.Querier, kingdomID int) (*db.KingdomConstruction, error) {
 	c, err := queries.GetKingdomConstruction(r.Context(), kingdomID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

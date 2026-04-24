@@ -168,7 +168,7 @@ func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAnd
 
 // fetchAllKingdomBuildings returns a map from kingdom ID to its buildings.
 // Uses a single query for all kingdoms to avoid N+1 queries during the tick.
-func fetchAllKingdomBuildings(ctx context.Context, q *db.Queries, kingdoms []db.Kingdom) (map[int][]db.KingdomBuilding, error) {
+func fetchAllKingdomBuildings(ctx context.Context, q db.Querier, kingdoms []db.Kingdom) (map[int][]db.KingdomBuilding, error) {
 	all, err := q.GetAllKingdomBuildings(ctx)
 	if err != nil {
 		return nil, err

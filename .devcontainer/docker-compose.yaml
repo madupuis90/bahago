@@ -17,6 +17,7 @@ services:
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
       - DATABASE_URL=postgres://postgres:postgres@db:5432/appdb?sslmode=disable
+      - TEST_DATABASE_URL=postgres://postgres:postgres@db:5432/testdb?sslmode=disable
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres

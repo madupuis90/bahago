@@ -27,9 +27,9 @@ tasks:
       - 'go build -o bin/{{.APP_NAME}} ./cmd/server/main.go'
 
   test:
-    desc: Run all project tests
+    desc: "Run all project tests. Example: task test -- -v"
     cmds:
-      - go test -v ./...
+      - go test {{.CLI_ARGS}} ./...
 
   lint:
     desc: Run go vet to check for potential issues

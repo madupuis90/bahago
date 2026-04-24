@@ -9,6 +9,7 @@ sql:
         out: "./internal/database/db"
         sql_package: "pgx/v5"
         emit_json_tags: false
+        emit_interface: true
         overrides:
           - db_type: "pg_catalog.int8"
             nullable: true
