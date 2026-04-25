@@ -106,6 +106,17 @@ type KingdomConstruction struct {
 	StartedAt      time.Time
 }
 
+type KingdomMessage struct {
+	ID            int
+	FromKingdomID int
+	ToKingdomID   int
+	Subject       string
+	Body          string
+	ReadAt        pgtype.Timestamptz
+	DeletedAt     pgtype.Timestamptz
+	CreatedAt     time.Time
+}
+
 type KingdomTraining struct {
 	ID             int
 	KingdomID      int

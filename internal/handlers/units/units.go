@@ -114,8 +114,8 @@ func (h *handler) handleUnitsRefresh() http.HandlerFunc {
 					sse.PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
 					return
 				}
-				page := KingdomLayout(r, "Units", routes.KingdomUnitsPath, &k, unitsContent(&k, units, buildings, training))
-				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+				page := unitsContent(&k, units, buildings, training)
+				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("units refresh: patch: %v", err)
 					return
 				}
@@ -259,9 +259,9 @@ func (h *handler) handleTrain() http.HandlerFunc {
 			return
 		}
 
-		page := KingdomLayout(r, "Units", routes.KingdomUnitsPath, &k, unitsContent(&k, allUnits, allBuildings, training))
+		page := unitsContent(&k, allUnits, allBuildings, training)
 		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("train: patch: %v", err)
 		}
 	}
@@ -291,7 +291,7 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 
 	return Div(
 		H1(Class("page-title"), Text("Units")),
-		Div(ds.Init(datastar.GetSSE(routes.KingdomUnitsRefreshPath))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomUnitsRefreshPath))),
 		unitsErrorComponent(nil),
 		Iff(training != nil, func() Node { return activeTrainingBanner(training) }),
 		unitsTable(counts, buildingCounts),

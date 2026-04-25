@@ -36,10 +36,6 @@ type sendInput struct {
 	DurationTicks int    `json:"duration_ticks"`
 }
 
-type cancelInput struct {
-	CampaignID int `json:"campaign_id"`
-}
-
 // ── Route registration ────────────────────────────────────────────────────────
 
 func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) {
@@ -47,7 +43,7 @@ func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tic
 	r.HandleFunc("GET "+routes.KingdomArmyPath, h.handleArmyPage())
 	r.HandleFunc("GET "+routes.KingdomArmyRefreshPath, h.handleArmyRefresh())
 	r.HandleFunc("POST "+routes.KingdomArmySendPath, h.handleSend())
-	r.HandleFunc("POST "+routes.KingdomArmyCancelPath, h.handleCancel())
+	r.HandleFunc("POST "+routes.KingdomArmyCancelPath+"/{id}", h.handleCancel())
 }
 
 type handler struct {
@@ -69,7 +65,12 @@ func (h *handler) handleArmyPage() http.HandlerFunc {
 			return
 		}
 
-		KingdomLayout(r, "Army", routes.KingdomArmyPath, kingdom, armyContent(kingdom, data)).Render(w)
+		targetName := r.URL.Query().Get("target")
+		action := r.URL.Query().Get("action")
+		if action != "attack" && action != "defend" {
+			action = "attack"
+		}
+		KingdomLayout(r, "Army", routes.KingdomArmyPath, kingdom, armyContent(kingdom, data, targetName, action)).Render(w)
 	}
 }
 
@@ -91,8 +92,8 @@ func (h *handler) handleArmyRefresh() http.HandlerFunc {
 					log.Printf("army refresh: %v", err)
 					return
 				}
-				page := KingdomLayout(r, "Army", routes.KingdomArmyPath, &k, armyContent(&k, data))
-				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+				page := armyContent(&k, data, "", "attack")
+				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("army refresh: patch: %v", err)
 					return
 				}
@@ -203,8 +204,8 @@ func (h *handler) handleSend() http.HandlerFunc {
 		}
 		sse := datastar.NewSSE(w, r)
 		sse.MarshalAndPatchSignals(map[string]any{"unit_type": firstAvailableUnit(data), "send_count": 1})
-		page := KingdomLayout(r, "Army", routes.KingdomArmyPath, kingdom, armyContent(kingdom, data))
-		sse.PatchElementGostar(page, datastar.WithSelector("html"))
+		page := armyContent(kingdom, data, "", "attack")
+		sse.PatchElementGostar(MainContent(page))
 	}
 }
 
@@ -212,15 +213,15 @@ func (h *handler) handleCancel() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		input := &cancelInput{}
-		if err := datastar.ReadSignals(r, input); err != nil {
-			log.Printf("army cancel: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid request")))
+		idStr := r.PathValue("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil || id <= 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid campaign id")))
 			return
 		}
 
-		_, err := h.queries.CancelCampaign(r.Context(), db.CancelCampaignParams{
-			ID:        input.CampaignID,
+		_, err = h.queries.CancelCampaign(r.Context(), db.CancelCampaignParams{
+			ID:        id,
 			KingdomID: kingdom.ID,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -233,15 +234,9 @@ func (h *handler) handleCancel() http.HandlerFunc {
 			return
 		}
 
-		data, err := h.loadArmyData(r, kingdom.ID)
-		if err != nil {
-			log.Printf("army cancel: reload data: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
-			return
+		if err := datastar.NewSSE(w, r).Redirect(routes.KingdomArmyPath); err != nil {
+			log.Printf("army cancel: redirect: %v", err)
 		}
-		sse := datastar.NewSSE(w, r)
-		page := KingdomLayout(r, "Army", routes.KingdomArmyPath, kingdom, armyContent(kingdom, data))
-		sse.PatchElementGostar(page, datastar.WithSelector("html"))
 	}
 }
 
@@ -286,7 +281,7 @@ func firstAvailableUnit(data armyData) string {
 	return ""
 }
 
-func armyContent(kingdom *db.Kingdom, data armyData) Node {
+func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) Node {
 	otherIndex := make(map[int]string, len(data.others))
 	for _, o := range data.others {
 		otherIndex[o.ID] = o.Name
@@ -305,14 +300,13 @@ func armyContent(kingdom *db.Kingdom, data armyData) Node {
 	return Div(
 		H1(Class("page-title"), Text("Army")),
 		ds.Signals(map[string]any{
-			"campaign_id":    0,
 			"unit_type":      firstUnit,
 			"send_count":     1,
-			"action":         "attack",
-			"target_name":    "",
+			"action":         action,
+			"target_name":    targetName,
 			"duration_ticks": 4,
 		}),
-		Div(ds.Init(datastar.GetSSE(routes.KingdomArmyRefreshPath))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomArmyRefreshPath))),
 		armyError(nil),
 		campaignsSection(data.campaigns, otherIndex),
 		armyUnitsSection(data.availableUnits),
@@ -369,7 +363,7 @@ func campaignRow(m db.KingdomCampaign, otherIndex map[int]string) Node {
 			Iff(canCancel, func() Node {
 				return Button(
 					Class("btn btn-text"),
-					ds.On("click", fmt.Sprintf("$campaign_id = %d", m.ID)+"; "+datastar.PostSSE(routes.KingdomArmyCancelPath)),
+					ds.On("click", datastar.PostSSE(routes.KingdomArmyCancelPath+"/%d", m.ID)),
 					Text("Cancel"),
 				)
 			}),

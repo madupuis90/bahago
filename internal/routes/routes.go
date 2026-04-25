@@ -29,6 +29,15 @@ const (
 	KingdomArmySendPath    = "/kingdom/army/send"
 	KingdomArmyCancelPath  = "/kingdom/army/cancel"
 
+	KingdomLayoutRefreshPath = "/kingdom/layout/refresh"
+
+	KingdomMessagesPath        = "/kingdom/messages"
+	KingdomMessagesRefreshPath = "/kingdom/messages/refresh"
+	KingdomMessagesViewPath    = "/kingdom/messages/view"
+	KingdomMessagesComposePath = "/kingdom/messages/compose"
+	KingdomMessagesSendPath    = "/kingdom/messages/send"
+	KingdomMessagesDeletePath  = "/kingdom/messages/delete"
+
 	LoginPath              = "/login"
 	RegisterPath           = "/register"
 	VerifyPath             = "/verify"

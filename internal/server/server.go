@@ -12,6 +12,8 @@ import (
 	"bahago/internal/handlers/home"
 	"bahago/internal/handlers/kingdom"
 	"bahago/internal/handlers/kingdomsetup"
+	"bahago/internal/handlers/layoutrefresh"
+	"bahago/internal/handlers/messages"
 	"bahago/internal/handlers/units"
 	"bahago/internal/handlers/worldmap"
 	"bahago/internal/hub"
@@ -74,6 +76,8 @@ func (s *Server) registerRoutes() {
 	units.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	army.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	worldmap.RegisterRoutes(reqKingdomRouter, s.queries)
+	layoutrefresh.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
+	messages.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 
 	// static assets — embedded into the binary at compile time
 	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
@@ -88,5 +92,5 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // StartGameTicker begins the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func (s *Server) StartGameTicker(ctx context.Context) {
-	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 1*time.Second)
+	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 20*time.Second)
 }

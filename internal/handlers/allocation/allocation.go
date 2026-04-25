@@ -87,8 +87,8 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 					return
 				}
 				rates := game.ComputeRates(k, buildings)
-				page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &k, allocationContent(k, rates))
-				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+				page := allocationContent(k, rates)
+				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
 					return
 				}
@@ -150,9 +150,9 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			return
 		}
 		rates := game.ComputeRates(updatedKingdom, buildings)
-		page := KingdomLayout(r, "Allocation", routes.KingdomAllocationPath, &updatedKingdom, allocationContent(updatedKingdom, rates))
+		page := allocationContent(updatedKingdom, rates)
 		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("save-allocation: patch: %v", err)
 		}
 	}
@@ -163,7 +163,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 	return Div(
 		H1(Class("page-title"), Text("Allocation")),
-		Div(ds.Init(datastar.GetSSE(routes.KingdomAllocationRefreshPath))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomAllocationRefreshPath))),
 		ds.Signals(map[string]any{
 			"idle_pct":      kingdom.IdlePct,
 			"wood_pct":      kingdom.WoodPct,

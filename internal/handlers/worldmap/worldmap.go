@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	. "maragu.dev/gomponents"
+	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
@@ -87,7 +88,10 @@ func tileURL(tileX, tileY int) string {
 }
 
 func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int) Node {
-	return Group([]Node{
+	return Div(
+		ds.Signals(map[string]any{
+			"selected_kingdom_name": "",
+		}),
 		H1(Class("page-title"), Text("World Map")),
 		P(Class("map-coords"),
 			Text(fmt.Sprintf("Page %d, %d  —  Tiles %d-%d, %d-%d",
@@ -97,7 +101,8 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 			)),
 		),
 		mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0),
-	})
+		kingdomPopup(),
+	)
 }
 
 // mapGrid renders the 8×8 diamond isometric tile grid with surrounding nav links.
@@ -155,12 +160,21 @@ func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node 
 }
 
 func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn bool) Node {
+	clickable := kingdom != nil && !isOwn
+	var nameAttr, onClickAttr Node
+	if clickable {
+		nameAttr = Data("kingdom-name", kingdom.Name)
+		onClickAttr = ds.On("click", "$selected_kingdom_name = el.dataset.kingdomName")
+	}
 	return Div(
 		Classes{
-			"map-cell":           true,
-			"map-cell--own":      isOwn,
-			"map-cell--occupied": kingdom != nil && !isOwn,
+			"map-cell":            true,
+			"map-cell--own":       isOwn,
+			"map-cell--occupied":  kingdom != nil && !isOwn,
+			"map-cell--clickable": clickable,
 		},
+		nameAttr,
+		onClickAttr,
 		Div(Class("map-cell-content"),
 			Iff(kingdom != nil, func() Node {
 				icon := Span(Class("map-icon"), Text([]string{"🛖", "⛩️", "🏡"}[rand.IntN(3)]))
@@ -183,4 +197,31 @@ func makeRange(n int) []int {
 		s[i] = i
 	}
 	return s
+}
+
+// kingdomPopup renders a fixed overlay popup that appears when a non-own kingdom
+// tile is clicked. Three action buttons navigate to compose, attack, or defend
+// pages with the target kingdom name pre-filled via query params.
+func kingdomPopup() Node {
+	msgHref := "'" + routes.KingdomMessagesComposePath + "?to='+encodeURIComponent($selected_kingdom_name)"
+	attackHref := "'" + routes.KingdomArmyPath + "?target='+encodeURIComponent($selected_kingdom_name)+'&action=attack'"
+	defendHref := "'" + routes.KingdomArmyPath + "?target='+encodeURIComponent($selected_kingdom_name)+'&action=defend'"
+
+	return Div(Class("map-popup-overlay"),
+		Style("display:none"),
+		ds.Show("$selected_kingdom_name !== ''"),
+		ds.On("click", "$selected_kingdom_name = ''"),
+		Div(Class("map-popup"),
+			ds.On("click", "{}", ds.ModifierStop),
+			Div(Class("map-popup-header"),
+				P(Class("map-popup-name"), ds.Text("$selected_kingdom_name")),
+				Button(Class("map-popup-close"), ds.On("click", "$selected_kingdom_name = ''"), Text("×")),
+			),
+			Div(Class("map-popup-actions"),
+				A(Class("btn map-popup-btn"), Href("#"), ds.Attr("href", msgHref), Text("✉️ Send Message")),
+				A(Class("btn map-popup-btn map-popup-btn--attack"), Href("#"), ds.Attr("href", attackHref), Text("⚔️ Attack")),
+				A(Class("btn map-popup-btn map-popup-btn--defend"), Href("#"), ds.Attr("href", defendHref), Text("🛡 Defend")),
+			),
+		),
+	)
 }

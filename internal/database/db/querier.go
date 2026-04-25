@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	AdvanceCampaignStatus(ctx context.Context, arg AdvanceCampaignStatusParams) error
 	BulkActivateCampaigns(ctx context.Context, ids []int) error
+	BulkCreateMessages(ctx context.Context, arg BulkCreateMessagesParams) error
 	BulkDeductKingdomUnitsCasualties(ctx context.Context, arg BulkDeductKingdomUnitsCasualtiesParams) error
 	BulkDeleteCampaigns(ctx context.Context, ids []int) error
 	BulkGainKingdomPopulation(ctx context.Context, arg BulkGainKingdomPopulationParams) error
@@ -24,6 +25,7 @@ type Querier interface {
 	CancelCampaign(ctx context.Context, arg CancelCampaignParams) (int, error)
 	ConsumeEmailVerification(ctx context.Context, token string) (int, error)
 	ConsumePasswordResetToken(ctx context.Context, token string) (int, error)
+	CountUnreadMessages(ctx context.Context, toKingdomID int) (int, error)
 	// Atomically checks that enough units are available (via kingdom_available_units
 	// view) and inserts the campaign in one statement. Returns no rows if the
 	// available count is insufficient, which the caller maps to "not enough units".
@@ -42,6 +44,7 @@ type Querier interface {
 	DeleteCampaign(ctx context.Context, id int) error
 	DeleteConstruction(ctx context.Context, kingdomID int) error
 	DeleteEmailVerificationByUserID(ctx context.Context, userID int) error
+	DeleteMessage(ctx context.Context, arg DeleteMessageParams) error
 	DeletePasswordResetTokensByUserID(ctx context.Context, userID int) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteSessionsByUserID(ctx context.Context, userID int) error
@@ -55,6 +58,7 @@ type Querier interface {
 	// Bulk version of GetAvailableKingdomUnits for the combat tick.
 	GetAvailableKingdomUnitsByIDs(ctx context.Context, ids []int) ([]KingdomAvailableUnit, error)
 	GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]KingdomCampaign, error)
+	GetInboxMessageByID(ctx context.Context, arg GetInboxMessageByIDParams) (GetInboxMessageByIDRow, error)
 	GetKingdomBuildings(ctx context.Context, kingdomID int) ([]KingdomBuilding, error)
 	GetKingdomByID(ctx context.Context, id int) (Kingdom, error)
 	GetKingdomByName(ctx context.Context, name string) (Kingdom, error)
@@ -63,6 +67,7 @@ type Querier interface {
 	GetKingdomTraining(ctx context.Context, kingdomID int) (KingdomTraining, error)
 	GetKingdomUnits(ctx context.Context, kingdomID int) ([]KingdomUnit, error)
 	GetKingdomsByIDs(ctx context.Context, ids []int) ([]Kingdom, error)
+	GetKingdomsByNames(ctx context.Context, names []string) ([]Kingdom, error)
 	GetKingdomsInViewport(ctx context.Context, arg GetKingdomsInViewportParams) ([]GetKingdomsInViewportRow, error)
 	GetLatestTickID(ctx context.Context) (int, error)
 	GetRecentCombatLogs(ctx context.Context, kingdomID int) ([]GetRecentCombatLogsRow, error)
@@ -72,7 +77,9 @@ type Querier interface {
 	InsertCombatLog(ctx context.Context, arg InsertCombatLogParams) (int, error)
 	InsertTick(ctx context.Context) (int, error)
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
+	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
 	ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error)
+	MarkMessageRead(ctx context.Context, arg MarkMessageReadParams) error
 	StartConstruction(ctx context.Context, arg StartConstructionParams) error
 	StartTraining(ctx context.Context, arg StartTrainingParams) error
 	StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error

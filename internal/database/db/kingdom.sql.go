@@ -275,6 +275,53 @@ func (q *Queries) GetKingdomsByIDs(ctx context.Context, ids []int) ([]Kingdom, e
 	return items, nil
 }
 
+const getKingdomsByNames = `-- name: GetKingdomsByNames :many
+SELECT id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y FROM kingdoms
+WHERE name = ANY($1::citext[])
+`
+
+func (q *Queries) GetKingdomsByNames(ctx context.Context, names []string) ([]Kingdom, error) {
+	rows, err := q.db.Query(ctx, getKingdomsByNames, names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Kingdom
+	for rows.Next() {
+		var i Kingdom
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Population,
+			&i.WoodPct,
+			&i.StonePct,
+			&i.FoodPct,
+			&i.ManaPct,
+			&i.DevotionPct,
+			&i.KnowledgePct,
+			&i.IdlePct,
+			&i.Wood,
+			&i.Stone,
+			&i.Food,
+			&i.Mana,
+			&i.Devotion,
+			&i.Knowledge,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.X,
+			&i.Y,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getKingdomsInViewport = `-- name: GetKingdomsInViewport :many
 SELECT id, name, x, y FROM kingdoms
 WHERE x >= $1 AND x <= $2

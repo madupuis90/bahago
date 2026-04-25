@@ -41,6 +41,10 @@ SELECT * FROM kingdoms;
 SELECT * FROM kingdoms
 WHERE id = ANY(@ids::bigint[]);
 
+-- name: GetKingdomsByNames :many
+SELECT * FROM kingdoms
+WHERE name = ANY(@names::citext[]);
+
 -- name: ListOtherKingdoms :many
 SELECT id, name FROM kingdoms
 WHERE id != $1

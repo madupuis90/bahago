@@ -14,6 +14,12 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
+// GetSSENoSignals generates a datastar @get() action that sends no signals.
+// Use this for refresh/subscribe endpoints that do not read signals from the request.
+func GetSSENoSignals(urlFormat string, args ...any) string {
+	return fmt.Sprintf(`@get('%s', {filterSignals: {include: /^$/}})`, fmt.Sprintf(urlFormat, args...))
+}
+
 // ── Layout functions ──────────────────────────────────────────────────────────
 
 // HomeLayout renders a full page with the home top-nav active and home side-nav.
@@ -22,6 +28,7 @@ func HomeLayout(r *http.Request, title string, content ...Node) Node {
 	currentPath := r.URL.Path
 	return shell(
 		title,
+		nil,
 		homeTopNav(user, currentPath),
 		Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
 		content...,
@@ -34,21 +41,29 @@ func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *d
 
 	var sideNav Node
 	if kingdom != nil {
-		sideNav = Nav(Class("side-nav panel"), KingdomSideNav(currentPath, kingdom))
+		sideNav = KingdomSideNav(currentPath, kingdom, 0)
 	} else {
-		sideNav = Nav(Class("side-nav panel"))
+		sideNav = Nav(ID("kingdom-sidenav"), Class("side-nav panel"))
 	}
 
+	layoutStream := Div(ds.Init(GetSSENoSignals(routes.KingdomLayoutRefreshPath+"?path=%s", currentPath)))
 	return shell(
 		title,
+		layoutStream,
 		kingdomTopNav(user, currentPath),
 		sideNav,
 		content...,
 	)
 }
 
+// MainContent wraps page content in the main element used by all kingdom pages.
+// Use this in SSE handlers when patching page content with WithSelector("#main-content").
+func MainContent(content ...Node) Node {
+	return Main(ID("main-content"), Group(content))
+}
+
 // shell is the shared HTML document structure used by both layouts.
-func shell(title string, topNav, sideNav Node, content ...Node) Node {
+func shell(title string, layoutStream Node, topNav, sideNav Node, content ...Node) Node {
 	return Doctype(
 		HTML(
 			Lang("en"),
@@ -61,9 +76,10 @@ func shell(title string, topNav, sideNav Node, content ...Node) Node {
 				topNav,
 				Div(Class("content-area"),
 					sideNav,
-					Main(content...),
+					MainContent(content...),
 				),
 				Footer(),
+				layoutStream,
 			),
 		),
 	)
@@ -140,8 +156,10 @@ func HomeSideNav(currentPath string) Node {
 	})
 }
 
-func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
-	return Group([]Node{
+// KingdomSideNav renders the kingdom sidebar navigation wrapped in its Nav element.
+// unreadCount is the number of unread messages; 0 hides the badge.
+func KingdomSideNav(currentPath string, kingdom *db.Kingdom, unreadCount int) Node {
+	return Nav(ID("kingdom-sidenav"), Class("side-nav panel"),
 		NavGroup("Kingdom",
 			P(Span(Text(kingdom.Name))),
 			P(Span(Text("Population: ")), Span(Text(fmt.Sprintf("%d", kingdom.Population)))),
@@ -161,6 +179,16 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom) Node {
 			NavItem(routes.KingdomUnitsPath, "Units", currentPath),
 			NavItem(routes.KingdomArmyPath, "Army", currentPath),
 			NavItem(routes.KingdomMapPath, "World Map", currentPath),
+			messagesNavItem(currentPath, unreadCount),
 		),
-	})
+	)
+}
+
+func messagesNavItem(currentPath string, unreadCount int) Node {
+	return Span(Class("nav-item-with-badge"),
+		NavItem(routes.KingdomMessagesPath, "Messages", currentPath),
+		Iff(unreadCount > 0, func() Node {
+			return Span(Class("nav-badge"), Text(fmt.Sprintf("%d", unreadCount)))
+		}),
+	)
 }

@@ -69,8 +69,8 @@ func (h *handler) handleKingdomRefresh() http.HandlerFunc {
 				if err != nil {
 					log.Printf("kingdom refresh: get combat log: %v", err)
 				}
-				page := KingdomLayout(r, k.Name, routes.KingdomPath, &k, kingdomOverviewSection(&k, groupCombatLog(rows)))
-				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+				page := kingdomOverviewSection(&k, groupCombatLog(rows))
+				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("kingdom refresh: patch: %v", err)
 					return
 				}
@@ -114,7 +114,7 @@ func groupCombatLog(rows []db.GetRecentCombatLogsRow) []combatLogDisplay {
 
 func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) Node {
 	return Div(
-		Div(ds.Init(datastar.GetSSE(routes.KingdomRefreshPath))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomRefreshPath))),
 		Div(Class("panel kingdom-overview"),
 			H1(Class("kingdom-name"), Text(kingdom.Name)),
 			kingdomStat("Population", fmt.Sprintf("%d", kingdom.Population)),

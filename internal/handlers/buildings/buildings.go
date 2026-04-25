@@ -93,8 +93,8 @@ func (h *handler) handleBuildingsRefresh() http.HandlerFunc {
 					sse.PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
 					return
 				}
-				page := KingdomLayout(r, "Buildings", routes.KingdomBuildingsPath, &k, buildingsContent(&k, buildings, construction))
-				if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+				page := buildingsContent(&k, buildings, construction)
+				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("buildings refresh: patch: %v", err)
 					return
 				}
@@ -210,9 +210,9 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsErrorComponent(errors.New("internal error")))
 			return
 		}
-		page := KingdomLayout(r, "Buildings", routes.KingdomBuildingsPath, &k, buildingsContent(&k, buildings, construction))
+		page := buildingsContent(&k, buildings, construction)
 		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementGostar(page, datastar.WithSelector("html")); err != nil {
+		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("start construction: patch: %v", err)
 		}
 	}
@@ -245,7 +245,7 @@ func buildingsContent(kingdom *db.Kingdom, buildings []db.KingdomBuilding, const
 	counts := game.BuildingCountMap(buildings)
 	return Div(
 		H1(Class("page-title"), Text("Buildings")),
-		Div(ds.Init(datastar.GetSSE(routes.KingdomBuildingsRefreshPath))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomBuildingsRefreshPath))),
 		buildingsErrorComponent(nil),
 		Iff(construction != nil, func() Node { return activeConstructionBanner(construction) }),
 		Div(Class("buildings-grid"),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -162,12 +163,16 @@ func TestHandleSend_CannotTargetOwnKingdom(t *testing.T) {
 func cancelHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
 	army.RegisterRoutes(cr, q, nil, nil)
-	return cr.Handlers["POST "+routes.KingdomArmyCancelPath]
+	return cr.Handlers["POST "+routes.KingdomArmyCancelPath+"/{id}"]
 }
 
-// cancelReq builds a POST request with the given body and kingdom in context.
-func cancelReq(body string, kingdom *db.Kingdom) *http.Request {
-	r := httptest.NewRequest("POST", routes.KingdomArmyCancelPath, strings.NewReader(body))
+// cancelReq builds a POST request with the campaign id as a path variable and
+// the provided kingdom injected into context.
+func cancelReq(id int, kingdom *db.Kingdom) *http.Request {
+	url := fmt.Sprintf("%s/%d", routes.KingdomArmyCancelPath, id)
+	r := httptest.NewRequest("POST", url, nil)
+	// Simulate the ServeMux path variable that the real router would set.
+	r.SetPathValue("id", strconv.Itoa(id))
 	return r.WithContext(context.WithValue(r.Context(), contextkeys.Kingdom, kingdom))
 }
 
@@ -179,14 +184,14 @@ func TestHandleCancel_CampaignNotFound(t *testing.T) {
 	}
 	h := cancelHandler(stub)
 	w := httptest.NewRecorder()
-	h(w, cancelReq(`{"campaign_id":99}`, attacker))
+	h(w, cancelReq(99, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "campaign not found or already returning")
 }
 
 func TestHandleCancel_InvalidInput(t *testing.T) {
 	h := cancelHandler(&stubQuerier{})
 	w := httptest.NewRecorder()
-	// Malformed JSON causes ReadSignals to fail.
-	h(w, cancelReq(`{invalid}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid request")
+	// id=0 is treated as invalid.
+	h(w, cancelReq(0, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "invalid campaign id")
 }
