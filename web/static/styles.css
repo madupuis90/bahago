@@ -632,10 +632,33 @@ h1 {
    11. World Map
    ============================================================================= */
 
+.map-info {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .map-coords {
   font-size: 0.8rem;
   color: var(--panel-link-color);
-  margin-bottom: 1.5rem;
+}
+
+.map-find-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  & form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  & .map-find-input {
+    width: 14rem;
+  }
 }
 
 /* Outer flex layout: N above, [W grid E] in middle, S below */
@@ -760,6 +783,12 @@ h1 {
 
   &.map-cell--clickable {
     cursor: pointer;
+  }
+
+  &.map-cell--highlighted {
+    outline: 2px solid var(--btn-bg);
+    outline-offset: -2px;
+    z-index: 1;
   }
 }
 

@@ -1,0 +1,119 @@
+[33mcommit 33fd7c0795bcb58cc6808e27f23e038a0a6b5b30[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Sat Apr 25 21:26:58 2026 +0000
+
+    Added Message feature
+
+[33mcommit 1a99e91f579b0e401baaddede80afdf48d90d493[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Fri Apr 24 19:09:38 2026 +0000
+
+    Added unit tests and ui test plans
+
+[33mcommit 9c4939f59a208d69f0485f1da8e7484e2bfff37c[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Wed Apr 22 23:02:36 2026 +0000
+
+    Adds army, campaigns, combat, combat_logs, overview
+
+[33mcommit b798739a2b3c682b1686c627e88e25e7dca240b3[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Sun Apr 19 00:41:52 2026 +0000
+
+    Added world map
+
+[33mcommit 660e34631dcfac3b9448c905ce09832d776f09ef[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Fri Apr 17 23:10:13 2026 +0000
+
+    Added Units, removed signals
+
+[33mcommit 57568a3f20ddba982b640374eaaf7de1ec3e835f[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Wed Apr 15 20:26:55 2026 +0000
+
+    Added buildings
+
+[33mcommit 755b6beccd0e54bd973bf3361ddf6f7e004159e2[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Tue Apr 14 16:08:33 2026 +0000
+
+    Improved styling
+
+[33mcommit 349ab2ecc87fc01e9af4a1cf76adf688155f9cf7[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Mon Apr 13 20:26:31 2026 +0000
+
+    Layout refactor, pages refactor, Fat-morph refresh
+
+[33mcommit a9c031c62e31734d2a5ed8708378c1ef4ffa08f7[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Fri Apr 10 17:58:44 2026 +0000
+
+    Adds game ticks, Adds rates, Update design doc
+
+[33mcommit 0dde66bcc5cdce4f3163f62df782e28585a9de7c[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Mon Apr 6 21:25:09 2026 +0000
+
+    Added allocation, kingdom middleware, create kingdom
+
+[33mcommit 5e8a921afc23bb76d8b524ae62f2a5172c46389b[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Fri Apr 3 19:01:04 2026 +0000
+
+    Better layout
+
+[33mcommit 8462f3b3830ee905425d9ee4c9db0f9856d7ba01[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Thu Apr 2 18:52:47 2026 +0000
+
+    Added resend verification e-mail, refactored paths into routes module
+
+[33mcommit edc2fd1343c0535064eea5245c959d234d91c967[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Wed Apr 1 20:58:17 2026 +0000
+
+    Added forget-password, split login in auth, added agent instructions
+
+[33mcommit be6b0a4a2b3692b5354b10a5d16d53e625811b8d[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Tue Mar 31 01:39:28 2026 +0000
+
+    progress
+
+[33mcommit 412c0b0e2d0bb789924fba64019e0f593988d188[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Sat Mar 28 20:38:21 2026 +0000
+
+    Added logout feature
+
+[33mcommit 2093ce506b66e2c3b53cd1b2b4e5ba6bea396d66[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Sat Mar 28 18:56:38 2026 +0000
+
+    Added Email verification with Resend
+
+[33mcommit a568fb2751a0b9798e7e92126d492ed4a071727a[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Thu Mar 19 00:18:02 2026 +0000
+
+    Added register and login
+
+[33mcommit 4c6353d867663eb5734e44894d4c3434306a3657[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Thu Feb 26 03:57:08 2026 +0000
+
+    restructured project vertically
+
+[33mcommit 3ca439b632bc52cb3b4bdce1b1df4e5f7631268e[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Sun Feb 22 19:46:50 2026 +0000
+
+    Added resources form using html (experimenting)
+
+[33mcommit d991d9cc2adafb86e5497e3b521cf73c1247ae53[m
+Author: madupuis90 <madupuis90@gmail.com>
+Date:   Fri Feb 13 02:38:06 2026 +0000
+
+    First commit

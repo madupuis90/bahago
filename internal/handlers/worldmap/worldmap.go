@@ -1,16 +1,22 @@
 package worldmap
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
@@ -24,6 +30,7 @@ import (
 func RegisterRoutes(r router.Router, queries db.Querier) {
 	h := &handler{queries: queries}
 	r.HandleFunc("GET "+routes.KingdomMapPath, h.handleMapPage())
+	r.HandleFunc("POST "+routes.KingdomMapFindPath, h.handleMapFind())
 }
 
 type handler struct {
@@ -51,7 +58,50 @@ func (h *handler) handleMapPage() http.HandlerFunc {
 			return
 		}
 
-		KingdomLayout(r, "World Map", r.URL.Path, kingdom, mapContent(kingdoms, kingdom.ID, pageX, pageY, tileX0, tileY0)).Render(w)
+		KingdomLayout(r, "World Map", r.URL.Path, kingdom, mapContent(kingdoms, kingdom.ID, pageX, pageY, tileX0, tileY0, r.URL.Query().Get("highlight"))).Render(w)
+	}
+}
+
+type findInput struct {
+	Name string `json:"find_name"`
+}
+
+// handleMapFind looks up a kingdom by name and returns a redirect URL signal
+// pointing to the map page containing that kingdom's tile.
+func (h *handler) handleMapFind() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		input := &findInput{}
+		if err := datastar.ReadSignals(r, input); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		sse := datastar.NewSSE(w, r)
+
+		name := strings.TrimSpace(input.Name)
+		if name == "" {
+			sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Please enter a kingdom name."))))
+			return
+		}
+
+		k, err := h.queries.GetKingdomByName(r.Context(), name)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Kingdom not found."))))
+				return
+			}
+			log.Printf("map find: get kingdom by name: %v", err)
+			sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Something went wrong. Please try again."))))
+			return
+		}
+
+		pageX := k.X / game.PageSize
+		pageY := k.Y / game.PageSize
+		tileX0 := pageX * game.PageSize
+		tileY0 := pageY * game.PageSize
+
+		sse.PatchElementGostar(findAlertComponent(nil))
+		sse.Redirect(tileURL(tileX0, tileY0) + "&highlight=" + url.QueryEscape(k.Name))
 	}
 }
 
@@ -87,26 +137,29 @@ func tileURL(tileX, tileY int) string {
 	return fmt.Sprintf("%s?x=%d&y=%d", routes.KingdomMapPath, tileX, tileY)
 }
 
-func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int) Node {
+func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
 	return Div(
 		ds.Signals(map[string]any{
 			"selected_kingdom_name": "",
 		}),
 		H1(Class("page-title"), Text("World Map")),
-		P(Class("map-coords"),
-			Text(fmt.Sprintf("Page %d, %d  —  Tiles %d-%d, %d-%d",
-				pageX+1, pageY+1,
-				tileX0, tileX0+game.PageSize-1,
-				tileY0, tileY0+game.PageSize-1,
-			)),
+		Div(Class("map-info panel"),
+			P(Class("map-coords"),
+				Text(fmt.Sprintf("Page %d, %d  —  Tiles %d-%d, %d-%d",
+					pageX+1, pageY+1,
+					tileX0, tileX0+game.PageSize-1,
+					tileY0, tileY0+game.PageSize-1,
+				)),
+			),
+			findBar(),
 		),
-		mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0),
+		mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0, highlight),
 		kingdomPopup(),
 	)
 }
 
 // mapGrid renders the 8×8 diamond isometric tile grid with surrounding nav links.
-func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int) Node {
+func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
 	index := make(map[game.Coord]*db.GetKingdomsInViewportRow, len(kingdoms))
 	for i := range kingdoms {
 		k := &kingdoms[i]
@@ -128,7 +181,9 @@ func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, 
 							tx := tileX0 + col
 							ty := tileY0 + row
 							k := index[game.Coord{X: tx, Y: ty}]
-							return mapCell(k, k != nil && k.ID == myKingdomID)
+							isOwn := k != nil && k.ID == myKingdomID
+							isHighlighted := k != nil && strings.EqualFold(k.Name, highlight)
+							return mapCell(k, isOwn, isHighlighted)
 						}),
 					),
 					Div(Class("map-box-wall--s")),
@@ -159,7 +214,7 @@ func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node 
 	return A(Href(tileURL(targetTileX, targetTileY)), classes, Text(label))
 }
 
-func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn bool) Node {
+func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn, isHighlighted bool) Node {
 	clickable := kingdom != nil && !isOwn
 	var nameAttr, onClickAttr Node
 	if clickable {
@@ -168,10 +223,11 @@ func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn bool) Node {
 	}
 	return Div(
 		Classes{
-			"map-cell":            true,
-			"map-cell--own":       isOwn,
-			"map-cell--occupied":  kingdom != nil && !isOwn,
-			"map-cell--clickable": clickable,
+			"map-cell":              true,
+			"map-cell--own":         isOwn,
+			"map-cell--occupied":    kingdom != nil && !isOwn,
+			"map-cell--clickable":   clickable,
+			"map-cell--highlighted": isHighlighted,
 		},
 		nameAttr,
 		onClickAttr,
@@ -197,6 +253,34 @@ func makeRange(n int) []int {
 		s[i] = i
 	}
 	return s
+}
+
+// findBar renders the kingdom search input and button.
+func findBar() Node {
+	return Div(Class("map-find-bar"),
+		Form(
+			ds.On("submit", datastar.PostSSE(routes.KingdomMapFindPath)),
+			Input(
+				Type("text"),
+				Placeholder("Kingdom name"),
+				Class("map-find-input"),
+				ds.Bind("find_name"),
+			),
+			Button(
+				Class("btn"),
+				Type("submit"),
+				ds.Indicator("find_fetching"),
+				ds.Attr("disabled", "$find_fetching || $find_name === ''"),
+				Text("Find"),
+			),
+		),
+		findAlertComponent(nil),
+	)
+}
+
+// findAlertComponent is the SSE patch target for find errors.
+func findAlertComponent(inner Node) Node {
+	return Div(ID("map-find-alert"), inner)
 }
 
 // kingdomPopup renders a fixed overlay popup that appears when a non-own kingdom
