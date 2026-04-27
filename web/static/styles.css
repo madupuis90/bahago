@@ -44,6 +44,8 @@
   --map-page-size: 8;
   --map-cell-size: 4rem;
   --map-wall-size: 3rem;
+  --map-axis-label-size: 2rem;
+  --map-minimap-cell-size: 1rem;
 }
 
 /* =============================================================================
@@ -640,6 +642,12 @@ h1 {
   margin-bottom: 1.5rem;
 }
 
+.map-main-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
 .map-coords {
   font-size: 0.8rem;
   color: var(--panel-link-color);
@@ -683,12 +691,12 @@ h1 {
  * overflow: visible lets the rotated diamond bleed outside its box.
  */
 /*
- * Width = grid diagonal = --map-page-size × cell × √2 ≈ 8 × 3.5rem × 1.415 ≈ 39.6rem.
+ * Width = grid diagonal = (--map-page-size × cell + axis×2) × √2.
  * Sizing the container to the actual diamond width keeps W/E nav links
  * visually outside the diamond — without this they sit behind the grid.
  */
 .map-iso-container {
-  width: calc(var(--map-cell-size) * var(--map-page-size) * 1.415);
+  width: calc((var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2) * 1.415);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -701,8 +709,8 @@ h1 {
  */
 .map-iso-stage {
   position: relative;
-  width: calc(var(--map-cell-size) * var(--map-page-size));
-  height: calc(var(--map-cell-size) * var(--map-page-size));
+  width: calc(var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2);
+  height: calc(var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2);
 
   transform: rotateX(60deg) rotateZ(45deg);
   transform-style: preserve-3d;
@@ -713,8 +721,8 @@ h1 {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: repeat(var(--map-page-size), var(--map-cell-size));
-  grid-template-rows: repeat(var(--map-page-size), var(--map-cell-size));
+  grid-template-columns: var(--map-axis-label-size) repeat(var(--map-page-size), var(--map-cell-size)) var(--map-axis-label-size);
+  grid-template-rows: var(--map-axis-label-size) repeat(var(--map-page-size), var(--map-cell-size)) var(--map-axis-label-size);
   transform-style: preserve-3d;
   /* Continuous surface gradient — replace with background-image for a texture later. */
   background: linear-gradient(135deg, #9aba70 0%, #8aaa60 50%, #6a9040 100%);
@@ -816,7 +824,7 @@ h1 {
   transform: translateY(-50%);
   white-space: nowrap;
   background: var(--panel-bg);
-  border: var(--border);
+  border: var(--panel-border);
   border-radius: 4px;
   padding: 0.25rem 0.6rem;
   font-size: 0.8rem;
@@ -828,6 +836,31 @@ h1 {
 
 .map-cell:hover .map-cell-tooltip {
   display: block;
+}
+
+.map-axis-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-axis-label-content {
+  transform: rotate(-45deg) scaleY(2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+  user-select: none;
+
+  &.map-axis-label-content--name {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
 }
 
 .map-icon {
@@ -853,7 +886,7 @@ h1 {
 
 .map-popup {
   background: var(--panel-bg);
-  border: var(--border);
+  border: var(--panel-border);
   border-radius: 8px;
   padding: 1.5rem;
   min-width: 16rem;
@@ -914,6 +947,37 @@ h1 {
       background: #2a70b8;
       border-color: #2a70b8;
     }
+  }
+}
+
+/* Mini-map — compact PageCount×PageCount page grid styled as a tiny world */
+.map-minimap {
+  display: grid;
+  grid-template-columns: repeat(var(--map-page-size), var(--map-minimap-cell-size));
+  grid-template-rows: repeat(var(--map-page-size), var(--map-minimap-cell-size));
+  gap: 2px;
+  padding: 0.35rem;
+  background: #3a5a28;
+  border: 1px solid #2a4a1a;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.map-minimap-cell {
+  display: block;
+  width: var(--map-minimap-cell-size);
+  height: var(--map-minimap-cell-size);
+  background: #5c7a40;
+  border-radius: 2px;
+  text-decoration: none;
+
+  &:hover {
+    background: #7a9a55;
+  }
+
+  &.map-minimap-cell--current {
+    background: #9aba70;
+    cursor: default;
   }
 }
 

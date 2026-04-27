@@ -145,15 +145,14 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 		H1(Class("page-title"), Text("World Map")),
 		Div(Class("map-info panel"),
 			P(Class("map-coords"),
-				Text(fmt.Sprintf("Page %d, %d  —  Tiles %d-%d, %d-%d",
-					pageX+1, pageY+1,
-					tileX0, tileX0+game.PageSize-1,
-					tileY0, tileY0+game.PageSize-1,
-				)),
+				Text(fmt.Sprintf("X: %d-%d, Y: %d-%d", tileX0, tileX0+game.PageSize-1, tileY0, tileY0+game.PageSize-1)),
 			),
 			findBar(),
 		),
-		mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0, highlight),
+		Div(Class("map-main-row"),
+			mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0, highlight),
+			miniMap(pageX, pageY),
+		),
 		kingdomPopup(),
 	)
 }
@@ -169,17 +168,45 @@ func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, 
 	const maxPage = game.PageCount - 1
 
 	return Div(Class("map-grid-container"),
-		navLink("N", tileX0, tileY0-game.PageSize, pageY > 0),
+		navLink("N", tileX0, tileY0+game.PageSize, pageY < maxPage),
 		Div(Class("map-grid-middle"),
 			navLink("W", tileX0-game.PageSize, tileY0, pageX > 0),
 			Div(Class("map-iso-container"),
 				Div(Class("map-iso-stage"),
 					Div(Class("map-grid"),
-						Map(makeRange(game.PageSize*game.PageSize), func(i int) Node {
-							col := i % game.PageSize
-							row := i / game.PageSize
-							tx := tileX0 + col
-							ty := tileY0 + row
+						Map(makeRange((game.PageSize+2)*(game.PageSize+2)), func(i int) Node {
+							col := i % (game.PageSize + 2)
+							row := i / (game.PageSize + 2)
+							// Top-left: X axis name
+							if row == game.PageSize+1 && col == 0 {
+								return axisNameLabelCell("X")
+							}
+							// Top-right: Y axis name
+							if row == 0 && col == game.PageSize+1 {
+								return axisNameLabelCell("Y")
+							}
+							// Top row (rest): blank
+							if row == 0 {
+								return Div(Class("map-axis-label"))
+							}
+							// Left column (rest): blank
+							if col == 0 {
+								return Div(Class("map-axis-label"))
+							}
+							// Right column: Y coord numbers, blank at bottom corner
+							if col == game.PageSize+1 {
+								if row == game.PageSize+1 {
+									return Div(Class("map-axis-label"))
+								}
+								return axisLabelCell(tileY0 + (game.PageSize - row))
+							}
+							// Bottom row: X coord numbers (cols 1..PageSize)
+							if row == game.PageSize+1 {
+								return axisLabelCell(tileX0 + col - 1)
+							}
+							// Tile cells (rows 1..PageSize, cols 1..PageSize)
+							tx := tileX0 + col - 1
+							ty := tileY0 + (game.PageSize - row)
 							k := index[game.Coord{X: tx, Y: ty}]
 							isOwn := k != nil && k.ID == myKingdomID
 							isHighlighted := k != nil && strings.EqualFold(k.Name, highlight)
@@ -192,7 +219,7 @@ func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, 
 			),
 			navLink("E", tileX0+game.PageSize, tileY0, pageX < maxPage),
 		),
-		navLink("S", tileX0, tileY0+game.PageSize, pageY < maxPage),
+		navLink("S", tileX0, tileY0-game.PageSize, pageY > 0),
 	)
 }
 
@@ -239,11 +266,32 @@ func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn, isHighlighted bool) No
 				}
 				return Group([]Node{
 					icon,
-					Span(Class("map-cell-tooltip"), Text(kingdom.Name)),
+					Span(Class("map-cell-tooltip"), Text(fmt.Sprintf("%s (%d, %d)", kingdom.Name, kingdom.X, kingdom.Y))),
 				})
 			}),
 		),
 	)
+}
+
+// miniMap renders a compact PageCount×PageCount grid showing all world pages.
+// The current page is highlighted; each other page is a navigation link.
+// Rows are rendered top-to-bottom with py = PageCount-1-row so that py=0
+// sits at the visual bottom, matching the Y-flipped main grid.
+func miniMap(pageX, pageY int) Node {
+	cells := make([]Node, 0, game.PageCount*game.PageCount)
+	for row := 0; row < game.PageCount; row++ {
+		py := game.PageCount - 1 - row
+		for px := 0; px < game.PageCount; px++ {
+			if px == pageX && py == pageY {
+				cell := Div(Class("map-minimap-cell map-minimap-cell--current"))
+				cells = append(cells, cell)
+			} else {
+				cell := A(Href(tileURL(px*game.PageSize, py*game.PageSize)), Class("map-minimap-cell"))
+				cells = append(cells, cell)
+			}
+		}
+	}
+	return Div(Class("map-minimap"), Group(cells))
 }
 
 // makeRange returns a slice of ints [0, n).
@@ -253,6 +301,20 @@ func makeRange(n int) []int {
 		s[i] = i
 	}
 	return s
+}
+
+// axisLabelCell renders a coordinate number on the grid edge.
+func axisLabelCell(coord int) Node {
+	return Div(Class("map-axis-label"),
+		Div(Class("map-axis-label-content"), Text(strconv.Itoa(coord))),
+	)
+}
+
+// axisNameLabelCell renders an axis name label ("X" or "Y") on the outer edge.
+func axisNameLabelCell(name string) Node {
+	return Div(Class("map-axis-label"),
+		Div(Class("map-axis-label-content map-axis-label-content--name"), Text(name)),
+	)
 }
 
 // findBar renders the kingdom search input and button.
@@ -269,6 +331,7 @@ func findBar() Node {
 			Button(
 				Class("btn"),
 				Type("submit"),
+				Disabled(),
 				ds.Indicator("find_fetching"),
 				ds.Attr("disabled", "$find_fetching || $find_name === ''"),
 				Text("Find"),
