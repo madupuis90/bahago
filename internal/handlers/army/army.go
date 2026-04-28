@@ -305,7 +305,7 @@ func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) 
 			"action":         action,
 			"target_name":    targetName,
 			"duration_ticks": 4,
-		}),
+		}, ds.ModifierIfMissing),
 		Div(ds.Init(GetSSENoSignals(routes.KingdomArmyRefreshPath))),
 		armyError(nil),
 		campaignsSection(data.campaigns, otherIndex),

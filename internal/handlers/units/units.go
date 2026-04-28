@@ -402,7 +402,7 @@ func trainForm(buildingCounts map[string]int, canSummon bool, busy bool) Node {
 		ds.Signals(map[string]any{
 			"costs":     costs,
 			"unit_type": unitNames[0],
-		}),
+		}, ds.ModifierIfMissing),
 		P(Class("panel-title"), Text("Train Units")),
 		Div(Class("units-train-fields"),
 			Label(For("unit-type-select"), Text("Unit type")),

@@ -172,7 +172,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 			"mana_pct":      kingdom.ManaPct,
 			"devotion_pct":  kingdom.DevotionPct,
 			"knowledge_pct": kingdom.KnowledgePct,
-		}),
+		}, ds.ModifierIfMissing),
 		Div(Class("allocation-card panel"),
 			Table(Class("allocation-table"),
 				THead(
