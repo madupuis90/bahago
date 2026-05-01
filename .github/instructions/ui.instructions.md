@@ -358,6 +358,21 @@ ds.Bind("signalName")
 > Select(ds.Bind("unit_type"), ...)
 > ```
 
+> **`<select>` elements bound to an `int` signal need no JavaScript coercion.** Datastar's bind plugin reads `typeof <current signal value>` on every change event and calls `+el.value` (numeric coercion) automatically when the existing signal is a number. Initialize the signal with a Go `int` value and use `ds.Bind` alone — never write `$field = parseInt($event.target.value, 10)` manually:
+> ```go
+> // Correct — int signal, ds.Bind handles coercion
+> ds.Signals(map[string]any{
+>     "target_kingdom_id": members[0].KingdomID, // Go int → JSON number
+> }),
+> Select(ds.Bind("target_kingdom_id"), ...)
+>
+> // Wrong — parseInt is redundant and adds noise
+> Select(
+>     ds.On("change", "$target_kingdom_id = parseInt($event.target.value, 10)"),
+>     ...
+> )
+> ```
+
 ```go
 // Wrong — email/password are initialized to "" by ds.Bind; ds.Signals is redundant
 ds.Signals(map[string]any{

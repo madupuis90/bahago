@@ -34,6 +34,11 @@ type composeInput struct {
 
 // ── Route registration ────────────────────────────────────────────────────────
 
+// deleteURL substitutes {id} into the delete route path constant.
+func deleteURL(id int) string {
+	return strings.ReplaceAll(routes.KingdomMessagesDeletePath, "{id}", strconv.Itoa(id))
+}
+
 func RegisterRoutes(r router.Router, queries db.Querier, tickHub *hub.Hub) {
 	h := &handler{queries: queries, hub: tickHub}
 	r.HandleFunc("GET "+routes.KingdomMessagesPath, h.handleMessagesPage())
@@ -70,7 +75,7 @@ func (h *handler) handleMessagesRefresh() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		activeID, _ := strconv.Atoi(r.URL.Query().Get("active"))
+		selectedMessageID, _ := strconv.Atoi(r.URL.Query().Get("active"))
 
 		sse := datastar.NewSSE(w, r)
 
@@ -87,7 +92,7 @@ func (h *handler) handleMessagesRefresh() http.HandlerFunc {
 					log.Printf("messages stream: list inbox: %v", err)
 					return
 				}
-				if err := sse.PatchElementGostar(messagesList(msgs, activeID)); err != nil {
+				if err := sse.PatchElementGostar(messagesList(msgs, selectedMessageID)); err != nil {
 					log.Printf("messages stream: patch: %v", err)
 					return
 				}
@@ -274,7 +279,7 @@ func (h *handler) handleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		idStr := r.URL.Query().Get("id")
+		idStr := r.PathValue("id")
 		id, err := strconv.Atoi(idStr)
 		if err != nil || id <= 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("invalid message id")))
@@ -316,13 +321,13 @@ func splitRecipients(raw string) []string {
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-func messagesShell(msgs []db.ListInboxMessagesRow, activeID int, panel Node) Node {
+func messagesShell(msgs []db.ListInboxMessagesRow, selectedMessageID int, panel Node) Node {
 	return Group([]Node{
 		H1(Class("page-title"), Text("Messages")),
 		Div(Class("messages-panel"),
 			Div(Class("messages-left"),
 				A(Href(routes.KingdomMessagesComposePath), Classes{"btn": true, "messages-compose-btn": true}, Text("Compose")),
-				messagesList(msgs, activeID),
+				messagesList(msgs, selectedMessageID),
 			),
 			Div(Class("messages-right"),
 				Iff(panel == nil, func() Node {
@@ -331,28 +336,28 @@ func messagesShell(msgs []db.ListInboxMessagesRow, activeID int, panel Node) Nod
 				Iff(panel != nil, func() Node { return panel }),
 			),
 		),
-		Div(ds.Init(GetSSENoSignals(routes.KingdomMessagesRefreshPath+"?active=%d", activeID))),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomMessagesRefreshPath+"?active=%d", selectedMessageID))),
 	})
 }
 
-func messagesList(msgs []db.ListInboxMessagesRow, activeID int) Node {
+func messagesList(msgs []db.ListInboxMessagesRow, selectedMessageID int) Node {
 	return Div(ID("messages-list"), Class("messages-list panel"),
 		Iff(len(msgs) == 0, func() Node {
 			return P(Class("messages-empty-state"), Text("No messages."))
 		}),
 		Group(Map(msgs, func(m db.ListInboxMessagesRow) Node {
-			return messageListItem(m, activeID)
+			return messageListItem(m, selectedMessageID)
 		})),
 	)
 }
 
-func messageListItem(m db.ListInboxMessagesRow, activeID int) Node {
+func messageListItem(m db.ListInboxMessagesRow, selectedMessageID int) Node {
 	return A(
 		Href(fmt.Sprintf("%s?id=%d", routes.KingdomMessagesViewPath, m.ID)),
 		Classes{
 			"message-item":         true,
 			"message-item--unread": !m.ReadAt.Valid,
-			"message-item--active": m.ID == activeID,
+			"message-item--active": m.ID == selectedMessageID,
 		},
 		P(Class("message-item-header"),
 			Span(Class("message-item-from"), Text(m.FromKingdomName)),
@@ -382,7 +387,7 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 				A(Href(replyURL), Class("btn btn-text"), Text("Reply")),
 				Button(
 					Class("btn btn-text"),
-					ds.On("click", datastar.PostSSE(routes.KingdomMessagesDeletePath+"?id=%d", m.ID)),
+					ds.On("click", datastar.PostSSE("%s", deleteURL(m.ID))),
 					Text("Delete"),
 				),
 			),

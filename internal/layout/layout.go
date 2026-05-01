@@ -16,8 +16,11 @@ import (
 
 // GetSSENoSignals generates a datastar @get() action that sends no signals.
 // Use this for refresh/subscribe endpoints that do not read signals from the request.
+// openWhenHidden:true prevents datastar from adding a visibilitychange listener that
+// aborts and reconnects the stream on tab focus changes — a pattern that causes Firefox
+// to throw "Error in input stream" on the reconnect attempt.
 func GetSSENoSignals(urlFormat string, args ...any) string {
-	return fmt.Sprintf(`@get('%s', {filterSignals: {include: /^$/}})`, fmt.Sprintf(urlFormat, args...))
+	return fmt.Sprintf(`@get('%s', {openWhenHidden: true, filterSignals: {include: /^$/}})`, fmt.Sprintf(urlFormat, args...))
 }
 
 // ── Layout functions ──────────────────────────────────────────────────────────
@@ -69,6 +72,7 @@ func shell(title string, layoutStream Node, topNav, sideNav Node, content ...Nod
 			Lang("en"),
 			Head(
 				TitleEl(Text(title)),
+				Link(Rel("icon"), Href("data:,")),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
 				Script(Type("module"), Src("/static/datastar.js")),
 			),
@@ -180,6 +184,7 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom, unreadCount int) No
 			NavItem(routes.KingdomArmyPath, "Army", currentPath),
 			NavItem(routes.KingdomMapPath, "World Map", currentPath),
 			messagesNavItem(currentPath, unreadCount),
+			NavItem(routes.GuildPath, "Guild", currentPath),
 		),
 	)
 }

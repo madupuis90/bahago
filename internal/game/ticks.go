@@ -99,6 +99,12 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		return fmt.Errorf("tick: advance campaigns: %w", err)
 	}
 
+	// Expire pending guilds that have not reached 5 supporters within 7 days.
+	// Single bulk DELETE — no per-row work needed.
+	if err := q.ExpirePendingGuilds(ctx); err != nil {
+		return fmt.Errorf("tick: expire pending guilds: %w", err)
+	}
+
 	// Resolve combat for all active campaigns on a 4-tick boundary.
 	// AdvanceCampaigns runs first, so freshly activated campaigns (ticks_remaining = action_ticks)
 	// fire their first combat round on the same tick they arrive. This is intentional:

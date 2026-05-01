@@ -163,13 +163,13 @@ func TestHandleSend_CannotTargetOwnKingdom(t *testing.T) {
 func cancelHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
 	army.RegisterRoutes(cr, q, nil, nil)
-	return cr.Handlers["POST "+routes.KingdomArmyCancelPath+"/{id}"]
+	return cr.Handlers["POST "+routes.KingdomArmyCancelPath]
 }
 
 // cancelReq builds a POST request with the campaign id as a path variable and
 // the provided kingdom injected into context.
 func cancelReq(id int, kingdom *db.Kingdom) *http.Request {
-	url := fmt.Sprintf("%s/%d", routes.KingdomArmyCancelPath, id)
+	url := strings.ReplaceAll(routes.KingdomArmyCancelPath, "{id}", strconv.Itoa(id))
 	r := httptest.NewRequest("POST", url, nil)
 	// Simulate the ServeMux path variable that the real router would set.
 	r.SetPathValue("id", strconv.Itoa(id))

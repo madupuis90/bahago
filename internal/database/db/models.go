@@ -23,6 +23,26 @@ type GameTick struct {
 	OccurredAt time.Time
 }
 
+type Guild struct {
+	ID                 int
+	Name               string
+	Slug               string
+	Description        string
+	Status             string
+	FoundingKingdomIds []int
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type GuildMembership struct {
+	ID        int
+	GuildID   int
+	KingdomID int
+	Role      string
+	JoinedAt  pgtype.Timestamptz
+	CreatedAt time.Time
+}
+
 type Kingdom struct {
 	ID           int
 	UserID       int

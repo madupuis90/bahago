@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -43,7 +44,7 @@ func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tic
 	r.HandleFunc("GET "+routes.KingdomArmyPath, h.handleArmyPage())
 	r.HandleFunc("GET "+routes.KingdomArmyRefreshPath, h.handleArmyRefresh())
 	r.HandleFunc("POST "+routes.KingdomArmySendPath, h.handleSend())
-	r.HandleFunc("POST "+routes.KingdomArmyCancelPath+"/{id}", h.handleCancel())
+	r.HandleFunc("POST "+routes.KingdomArmyCancelPath, h.handleCancel())
 }
 
 type handler struct {
@@ -53,6 +54,11 @@ type handler struct {
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
+
+// cancelURL substitutes {id} into the cancel route path constant.
+func cancelURL(id int) string {
+	return strings.ReplaceAll(routes.KingdomArmyCancelPath, "{id}", strconv.Itoa(id))
+}
 
 func (h *handler) handleArmyPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -363,7 +369,7 @@ func campaignRow(m db.KingdomCampaign, otherIndex map[int]string) Node {
 			Iff(canCancel, func() Node {
 				return Button(
 					Class("btn btn-text"),
-					ds.On("click", datastar.PostSSE(routes.KingdomArmyCancelPath+"/%d", m.ID)),
+					ds.On("click", datastar.PostSSE("%s", cancelURL(m.ID))),
 					Text("Cancel"),
 				)
 			}),
