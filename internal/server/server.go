@@ -82,7 +82,14 @@ func (s *Server) registerRoutes() {
 	guild.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 
 	// static assets — embedded into the binary at compile time
-	s.mux.Handle("GET /static/", http.FileServer(http.FS(web.Static)))
+	// Cache-Control is set explicitly because embed.FS has no ModTime, so
+	// http.FileServer cannot emit Last-Modified or a reliable ETag, leaving
+	// browsers with no freshness signal and forcing a full re-fetch every time.
+	staticHandler := http.FileServer(http.FS(web.Static))
+	s.mux.Handle("GET /static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		staticHandler.ServeHTTP(w, r)
+	}))
 
 }
 
