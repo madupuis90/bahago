@@ -137,6 +137,16 @@ type KingdomMessage struct {
 	CreatedAt     time.Time
 }
 
+type KingdomPrayer struct {
+	ID              int
+	KingdomID       int
+	TargetKingdomID int
+	PrayerType      string
+	TicksRemaining  int
+	TicksTotal      int
+	StartedAt       time.Time
+}
+
 type KingdomTraining struct {
 	ID             int
 	KingdomID      int

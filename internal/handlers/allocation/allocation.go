@@ -62,7 +62,19 @@ func (h *handler) handleAllocationPage() http.HandlerFunc {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		rates := game.ComputeRates(*kingdom, buildings)
+		prayers, err := h.queries.ListKingdomPrayers(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("allocation page: get prayers: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("allocation page: get targeted prayers: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		rates := game.ComputeRates(*kingdom, buildings, targetedPrayers, prayers)
 		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(*kingdom, rates)).Render(w)
 	}
 }
@@ -86,7 +98,19 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
 					return
 				}
-				rates := game.ComputeRates(k, buildings)
+				prayers, err := h.queries.ListKingdomPrayers(r.Context(), k.ID)
+				if err != nil {
+					log.Printf("allocation refresh: get prayers: %v", err)
+					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					return
+				}
+				targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), k.ID)
+				if err != nil {
+					log.Printf("allocation refresh: get targeted prayers: %v", err)
+					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					return
+				}
+				rates := game.ComputeRates(k, buildings, targetedPrayers, prayers)
 				page := allocationContent(k, rates)
 				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
@@ -149,7 +173,19 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
 			return
 		}
-		rates := game.ComputeRates(updatedKingdom, buildings)
+		prayers, err := h.queries.ListKingdomPrayers(r.Context(), updatedKingdom.ID)
+		if err != nil {
+			log.Printf("save-allocation: get prayers: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			return
+		}
+		targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), updatedKingdom.ID)
+		if err != nil {
+			log.Printf("save-allocation: get targeted prayers: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			return
+		}
+		rates := game.ComputeRates(updatedKingdom, buildings, targetedPrayers, prayers)
 		page := allocationContent(updatedKingdom, rates)
 		sse := datastar.NewSSE(w, r)
 		if err := sse.PatchElementGostar(MainContent(page)); err != nil {

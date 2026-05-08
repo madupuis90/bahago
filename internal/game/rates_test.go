@@ -63,7 +63,7 @@ func TestComputeRates_WoodProduction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			k := db.Kingdom{Population: tt.population, WoodPct: tt.woodPct, FoodPct: 30}
 			// FoodPct: 30 keeps the kingdom at break-even so starvation doesn't affect pop.
-			got := ComputeRates(k, tt.buildings)
+			got := ComputeRates(k, tt.buildings, nil, nil)
 			if got.WoodProduction != tt.wantWood {
 				t.Errorf("WoodProduction = %d, want %d", got.WoodProduction, tt.wantWood)
 			}
@@ -121,7 +121,7 @@ func TestComputeRates_Starvation(t *testing.T) {
 				Food:       tt.food,
 				FoodPct:    tt.foodPct,
 			}
-			got := ComputeRates(k, nil)
+			got := ComputeRates(k, nil, nil, nil)
 			if got.PopulationUpkeep != tt.wantLoss {
 				t.Errorf("PopulationUpkeep (starvation loss) = %d, want %d", got.PopulationUpkeep, tt.wantLoss)
 			}
@@ -140,7 +140,7 @@ func TestComputeRates_PopulationGrowthSuppressedWhenStarving(t *testing.T) {
 		FoodPct:    0,
 		IdlePct:    10, // would produce 3000*10/2500=12 normally
 	}
-	got := ComputeRates(k, nil)
+	got := ComputeRates(k, nil, nil, nil)
 	if got.PopulationProduction != 0 {
 		t.Errorf("PopulationProduction = %d, want 0 while starving", got.PopulationProduction)
 	}
@@ -157,7 +157,7 @@ func TestComputeRates_PopulationGrowsWithIdleWorkers(t *testing.T) {
 		FoodPct:    30, // break-even
 		IdlePct:    10, // 3000*10/2500 = 12
 	}
-	got := ComputeRates(k, nil)
+	got := ComputeRates(k, nil, nil, nil)
 	if got.PopulationUpkeep != 0 {
 		t.Errorf("expected no starvation, got PopulationUpkeep = %d", got.PopulationUpkeep)
 	}
@@ -168,7 +168,7 @@ func TestComputeRates_PopulationGrowsWithIdleWorkers(t *testing.T) {
 
 func TestComputeRates_FoodUpkeep(t *testing.T) {
 	k := db.Kingdom{Population: 3000, FoodPct: 50}
-	got := ComputeRates(k, nil)
+	got := ComputeRates(k, nil, nil, nil)
 	// foodUpkeep = 3000/30 = 100
 	if got.FoodUpkeep != 100 {
 		t.Errorf("FoodUpkeep = %d, want 100", got.FoodUpkeep)

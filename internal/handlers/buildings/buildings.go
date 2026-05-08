@@ -298,7 +298,7 @@ func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.K
 	return Div(Classes{"building-card": true, "panel": true, "building-card--locked": locked},
 		P(Class("panel-title"), Text(def.Name)),
 		P(Text(fmt.Sprintf("%d / %d", count, def.MaxCount))),
-		If(len(def.BonusPctPer) > 0, P(Text(bonusText(def)))),
+		If(def.BonusPctPer.HasAny(), P(Text(bonusText(def)))),
 		If(locked, P(Text(prereqText(def)))),
 		If(!atMax, Group([]Node{
 			P(Text(costText(def.Cost) + " · " + fmt.Sprintf("%d ticks", def.Ticks))),
@@ -324,9 +324,25 @@ func buildingsErrorComponent(err error) Node {
 }
 
 func bonusText(def game.BuildingDef) string {
-	parts := make([]string, 0, len(def.BonusPctPer))
-	for resource, pct := range def.BonusPctPer {
-		parts = append(parts, fmt.Sprintf("+%d%% %s", pct, resource))
+	b := def.BonusPctPer
+	var parts []string
+	if b.Wood != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% wood", b.Wood))
+	}
+	if b.Stone != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% stone", b.Stone))
+	}
+	if b.Food != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% food", b.Food))
+	}
+	if b.Mana != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% mana", b.Mana))
+	}
+	if b.Devotion != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% devotion", b.Devotion))
+	}
+	if b.Knowledge != 0 {
+		parts = append(parts, fmt.Sprintf("+%d%% knowledge", b.Knowledge))
 	}
 	return strings.Join(parts, ", ") + " per instance"
 }
@@ -340,7 +356,7 @@ func prereqText(def game.BuildingDef) string {
 	return "Requires: " + strings.Join(parts, " and ")
 }
 
-func costText(cost game.ResourceCost) string {
+func costText(cost game.ResourceValues) string {
 	parts := []string{}
 	if cost.Wood > 0 {
 		parts = append(parts, fmt.Sprintf("%d wood", cost.Wood))

@@ -1,6 +1,112 @@
 # Guild UI Test Plans
 
-The guild system lets kingdoms form guilds through a proposal-and-support phase, then recruit members once active. Plans are ordered to build on each other's end state; each can also be run in isolation if the DB is seeded to match its precondition.
+The guild system (`/guild`) lets kingdoms form guilds through a proposal-and-support phase, then recruit members once active.
+
+---
+
+## Plan: Guild Full Flow
+
+**Accounts:**
+
+| Role | Email | Password |
+|------|-------|----------|
+| Primary (leader) | mad@test.com | 12345678 |
+| Supporter 1 | seed1@dev.local | password |
+| Supporter 2 | seed2@dev.local | password |
+| Applicant | seed3@dev.local | password |
+
+**Precondition:** Logged in as mad@test.com. Navigate to `/guild`. None of the four accounts above have an existing guild membership.
+
+### Steps
+
+**Page structure**
+
+1. Navigate to `/guild` as mad@test.com.
+   - Expected: Page shows "You are not a member of any guild." and a "Create a Guild" button.
+
+**Create and cancel a proposal**
+
+2. Click "Create a Guild".
+   - Expected: Navigated to `/guild/new`. Form shows Name and Description fields and a Create button.
+
+3. Submit the form with Name = "Test Guild Beta" and Description = "A temporary guild.".
+   - Expected: Redirected to the guild page at `/guild/test-guild-beta`. Status shows "Pending". mad@test.com's kingdom is listed as Applicant. A "Cancel Proposal" button is visible. No "Request to Join" button.
+
+4. Click "Cancel Proposal".
+   - Expected: Redirected to `/guild`. Navigate to `/guild/test-guild-beta` — it no longer exists (returns a not-found page).
+
+**Create the real proposal**
+
+5. Navigate to `/guild` and click "Create a Guild". Submit with Name = "Test Guild Alpha" and Description = "Our main guild.".
+   - Expected: Redirected to `/guild/test-guild-alpha`. Status shows "Pending". "Cancel Proposal" button is visible.
+
+**Supporting the proposal — pledge, withdraw, re-pledge**
+
+6. Log out and log in as seed1@dev.local. Navigate to `/guild/test-guild-alpha`.
+   - Expected: Guild page shows status "Pending". "Pledge Support" button is visible.
+
+7. Click "Pledge Support".
+   - Expected: seed1's kingdom appears in the member list as Supporter.
+
+8. Click "Withdraw Support".
+   - Expected: seed1's kingdom is removed from the member list. "Pledge Support" button reappears.
+
+9. Click "Pledge Support" again.
+   - Expected: seed1's kingdom appears in the member list as Supporter again.
+
+**Activating the guild**
+
+10. Log out and log in as seed2@dev.local. Navigate to `/guild/test-guild-alpha`.
+    - Expected: seed1's kingdom is listed as Supporter. "Pledge Support" button is visible for seed2.
+
+11. Click "Pledge Support".
+    - Expected: seed2's kingdom appears as Supporter. Guild status changes to "Active". mad@test.com's kingdom role changes to "Leader". seed1 and seed2 are shown as Member.
+
+**Requesting to join and rejection**
+
+12. Log out and log in as seed3@dev.local. Navigate to `/guild/test-guild-alpha`.
+    - Expected: Guild is active. "Request to Join" button is visible.
+
+13. Click "Request to Join".
+    - Expected: Button changes to indicate the request is pending. "Request to Join" button is no longer shown.
+
+14. Log out and log in as mad@test.com. Navigate to `/guild/test-guild-alpha/manage`.
+    - Expected: "Pending Requests" section shows seed3's kingdom with Approve and Reject buttons.
+
+15. Click "Reject" next to seed3's kingdom.
+    - Expected: seed3's kingdom disappears from Pending Requests and is not in the Members list.
+
+16. Log out and log in as seed3@dev.local. Navigate to `/guild/test-guild-alpha`.
+    - Expected: "Request to Join" button is visible again.
+
+17. Click "Request to Join" again.
+    - Expected: Request is pending.
+
+18. Log out and log in as mad@test.com. Navigate to `/guild/test-guild-alpha/manage`.
+    - Expected: seed3's kingdom is in Pending Requests again.
+
+19. Click "Approve" next to seed3's kingdom.
+    - Expected: seed3's kingdom disappears from Pending Requests and appears in the Members list with role "Member".
+
+**Promoting and demoting an officer**
+
+20. On `/guild/test-guild-alpha/manage`, locate seed1's kingdom.
+    - Expected: seed1's kingdom shows role "Member" with a "Promote" button.
+
+21. Click "Promote" next to seed1's kingdom.
+    - Expected: seed1's role changes to "Officer". "Demote" button is now visible. "Promote" button is gone.
+
+22. Click "Demote" next to seed1's kingdom.
+    - Expected: seed1's role changes back to "Member". "Promote" button reappears.
+
+**Removing a member**
+
+23. Click "Remove" next to seed3's kingdom.
+    - Expected: seed3's kingdom disappears from the Members list.
+
+24. Log out and log in as seed3@dev.local. Navigate to `/guild/test-guild-alpha`.
+    - Expected: "Request to Join" button is visible again — seed3's kingdom is no longer a member.
+
 
 ## Test Accounts
 

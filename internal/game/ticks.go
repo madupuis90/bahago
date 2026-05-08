@@ -43,6 +43,18 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		return fmt.Errorf("tick: fetch buildings: %w", err)
 	}
 
+	prayersByCaster, prayersByTarget, err := fetchAllKingdomPrayers(ctx, q)
+	if err != nil {
+		return fmt.Errorf("tick: fetch prayers: %w", err)
+	}
+
+	// Cancel prayers for any caster that can no longer afford their devotion upkeep.
+	// This must happen before the main rate loop so that target kingdoms don't receive
+	// bonuses from prayers that are about to be deleted.
+	if err := cancelUnsustainedPrayers(ctx, q, kingdoms, allBuildings, prayersByCaster, prayersByTarget); err != nil {
+		return fmt.Errorf("tick: %w", err)
+	}
+
 	params := db.BulkTickKingdomsParams{
 		Ids:        make([]int, len(kingdoms)),
 		Wood:       make([]int, len(kingdoms)),
@@ -55,7 +67,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	}
 
 	for i, k := range kingdoms {
-		r := ComputeRates(k, allBuildings[k.ID])
+		r := ComputeRates(k, allBuildings[k.ID], prayersByTarget[k.ID], prayersByCaster[k.ID])
 
 		params.Ids[i] = k.ID
 		params.Wood[i] = max(0, k.Wood+r.WoodProduction-r.WoodUpkeep)
@@ -111,6 +123,12 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	// arrival and first strike are simultaneous.
 	if err := ResolveCombat(ctx, pool, q, tickID); err != nil {
 		return fmt.Errorf("tick: resolve combat: %w", err)
+	}
+
+	// Expire prayers whose countdown has reached zero.
+	// The CTE in DecrementAndListPrayersAtZero decrements and deletes in one round trip.
+	if _, err := q.DecrementAndListPrayersAtZero(ctx); err != nil {
+		return fmt.Errorf("tick: decrement prayers: %w", err)
 	}
 
 	// Single authoritative notify — reads post-everything state from DB so
@@ -172,6 +190,56 @@ func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAnd
 	return tx.Commit(ctx)
 }
 
+// cancelUnsustainedPrayers cancels prayers for any caster that cannot sustain their total
+// devotion upkeep this tick. A caster is considered able to sustain if their current devotion
+// stockpile plus their devotion production this tick covers the total upkeep — i.e. they would
+// not go negative even starting from zero stock. This means a kingdom with 0 devotion but
+// sufficient production keeps its prayers active.
+// Both maps are modified in place (Go maps are reference types).
+func cancelUnsustainedPrayers(
+	ctx context.Context,
+	q db.Querier,
+	kingdoms []db.Kingdom,
+	allBuildings map[int][]db.KingdomBuilding,
+	prayersByCaster, prayersByTarget map[int][]db.KingdomPrayer,
+) error {
+	var cancelIDs []int
+	for _, k := range kingdoms {
+		castPrayers := prayersByCaster[k.ID]
+		if len(castPrayers) == 0 {
+			continue
+		}
+		bonus := ComputeBonuses(allBuildings[k.ID], prayersByTarget[k.ID])
+		devProd := devotionProduction(k.Population, k.DevotionPct, bonus.Devotion)
+		if k.Devotion+devProd < devotionUpkeep(castPrayers) {
+			cancelIDs = append(cancelIDs, k.ID)
+			delete(prayersByCaster, k.ID)
+			for _, p := range castPrayers {
+				targeted := prayersByTarget[p.TargetKingdomID]
+				var kept []db.KingdomPrayer
+				for _, tp := range targeted {
+					if tp.KingdomID == k.ID {
+						continue
+					}
+					kept = append(kept, tp)
+				}
+				if len(kept) == 0 {
+					delete(prayersByTarget, p.TargetKingdomID)
+				} else {
+					prayersByTarget[p.TargetKingdomID] = kept
+				}
+			}
+		}
+	}
+	if len(cancelIDs) == 0 {
+		return nil
+	}
+	if err := q.DeleteKingdomPrayers(ctx, cancelIDs); err != nil {
+		return fmt.Errorf("cancel prayers on devotion failure: %w", err)
+	}
+	return nil
+}
+
 // fetchAllKingdomBuildings returns a map from kingdom ID to its buildings.
 // Uses a single query for all kingdoms to avoid N+1 queries during the tick.
 func fetchAllKingdomBuildings(ctx context.Context, q db.Querier, kingdoms []db.Kingdom) (map[int][]db.KingdomBuilding, error) {
@@ -184,6 +252,26 @@ func fetchAllKingdomBuildings(ctx context.Context, q db.Querier, kingdoms []db.K
 		m[b.KingdomID] = append(m[b.KingdomID], b)
 	}
 	return m, nil
+}
+
+// fetchAllKingdomPrayers returns two maps built from a single query:
+//   - byCaster: keyed by kingdom_id (the praying kingdom) — used for devotion upkeep
+//   - byTarget: keyed by target_kingdom_id (the receiving kingdom) — used for resource bonuses
+//
+// Keeping them separate ensures that when caster ≠ target the costs and bonuses land on the
+// correct kingdoms. For self-targeted prayers (the current default) both maps hold the same rows.
+func fetchAllKingdomPrayers(ctx context.Context, q db.Querier) (byCaster, byTarget map[int][]db.KingdomPrayer, err error) {
+	all, err := q.GetAllKingdomPrayers(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	byCaster = make(map[int][]db.KingdomPrayer)
+	byTarget = make(map[int][]db.KingdomPrayer)
+	for _, p := range all {
+		byCaster[p.KingdomID] = append(byCaster[p.KingdomID], p)
+		byTarget[p.TargetKingdomID] = append(byTarget[p.TargetKingdomID], p)
+	}
+	return byCaster, byTarget, nil
 }
 
 // StartTicker starts the game tick loop. It blocks until ctx is cancelled.

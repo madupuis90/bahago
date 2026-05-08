@@ -183,6 +183,7 @@ func KingdomSideNav(currentPath string, kingdom *db.Kingdom, unreadCount int) No
 			NavItem(routes.KingdomUnitsPath, "Units", currentPath),
 			NavItem(routes.KingdomArmyPath, "Army", currentPath),
 			NavItem(routes.KingdomMapPath, "World Map", currentPath),
+			NavItem(routes.KingdomPrayersPath, "Prayers", currentPath),
 			messagesNavItem(currentPath, unreadCount),
 			NavItem(routes.GuildPath, "Guild", currentPath),
 		),

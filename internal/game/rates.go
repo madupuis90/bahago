@@ -61,39 +61,58 @@ func foodProduction(population, pct, bonusPct int) int {
 	return population * pct * (100 + bonusPct) / (foodProdDivisor * 100)
 }
 
-// foodUpkeep returns food consumed per tick (one unit per 30 population).
 func foodUpkeep(population int) int {
 	return population / foodUpkDivisor
 }
 
-// manaProduction returns mana produced per tick.
 func manaProduction(population, pct, bonusPct int) int {
 	return population * pct * (100 + bonusPct) / (manaDivisor * 100)
 }
 
-// devotionProduction returns devotion produced per tick.
 func devotionProduction(population, pct, bonusPct int) int {
 	return population * pct * (100 + bonusPct) / (devotionDivisor * 100)
 }
 
-// knowledgeProduction returns knowledge produced per tick.
 func knowledgeProduction(population, pct, bonusPct int) int {
 	return population * pct * (100 + bonusPct) / (knowDivisor * 100)
 }
 
-// populationProduction returns population growth per tick.
 func populationProduction(population, pct int) int {
 	return population * pct / popIdleDivisor
+}
+
+// devotionUpkeep returns the sum of devotion upkeep across all given prayers.
+// Unknown prayer types are silently skipped (they have no upkeep to charge).
+func devotionUpkeep(prayers []db.KingdomPrayer) int {
+	var total int
+	for _, p := range prayers {
+		if def, ok := PrayerDefs[p.PrayerType]; ok {
+			total += def.DevotionUpkeep
+		}
+	}
+	return total
+}
+
+// ComputeBonuses returns the merged production bonus percentages for a kingdom,
+// combining building bonuses with resource bonuses from prayers targeting it.
+func ComputeBonuses(buildings []db.KingdomBuilding, targetedPrayers []db.KingdomPrayer) ProductionBonus {
+	return BuildingBonusPct(BuildingCountMap(buildings)).Add(PrayerBonusPct(targetedPrayers))
 }
 
 // ComputeRates calculates production and upkeep for all resources based on kingdom state.
 // This is a pure function with no side effects; it is safe to call in tests.
 // Building bonus percentages are folded into the single integer division inside each production
 // function to avoid double truncation from two separate integer divisions.
-func ComputeRates(k db.Kingdom, buildings []db.KingdomBuilding) ResourceRates {
-	bonus := BuildingBonusPct(BuildingCountMap(buildings))
+//
+// targetedPrayers are prayers whose target_kingdom_id is this kingdom — their resource bonuses
+// apply here. castPrayers are prayers whose kingdom_id is this kingdom — their devotion upkeep
+// is charged here. For self-targeted prayers both slices contain the same rows.
+func ComputeRates(k db.Kingdom, buildings []db.KingdomBuilding, targetedPrayers, castPrayers []db.KingdomPrayer) ResourceRates {
+	bonus := ComputeBonuses(buildings, targetedPrayers)
 
-	fp := foodProduction(k.Population, k.FoodPct, bonus["food"])
+	prayerDevotionUpkeep := devotionUpkeep(castPrayers)
+
+	fp := foodProduction(k.Population, k.FoodPct, bonus.Food)
 	fu := foodUpkeep(k.Population)
 	popLoss := starvationLoss(k.Population, k.Food, fp, fu)
 	// Population does not grow while starving — a food deficit suppresses births entirely.
@@ -102,17 +121,17 @@ func ComputeRates(k db.Kingdom, buildings []db.KingdomBuilding) ResourceRates {
 		popProd = 0
 	}
 	return ResourceRates{
-		WoodProduction:       woodProduction(k.Population, k.WoodPct, bonus["wood"]),
+		WoodProduction:       woodProduction(k.Population, k.WoodPct, bonus.Wood),
 		WoodUpkeep:           0,
-		StoneProduction:      stoneProduction(k.Population, k.StonePct, bonus["stone"]),
+		StoneProduction:      stoneProduction(k.Population, k.StonePct, bonus.Stone),
 		StoneUpkeep:          0,
 		FoodProduction:       fp,
 		FoodUpkeep:           fu,
-		ManaProduction:       manaProduction(k.Population, k.ManaPct, bonus["mana"]),
+		ManaProduction:       manaProduction(k.Population, k.ManaPct, bonus.Mana),
 		ManaUpkeep:           0,
-		DevotionProduction:   devotionProduction(k.Population, k.DevotionPct, bonus["devotion"]),
-		DevotionUpkeep:       0,
-		KnowledgeProduction:  knowledgeProduction(k.Population, k.KnowledgePct, bonus["knowledge"]),
+		DevotionProduction:   devotionProduction(k.Population, k.DevotionPct, bonus.Devotion),
+		DevotionUpkeep:       prayerDevotionUpkeep,
+		KnowledgeProduction:  knowledgeProduction(k.Population, k.KnowledgePct, bonus.Knowledge),
 		KnowledgeUpkeep:      0,
 		PopulationProduction: popProd,
 		PopulationUpkeep:     popLoss,

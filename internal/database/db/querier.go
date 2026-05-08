@@ -44,10 +44,12 @@ type Querier interface {
 	CreateGuildMembership(ctx context.Context, arg CreateGuildMembershipParams) error
 	CreateKingdom(ctx context.Context, arg CreateKingdomParams) (Kingdom, error)
 	CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) error
+	CreatePrayer(ctx context.Context, arg CreatePrayerParams) (KingdomPrayer, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int, error)
 	DecrementAndListCampaignsAtZero(ctx context.Context) ([]DecrementAndListCampaignsAtZeroRow, error)
 	DecrementAndListConstructionAtZero(ctx context.Context) ([]DecrementAndListConstructionAtZeroRow, error)
+	DecrementAndListPrayersAtZero(ctx context.Context) ([]DecrementAndListPrayersAtZeroRow, error)
 	DecrementAndListTrainingAtZero(ctx context.Context) ([]DecrementAndListTrainingAtZeroRow, error)
 	DeductBuildingCost(ctx context.Context, arg DeductBuildingCostParams) (int, error)
 	DeductKingdomUnitsCasualties(ctx context.Context, arg DeductKingdomUnitsCasualtiesParams) error
@@ -55,8 +57,10 @@ type Querier interface {
 	DeleteCampaign(ctx context.Context, id int) error
 	DeleteConstruction(ctx context.Context, kingdomID int) error
 	DeleteEmailVerificationByUserID(ctx context.Context, userID int) error
+	DeleteKingdomPrayers(ctx context.Context, ids []int) error
 	DeleteMessage(ctx context.Context, arg DeleteMessageParams) error
 	DeletePasswordResetTokensByUserID(ctx context.Context, userID int) error
+	DeletePrayer(ctx context.Context, arg DeletePrayerParams) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteSessionsByUserID(ctx context.Context, userID int) error
 	DeleteTraining(ctx context.Context, kingdomID int) error
@@ -64,6 +68,7 @@ type Querier interface {
 	ExpirePendingGuilds(ctx context.Context) error
 	GetActiveCampaignsReadyForCombat(ctx context.Context) ([]KingdomCampaign, error)
 	GetAllKingdomBuildings(ctx context.Context) ([]KingdomBuilding, error)
+	GetAllKingdomPrayers(ctx context.Context) ([]KingdomPrayer, error)
 	GetAllKingdomUnits(ctx context.Context) ([]KingdomUnit, error)
 	// Returns available unit counts for a kingdom via the kingdom_available_units view.
 	// A unit is available if it is not committed to any campaign (any status).
@@ -98,8 +103,10 @@ type Querier interface {
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
 	ListGuildMembersWithNames(ctx context.Context, guildID int) ([]ListGuildMembersWithNamesRow, error)
 	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
+	ListKingdomPrayers(ctx context.Context, kingdomID int) ([]KingdomPrayer, error)
 	ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error)
 	ListPendingRequests(ctx context.Context, guildID int) ([]ListPendingRequestsRow, error)
+	ListPrayersTargetingKingdom(ctx context.Context, targetKingdomID int) ([]KingdomPrayer, error)
 	MarkMessageRead(ctx context.Context, arg MarkMessageReadParams) error
 	RejectMembership(ctx context.Context, arg RejectMembershipParams) error
 	RemoveMembership(ctx context.Context, arg RemoveMembershipParams) error

@@ -115,22 +115,22 @@ func TestCanBuild(t *testing.T) {
 func TestBuildingBonusPct(t *testing.T) {
 	t.Run("empty counts", func(t *testing.T) {
 		bonus := BuildingBonusPct(map[string]int{})
-		if len(bonus) != 0 {
-			t.Errorf("expected empty bonus map, got %v", bonus)
+		if bonus != (ProductionBonus{}) {
+			t.Errorf("expected zero BonusMap, got %v", bonus)
 		}
 	})
 
 	t.Run("single mill gives wood bonus", func(t *testing.T) {
 		bonus := BuildingBonusPct(map[string]int{BuildingMill: 1})
-		if bonus["wood"] != 10 {
-			t.Errorf("wood bonus = %d, want 10", bonus["wood"])
+		if bonus.Wood != 10 {
+			t.Errorf("wood bonus = %d, want 10", bonus.Wood)
 		}
 	})
 
 	t.Run("five mills stack to 50pct wood bonus", func(t *testing.T) {
 		bonus := BuildingBonusPct(map[string]int{BuildingMill: 5})
-		if bonus["wood"] != 50 {
-			t.Errorf("wood bonus = %d, want 50", bonus["wood"])
+		if bonus.Wood != 50 {
+			t.Errorf("wood bonus = %d, want 50", bonus.Wood)
 		}
 	})
 
@@ -139,8 +139,8 @@ func TestBuildingBonusPct(t *testing.T) {
 			BuildingMill:    5, // +50% wood
 			BuildingFactory: 2, // +50% wood
 		})
-		if bonus["wood"] != 100 {
-			t.Errorf("wood bonus = %d, want 100", bonus["wood"])
+		if bonus.Wood != 100 {
+			t.Errorf("wood bonus = %d, want 100", bonus.Wood)
 		}
 	})
 
@@ -149,21 +149,21 @@ func TestBuildingBonusPct(t *testing.T) {
 			BuildingMill:   3, // +30% wood
 			BuildingQuarry: 2, // +20% stone
 		})
-		if bonus["wood"] != 30 {
-			t.Errorf("wood bonus = %d, want 30", bonus["wood"])
+		if bonus.Wood != 30 {
+			t.Errorf("wood bonus = %d, want 30", bonus.Wood)
 		}
-		if bonus["stone"] != 20 {
-			t.Errorf("stone bonus = %d, want 20", bonus["stone"])
+		if bonus.Stone != 20 {
+			t.Errorf("stone bonus = %d, want 20", bonus.Stone)
 		}
-		if bonus["food"] != 0 {
-			t.Errorf("food bonus = %d, want 0", bonus["food"])
+		if bonus.Food != 0 {
+			t.Errorf("food bonus = %d, want 0", bonus.Food)
 		}
 	})
 
 	t.Run("zero count building contributes no bonus", func(t *testing.T) {
 		bonus := BuildingBonusPct(map[string]int{BuildingMill: 0})
-		if bonus["wood"] != 0 {
-			t.Errorf("wood bonus = %d, want 0 for zero-count building", bonus["wood"])
+		if bonus.Wood != 0 {
+			t.Errorf("wood bonus = %d, want 0 for zero-count building", bonus.Wood)
 		}
 	})
 }

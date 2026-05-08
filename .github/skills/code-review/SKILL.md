@@ -5,19 +5,8 @@ description: Structured Go code review for this project. Diffs local main agains
 
 Read `.github/instructions/review.instructions.md` before doing anything else.
 
+I would like you to review the code of the last features we added. You can use git to read the diffs we have made. You can lookup the instructions depending on the files you are reviewing to make sure they are followed properly. Try to flag anything that we might have forgotten in terms of feature, error message, feedback to the user, design/architecture problems, discrepencies or illogical code path, anti-patterns, security or data integridy concerns, race conditions, best practices, unclear variable names etc. I will take the time with you to review even small details, although we will focus on bigger tasks  first. We take the time to be thorough, quality over speed. 
+
 ## Workflow
 
-1. Run `git log origin/main..HEAD --oneline` to identify commits not yet on origin. Summarise the feature under review; if commits span multiple unrelated features, ask the user which to focus on.
-2. Run `git diff origin/main..HEAD` to pull the full diff.
-3. Read every changed file in full — do not form opinions from the diff alone.
-4. Apply the full checklist from `review.instructions.md`. Check each category explicitly: SQL & Database, Go, UI / Templates, Structure & Conventions, Security.
-5. Present the review in two sections:
-   - **Must change** — specific issues with file and line references, ordered most impactful first (architecture and correctness before style)
-   - **Questions** — ambiguities or design decisions that need the user's input
-6. Work through **Must change** items one at a time. Wait for the user to resolve or dismiss each before moving to the next. Do not batch-fix.
-
-## Principles
-
-- Flag missing features, absent error feedback, and unclear variable names — not just rule violations
-- Prefer asking over assuming when a design decision could go either way
-- If a `test/ui/<feature>.md` test plan exists for any changed feature, note it and recommend running it after fixes are applied
+Follow the workflow from the instructions.

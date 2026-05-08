@@ -9,7 +9,7 @@ description: "Use when performing a code review"
 1. Run `git log --oneline` to identify the commits belonging to the feature
 2. Run `git diff <first-commit>^..HEAD` to pull the full diff
 3. Read all changed files in full before forming any opinion
-4. Present a structured review: **what looks good**, **what needs to change** (with specific file/line references), and **any open questions**
+4. Present a structured review: **what needs to change** (with specific file/line references), and **any open questions**
 5. Work through each issue with the user one at a time — do not batch-fix everything at once
 
 > Note: this project commits directly to main (solo dev, one feature at a time). If branches are introduced in future, use `git diff main...HEAD` instead.

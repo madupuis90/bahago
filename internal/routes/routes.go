@@ -39,6 +39,11 @@ const (
 	KingdomMessagesSendPath    = "/kingdom/messages/send"
 	KingdomMessagesDeletePath  = "/kingdom/messages/delete/{id}"
 
+	KingdomPrayersPath        = "/kingdom/prayers"
+	KingdomPrayersRefreshPath = "/kingdom/prayers/refresh"
+	KingdomPrayerCastPath     = "/kingdom/prayers/cast"
+	KingdomPrayerCancelPath   = "/kingdom/prayers/cancel/{id}"
+
 	GuildPath                   = "/guild"
 	GuildListPath               = "/guild/list"
 	GuildNewPath                = "/guild/new"

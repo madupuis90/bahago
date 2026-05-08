@@ -383,9 +383,13 @@ func (h *handler) handleWithdrawSupport() http.HandlerFunc {
 			return
 		}
 
-		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
-			log.Printf("guild withdraw support: redirect: %v", err)
+		toNotify := []int{kingdom.ID}
+		if remaining, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
+			for _, m := range remaining {
+				toNotify = append(toNotify, m.KingdomID)
+			}
 		}
+		h.publishUpdates(r, toNotify)
 	}
 }
 

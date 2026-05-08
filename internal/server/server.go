@@ -15,6 +15,7 @@ import (
 	"bahago/internal/handlers/kingdomsetup"
 	"bahago/internal/handlers/layoutrefresh"
 	"bahago/internal/handlers/messages"
+	"bahago/internal/handlers/prayers"
 	"bahago/internal/handlers/units"
 	"bahago/internal/handlers/worldmap"
 	"bahago/internal/hub"
@@ -79,6 +80,7 @@ func (s *Server) registerRoutes() {
 	worldmap.RegisterRoutes(reqKingdomRouter, s.queries)
 	layoutrefresh.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
 	messages.RegisterRoutes(reqKingdomRouter, s.queries, s.tickHub)
+	prayers.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 	guild.RegisterRoutes(reqKingdomRouter, s.queries, s.pool, s.tickHub)
 
 	// static assets — embedded into the binary at compile time

@@ -393,7 +393,7 @@ func trainForm(buildingCounts map[string]int, canSummon bool, busy bool) Node {
 		unitNames = append(unitNames, game.SummonOrder...)
 	}
 
-	costs := make(map[string]game.ResourceCost, len(unitNames))
+	costs := make(map[string]game.ResourceValues, len(unitNames))
 	for _, utype := range unitNames {
 		costs[utype] = game.UnitDefs[utype].Cost
 	}

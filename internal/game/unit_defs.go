@@ -74,7 +74,7 @@ type UnitDef struct {
 
 	// Cost is the resource cost to train one unit.
 	// Regular units use Wood/Stone; summons use Mana.
-	Cost ResourceCost
+	Cost ResourceValues
 
 	// FoodUpkeep is food consumed per unit per tick.
 	// Zero for units with the Summon attribute.
@@ -106,7 +106,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:       "Recruit",
 		Power:      1,
 		Ticks:      12, // 3h
-		Cost:       ResourceCost{Wood: 10},
+		Cost:       ResourceValues{Wood: 10},
 		FoodUpkeep: 1,
 		Attributes: []Attribute{AttributeMelee},
 	},
@@ -114,7 +114,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:       "Archer",
 		Power:      1,
 		Ticks:      16, // 4h
-		Cost:       ResourceCost{Wood: 15},
+		Cost:       ResourceValues{Wood: 15},
 		FoodUpkeep: 1,
 		Attributes: []Attribute{AttributeArcher},
 	},
@@ -122,7 +122,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:          "Raider",
 		Power:         2,
 		Ticks:         16, // 4h
-		Cost:          ResourceCost{Wood: 15, Stone: 5},
+		Cost:          ResourceValues{Wood: 15, Stone: 5},
 		FoodUpkeep:    1,
 		Prerequisites: []Prerequisite{{Type: BuildingMill, MinCount: 1}},
 		Attributes:    []Attribute{AttributeRaiders, AttributeMelee},
@@ -131,7 +131,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:          "Knight",
 		Power:         3,
 		Ticks:         24, // 6h
-		Cost:          ResourceCost{Wood: 20, Stone: 20},
+		Cost:          ResourceValues{Wood: 20, Stone: 20},
 		FoodUpkeep:    2,
 		Prerequisites: []Prerequisite{{Type: BuildingArmory, MinCount: 1}},
 		Attributes:    []Attribute{AttributeMelee, AttributeShields},
@@ -140,7 +140,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:          "Catapult",
 		Power:         5,
 		Ticks:         32, // 8h
-		Cost:          ResourceCost{Stone: 40},
+		Cost:          ResourceValues{Stone: 40},
 		FoodUpkeep:    2,
 		Prerequisites: []Prerequisite{{Type: BuildingArmory, MinCount: 1}},
 		Attributes:    []Attribute{AttributeSiegeEngine},
@@ -150,7 +150,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:       "Shade",
 		Power:      2,
 		Ticks:      20, // 5h
-		Cost:       ResourceCost{Mana: 30},
+		Cost:       ResourceValues{Mana: 30},
 		ManaUpkeep: 1,
 		IsSummon:   true,
 		Attributes: []Attribute{AttributeSummon},
@@ -159,7 +159,7 @@ var UnitDefs = map[string]UnitDef{
 		Name:       "Dread Knight",
 		Power:      5,
 		Ticks:      32, // 8h
-		Cost:       ResourceCost{Mana: 60},
+		Cost:       ResourceValues{Mana: 60},
 		ManaUpkeep: 2,
 		IsSummon:   true,
 		Attributes: []Attribute{AttributeSummon, AttributeDeathtouch, AttributeUndead},
