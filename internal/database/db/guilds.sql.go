@@ -441,6 +441,56 @@ func (q *Queries) ListGuildMembersWithNames(ctx context.Context, guildID int) ([
 	return items, nil
 }
 
+const listPendingGuilds = `-- name: ListPendingGuilds :many
+SELECT
+    g.name,
+    g.slug,
+    k.name AS founder_name,
+    COUNT(p.id)::int AS supporter_count,
+    (g.created_at + INTERVAL '7 days')::timestamptz AS expires_at
+FROM guilds g
+LEFT JOIN guild_memberships a ON a.guild_id = g.id AND a.role = 'applicant'
+LEFT JOIN kingdoms k ON k.id = a.kingdom_id
+LEFT JOIN guild_memberships p ON p.guild_id = g.id AND p.role IN ('applicant', 'supporter')
+WHERE g.status = 'pending'
+GROUP BY g.id, g.name, g.slug, k.name, g.created_at
+ORDER BY g.name ASC
+`
+
+type ListPendingGuildsRow struct {
+	Name           string
+	Slug           string
+	FounderName    pgtype.Text
+	SupporterCount int
+	ExpiresAt      time.Time
+}
+
+func (q *Queries) ListPendingGuilds(ctx context.Context) ([]ListPendingGuildsRow, error) {
+	rows, err := q.db.Query(ctx, listPendingGuilds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingGuildsRow
+	for rows.Next() {
+		var i ListPendingGuildsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.Slug,
+			&i.FounderName,
+			&i.SupporterCount,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingRequests = `-- name: ListPendingRequests :many
 SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.role, gm.joined_at, gm.created_at,
        k.name AS kingdom_name

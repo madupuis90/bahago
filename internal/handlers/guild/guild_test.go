@@ -32,6 +32,8 @@ type stubQuerier struct {
 	onGetKingdomGuildMembership      func(ctx context.Context, kingdomID int) (db.GetKingdomGuildMembershipRow, error)
 	onGetKingdomsByIDs               func(ctx context.Context, ids []int) ([]db.Kingdom, error)
 	onBulkCreateMessages             func(ctx context.Context, arg db.BulkCreateMessagesParams) error
+	onListActiveGuilds               func(ctx context.Context) ([]db.ListActiveGuildsRow, error)
+	onListPendingGuilds              func(ctx context.Context) ([]db.ListPendingGuildsRow, error)
 }
 
 func (s *stubQuerier) GetGuildBySlug(ctx context.Context, slug string) (db.Guild, error) {
@@ -95,6 +97,20 @@ func (s *stubQuerier) BulkCreateMessages(ctx context.Context, arg db.BulkCreateM
 		return s.onBulkCreateMessages(ctx, arg)
 	}
 	panic("stubQuerier: unexpected call to BulkCreateMessages")
+}
+
+func (s *stubQuerier) ListActiveGuilds(ctx context.Context) ([]db.ListActiveGuildsRow, error) {
+	if s.onListActiveGuilds != nil {
+		return s.onListActiveGuilds(ctx)
+	}
+	panic("stubQuerier: unexpected call to ListActiveGuilds")
+}
+
+func (s *stubQuerier) ListPendingGuilds(ctx context.Context) ([]db.ListPendingGuildsRow, error) {
+	if s.onListPendingGuilds != nil {
+		return s.onListPendingGuilds(ctx)
+	}
+	panic("stubQuerier: unexpected call to ListPendingGuilds")
 }
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────

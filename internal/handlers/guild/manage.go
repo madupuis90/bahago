@@ -54,15 +54,8 @@ func (h *handler) handleManage() http.HandlerFunc {
 			return
 		}
 
-		pending, err := h.queries.ListPendingRequests(r.Context(), guild.ID)
-		if err != nil {
-			log.Printf("guild manage: list pending: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-
 		KingdomLayout(r, "Manage "+guild.Name, r.URL.Path, kingdom,
-			guildManageContent(guild, members, pending, viewerRole),
+			guildManageContent(guild, members, viewerRole),
 		).Render(w)
 	}
 }
@@ -98,12 +91,7 @@ func (h *handler) handleManageRefresh() http.HandlerFunc {
 					}
 					return
 				}
-				pending, err := h.queries.ListPendingRequests(r.Context(), guild.ID)
-				if err != nil {
-					log.Printf("guild manage refresh: list pending: %v", err)
-					return
-				}
-				if err := sse.PatchElementGostar(MainContent(guildManageContent(guild, members, pending, viewerRole))); err != nil {
+				if err := sse.PatchElementGostar(MainContent(guildManageContent(guild, members, viewerRole))); err != nil {
 					log.Printf("guild manage refresh: patch: %v", err)
 					return
 				}
@@ -163,7 +151,7 @@ func (h *handler) handleApprove() http.HandlerFunc {
 			fmt.Sprintf("Your request to join %s has been accepted. Welcome!", g.Name),
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
+		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
 			log.Printf("guild approve: redirect: %v", err)
 		}
 	}
@@ -224,7 +212,7 @@ func (h *handler) handleReject() http.HandlerFunc {
 			fmt.Sprintf("Your request to join %s has been declined.", g.Name),
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
+		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
 			log.Printf("guild reject: redirect: %v", err)
 		}
 	}
@@ -621,7 +609,7 @@ func (h *handler) handleEditDescription() http.HandlerFunc {
 
 // ── Page components ───────────────────────────────────────────────────────────
 
-func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, pending []db.ListPendingRequestsRow, viewerRole MemberRole) Node {
+func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole) Node {
 	slug := g.Slug
 	isLeader := viewerRole.IsLeader()
 
@@ -637,31 +625,6 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, p
 		H1(Class("page-title"), Text("Manage "+g.Name)),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
 		A(Href(slugURL(routes.GuildViewPath, slug)), Text("← Back to guild page")),
-
-		// ── Join requests section
-		Div(Class("guild-manage-section panel"),
-			P(Class("panel-title"), Text("Join Requests")),
-			If(len(pending) == 0,
-				P(Text("No pending requests.")),
-			),
-			If(len(pending) > 0,
-				Table(Class("guild-member-table"),
-					THead(Tr(
-						Th(Text("Kingdom")),
-						Th(Text("Actions")),
-					)),
-					TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
-						return Tr(
-							Td(Text(p.KingdomName)),
-							Td(
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))), Text("Approve")),
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))), Text("Reject")),
-							),
-						)
-					})),
-				),
-			),
-		),
 
 		// ── Members section
 		Div(Class("guild-manage-section panel"),

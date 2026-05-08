@@ -194,3 +194,18 @@ LEFT JOIN guild_memberships m ON m.guild_id = g.id AND m.role IN ('member', 'off
 WHERE g.status = 'active'
 GROUP BY g.id, g.name, g.slug, k.name
 ORDER BY g.name ASC;
+
+-- name: ListPendingGuilds :many
+SELECT
+    g.name,
+    g.slug,
+    k.name AS founder_name,
+    COUNT(p.id)::int AS supporter_count,
+    (g.created_at + INTERVAL '7 days')::timestamptz AS expires_at
+FROM guilds g
+LEFT JOIN guild_memberships a ON a.guild_id = g.id AND a.role = 'applicant'
+LEFT JOIN kingdoms k ON k.id = a.kingdom_id
+LEFT JOIN guild_memberships p ON p.guild_id = g.id AND p.role IN ('applicant', 'supporter')
+WHERE g.status = 'pending'
+GROUP BY g.id, g.name, g.slug, k.name, g.created_at
+ORDER BY g.name ASC;

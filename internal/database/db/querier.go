@@ -105,6 +105,7 @@ type Querier interface {
 	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
 	ListKingdomPrayers(ctx context.Context, kingdomID int) ([]KingdomPrayer, error)
 	ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error)
+	ListPendingGuilds(ctx context.Context) ([]ListPendingGuildsRow, error)
 	ListPendingRequests(ctx context.Context, guildID int) ([]ListPendingRequestsRow, error)
 	ListPrayersTargetingKingdom(ctx context.Context, targetKingdomID int) ([]KingdomPrayer, error)
 	MarkMessageRead(ctx context.Context, arg MarkMessageReadParams) error

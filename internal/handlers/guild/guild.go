@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/jackc/pgerrcode"
@@ -109,11 +110,17 @@ func (h *handler) handleList() http.HandlerFunc {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		guilds, err := h.queries.ListActiveGuilds(r.Context())
 		if err != nil {
-			log.Printf("guild list: query: %v", err)
+			log.Printf("guild list: active query: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		KingdomLayout(r, "Guilds", r.URL.Path, kingdom, guildListContent(guilds)).Render(w)
+		pending, err := h.queries.ListPendingGuilds(r.Context())
+		if err != nil {
+			log.Printf("guild list: pending query: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		KingdomLayout(r, "Guilds", r.URL.Path, kingdom, guildListContent(guilds, pending)).Render(w)
 	}
 }
 
@@ -225,8 +232,18 @@ func (h *handler) handleView() http.HandlerFunc {
 			return
 		}
 
+		var pending []db.ListPendingRequestsRow
+		if viewerRole.CanManage() {
+			pending, err = h.queries.ListPendingRequests(r.Context(), guild.ID)
+			if err != nil {
+				log.Printf("guild view: list pending: %v", err)
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+		}
+
 		KingdomLayout(r, guild.Name, r.URL.Path, kingdom,
-			guildViewContent(guild, members, viewerRole),
+			guildViewContent(guild, members, pending, viewerRole),
 		).Render(w)
 	}
 }
@@ -256,7 +273,15 @@ func (h *handler) handleViewRefresh() http.HandlerFunc {
 					log.Printf("guild view refresh: load: %v", err)
 					return
 				}
-				if err := sse.PatchElementGostar(MainContent(guildViewContent(guild, members, viewerRole))); err != nil {
+				var pending []db.ListPendingRequestsRow
+				if viewerRole.CanManage() {
+					pending, err = h.queries.ListPendingRequests(r.Context(), guild.ID)
+					if err != nil {
+						log.Printf("guild view refresh: list pending: %v", err)
+						return
+					}
+				}
+				if err := sse.PatchElementGostar(MainContent(guildViewContent(guild, members, pending, viewerRole))); err != nil {
 					log.Printf("guild view refresh: patch: %v", err)
 					return
 				}
@@ -689,7 +714,7 @@ func guildNewContent() Node {
 	)
 }
 
-func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole) Node {
+func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, pending []db.ListPendingRequestsRow, viewerRole MemberRole) Node {
 	isPending := GuildStatus(g.Status).IsPending()
 
 	titleSuffix := ""
@@ -721,6 +746,26 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 			),
 			guildMemberTable(members),
 			guildActionButtons(g, viewerRole),
+		),
+		If(viewerRole.CanManage() && len(pending) > 0,
+			Div(Class("guild-manage-section panel"),
+				P(Class("panel-title"), Text("Join Requests")),
+				Table(Class("guild-member-table"),
+					THead(Tr(
+						Th(Text("Kingdom")),
+						Th(Text("Actions")),
+					)),
+					TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
+						return Tr(
+							Td(Text(p.KingdomName)),
+							Td(
+								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, g.Slug, p.ID))), Text("Approve")),
+								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, g.Slug, p.ID))), Text("Reject")),
+							),
+						)
+					})),
+				),
+			),
 		),
 		guildErrorComponent(nil),
 	)
@@ -759,7 +804,7 @@ func guildActionButtons(g db.Guild, viewerRole MemberRole) Node {
 			),
 		),
 		If(isPending && viewerRole == RoleSupporter,
-			Button(Class("btn"),
+			Button(Class("btn btn--danger"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildWithdrawSupportPath, slug))),
 				Text("Withdraw Support"),
 			),
@@ -800,10 +845,11 @@ func guildActionButtons(g db.Guild, viewerRole MemberRole) Node {
 	)
 }
 
-func guildListContent(guilds []db.ListActiveGuildsRow) Node {
+func guildListContent(guilds []db.ListActiveGuildsRow, pending []db.ListPendingGuildsRow) Node {
 	return Div(
 		H1(Class("page-title"), Text("Guilds")),
 		Div(Class("guilds-list panel"),
+			P(Class("panel-title"), Text("Active Guilds")),
 			Iff(len(guilds) == 0, func() Node {
 				return P(Text("No active guilds yet."))
 			}),
@@ -832,5 +878,46 @@ func guildListContent(guilds []db.ListActiveGuildsRow) Node {
 				)
 			}),
 		),
+		Iff(len(pending) > 0, func() Node {
+			return Div(Class("guilds-applications panel"),
+				P(Class("panel-title"), Text("Guild Applications")),
+				Table(Class("table"),
+					THead(
+						Tr(
+							Th(Text("Guild")),
+							Th(Text("Founder")),
+							Th(Text("Supporters")),
+							Th(Text("Expires")),
+						),
+					),
+					TBody(
+						Map(pending, func(g db.ListPendingGuildsRow) Node {
+							founderName := "—"
+							if g.FounderName.Valid {
+								founderName = g.FounderName.String
+							}
+							return Tr(
+								Td(A(Href(slugURL(routes.GuildViewPath, g.Slug)), Text(g.Name))),
+								Td(Text(founderName)),
+								Td(Text(fmt.Sprintf("%d / 5", g.SupporterCount))),
+								Td(Text(formatExpiry(g.ExpiresAt))),
+							)
+						}),
+					),
+				),
+			)
+		}),
 	)
+}
+
+func formatExpiry(t time.Time) string {
+	d := int(time.Until(t).Hours() / 24)
+	switch {
+	case d <= 0:
+		return "today"
+	case d == 1:
+		return "1 day"
+	default:
+		return fmt.Sprintf("%d days", d)
+	}
 }

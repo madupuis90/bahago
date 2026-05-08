@@ -1460,11 +1460,16 @@ h1 {
   }
 }
 
-/* Guild list page panel */
-.guilds-list {
+/* Guild list page panels */
+.guilds-list,
+.guilds-applications {
   padding: 1.25rem;
+}
 
-  & p {
+.guilds-list {
+  margin-bottom: 1rem;
+
+  & p:not(.panel-title) {
     font-style: italic;
     opacity: 0.6;
   }
@@ -1549,6 +1554,11 @@ h1 {
   border-radius: 0.4rem;
   padding: 0.6rem 0.8rem;
   color: #721c24;
+}
+
+/* Spacing between view panel and join requests on the guild view page */
+.guild-view+.guild-manage-section {
+  margin-top: 1.25rem;
 }
 
 /* Manage page — each section panel */
