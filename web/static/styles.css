@@ -1350,7 +1350,7 @@ h1 {
 
   .message-detail-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     padding-top: 0.25rem;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
   }
@@ -1559,6 +1559,29 @@ h1 {
 /* Spacing between view panel and join requests on the guild view page */
 .guild-view+.guild-manage-section {
   margin-top: 1.25rem;
+}
+
+/* Invitations panel on the guild landing page */
+.guild-invitations {
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Invitation notice on the guild view page */
+.guild-invitation-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--panel-link-color) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--panel-link-color) 30%, transparent);
+  border-radius: 0.4rem;
+
+  & p {
+    margin: 0;
+    font-weight: 500;
+    flex: 1;
+  }
 }
 
 /* Manage page — each section panel */

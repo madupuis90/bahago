@@ -8,6 +8,7 @@ const (
 	RoleApplicant       MemberRole = "applicant"
 	RoleSupporter       MemberRole = "supporter"
 	RolePendingApproval MemberRole = "pending_approval"
+	RoleInvited         MemberRole = "invited"
 	RoleMember          MemberRole = "member"
 	RoleOfficer         MemberRole = "officer"
 	RoleLeader          MemberRole = "leader"
@@ -60,6 +61,8 @@ func (r MemberRole) Display() string {
 		return "Supporter"
 	case RolePendingApproval:
 		return "Pending Approval"
+	case RoleInvited:
+		return "Invited"
 	case RoleMember:
 		return "Member"
 	case RoleOfficer:

@@ -13,8 +13,8 @@ import (
 )
 
 const bulkCreateMessages = `-- name: BulkCreateMessages :exec
-INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body)
-SELECT $1::bigint, unnest($2::bigint[]), $3::text, $4::text
+INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text)
+SELECT $1::bigint, unnest($2::bigint[]), $3::text, $4::text, $5::text, $6::text
 `
 
 type BulkCreateMessagesParams struct {
@@ -22,6 +22,8 @@ type BulkCreateMessagesParams struct {
 	ToKingdomIds  []int
 	Subject       string
 	Body          string
+	ActionUrl     string
+	ActionText    string
 }
 
 func (q *Queries) BulkCreateMessages(ctx context.Context, arg BulkCreateMessagesParams) error {
@@ -30,6 +32,8 @@ func (q *Queries) BulkCreateMessages(ctx context.Context, arg BulkCreateMessages
 		arg.ToKingdomIds,
 		arg.Subject,
 		arg.Body,
+		arg.ActionUrl,
+		arg.ActionText,
 	)
 	return err
 }
@@ -73,6 +77,8 @@ SELECT
     m.to_kingdom_id,
     m.subject,
     m.body,
+    m.action_url,
+    m.action_text,
     m.read_at,
     m.created_at,
     fk.name AS from_kingdom_name,
@@ -96,6 +102,8 @@ type GetInboxMessageByIDRow struct {
 	ToKingdomID     int
 	Subject         string
 	Body            string
+	ActionUrl       pgtype.Text
+	ActionText      pgtype.Text
 	ReadAt          pgtype.Timestamptz
 	CreatedAt       time.Time
 	FromKingdomName string
@@ -111,6 +119,8 @@ func (q *Queries) GetInboxMessageByID(ctx context.Context, arg GetInboxMessageBy
 		&i.ToKingdomID,
 		&i.Subject,
 		&i.Body,
+		&i.ActionUrl,
+		&i.ActionText,
 		&i.ReadAt,
 		&i.CreatedAt,
 		&i.FromKingdomName,

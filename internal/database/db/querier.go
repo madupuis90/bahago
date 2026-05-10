@@ -9,6 +9,11 @@ import (
 )
 
 type Querier interface {
+	// Atomically promotes the invited row to member if the guild is not full (< 20),
+	// cancels any pending join requests for the kingdom in other guilds, and
+	// cancels any other outstanding invitations. Returns no rows if the invitation
+	// is not found or the guild is at capacity.
+	AcceptGuildInvitation(ctx context.Context, arg AcceptGuildInvitationParams) (int, error)
 	ActivateGuild(ctx context.Context, guildID int) error
 	AdvanceCampaignStatus(ctx context.Context, arg AdvanceCampaignStatusParams) error
 	// Atomically checks the active member count and approves the pending request
@@ -41,12 +46,14 @@ type Querier interface {
 	CreateCampaignIfAvailable(ctx context.Context, arg CreateCampaignIfAvailableParams) (KingdomCampaign, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) error
 	CreateGuild(ctx context.Context, arg CreateGuildParams) (CreateGuildRow, error)
+	CreateGuildInvitation(ctx context.Context, arg CreateGuildInvitationParams) error
 	CreateGuildMembership(ctx context.Context, arg CreateGuildMembershipParams) error
 	CreateKingdom(ctx context.Context, arg CreateKingdomParams) (Kingdom, error)
 	CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) error
 	CreatePrayer(ctx context.Context, arg CreatePrayerParams) (KingdomPrayer, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int, error)
+	DeclineGuildInvitation(ctx context.Context, arg DeclineGuildInvitationParams) (int, error)
 	DecrementAndListCampaignsAtZero(ctx context.Context) ([]DecrementAndListCampaignsAtZeroRow, error)
 	DecrementAndListConstructionAtZero(ctx context.Context) ([]DecrementAndListConstructionAtZeroRow, error)
 	DecrementAndListPrayersAtZero(ctx context.Context) ([]DecrementAndListPrayersAtZeroRow, error)
@@ -84,6 +91,7 @@ type Querier interface {
 	GetKingdomByName(ctx context.Context, name string) (Kingdom, error)
 	GetKingdomByUserID(ctx context.Context, userID int) (Kingdom, error)
 	GetKingdomConstruction(ctx context.Context, kingdomID int) (KingdomConstruction, error)
+	GetKingdomGuildInvitation(ctx context.Context, arg GetKingdomGuildInvitationParams) (int, error)
 	GetKingdomGuildMembership(ctx context.Context, kingdomID int) (GetKingdomGuildMembershipRow, error)
 	GetKingdomTraining(ctx context.Context, kingdomID int) (KingdomTraining, error)
 	GetKingdomUnits(ctx context.Context, kingdomID int) ([]KingdomUnit, error)
@@ -101,8 +109,10 @@ type Querier interface {
 	InsertTick(ctx context.Context) (int, error)
 	ListActiveGuilds(ctx context.Context) ([]ListActiveGuildsRow, error)
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
+	ListGuildInvitations(ctx context.Context, guildID int) ([]ListGuildInvitationsRow, error)
 	ListGuildMembersWithNames(ctx context.Context, guildID int) ([]ListGuildMembersWithNamesRow, error)
 	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
+	ListKingdomInvitations(ctx context.Context, kingdomID int) ([]ListKingdomInvitationsRow, error)
 	ListKingdomPrayers(ctx context.Context, kingdomID int) ([]KingdomPrayer, error)
 	ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error)
 	ListPendingGuilds(ctx context.Context) ([]ListPendingGuildsRow, error)
@@ -115,6 +125,7 @@ type Querier interface {
 	// in one statement. Returns no rows if the guild is full (>= 20 active members),
 	// which the caller maps to "this guild is full".
 	RequestJoinIfNotFull(ctx context.Context, arg RequestJoinIfNotFullParams) (GuildMembership, error)
+	RevokeGuildInvitation(ctx context.Context, arg RevokeGuildInvitationParams) (int, error)
 	SetMembershipRole(ctx context.Context, arg SetMembershipRoleParams) error
 	StartConstruction(ctx context.Context, arg StartConstructionParams) error
 	StartTraining(ctx context.Context, arg StartTrainingParams) error

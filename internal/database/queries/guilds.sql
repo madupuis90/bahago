@@ -124,6 +124,11 @@ cleanup AS (
     WHERE gm2.kingdom_id = (SELECT kingdom_id FROM approved)
       AND gm2.role = 'pending_approval'
       AND gm2.guild_id != @guild_id
+),
+cancel_invitations AS (
+    DELETE FROM guild_memberships gm3
+    WHERE gm3.kingdom_id = (SELECT kingdom_id FROM approved)
+      AND gm3.role = 'invited'
 )
 SELECT kingdom_id FROM approved;
 
@@ -180,6 +185,69 @@ SELECT @guild_id, @kingdom_id, 'pending_approval'
 FROM member_count
 WHERE cnt < 20
 RETURNING id, guild_id, kingdom_id, role, joined_at, created_at;
+
+-- name: CreateGuildInvitation :exec
+INSERT INTO guild_memberships (guild_id, kingdom_id, role)
+VALUES (@guild_id, @kingdom_id, 'invited');
+
+-- name: ListGuildInvitations :many
+SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.created_at,
+       k.name AS kingdom_name
+FROM guild_memberships gm
+JOIN kingdoms k ON k.id = gm.kingdom_id
+WHERE gm.guild_id = $1 AND gm.role = 'invited'
+ORDER BY gm.created_at DESC;
+
+-- name: ListKingdomInvitations :many
+SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.created_at,
+       g.name AS guild_name,
+       g.slug AS guild_slug
+FROM guild_memberships gm
+JOIN guilds g ON g.id = gm.guild_id
+WHERE gm.kingdom_id = $1 AND gm.role = 'invited'
+ORDER BY gm.created_at DESC;
+
+-- name: GetKingdomGuildInvitation :one
+SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited' LIMIT 1;
+
+-- name: RevokeGuildInvitation :one
+DELETE FROM guild_memberships WHERE id = $1 AND guild_id = $2 AND role = 'invited' RETURNING kingdom_id;
+
+-- name: DeclineGuildInvitation :one
+DELETE FROM guild_memberships WHERE id = $1 AND kingdom_id = $2 AND role = 'invited' RETURNING guild_id;
+
+-- name: AcceptGuildInvitation :one
+-- Atomically promotes the invited row to member if the guild is not full (< 20),
+-- cancels any pending join requests for the kingdom in other guilds, and
+-- cancels any other outstanding invitations. Returns no rows if the invitation
+-- is not found or the guild is at capacity.
+WITH member_count AS (
+    SELECT COUNT(*) AS cnt
+    FROM guild_memberships gm
+    WHERE gm.guild_id = @guild_id AND gm.role IN ('member', 'officer', 'leader')
+),
+new_member AS (
+    UPDATE guild_memberships AS gm_inv
+    SET role = 'member', joined_at = NOW()
+    WHERE gm_inv.id = @invitation_id
+      AND gm_inv.kingdom_id = @kingdom_id
+      AND gm_inv.guild_id = @guild_id
+      AND gm_inv.role = 'invited'
+      AND (SELECT cnt FROM member_count) < 20
+    RETURNING gm_inv.kingdom_id
+),
+cancel_requests AS (
+    DELETE FROM guild_memberships gm2
+    WHERE gm2.kingdom_id = (SELECT kingdom_id FROM new_member)
+      AND gm2.role = 'pending_approval'
+),
+cancel_invitations AS (
+    DELETE FROM guild_memberships gm3
+    WHERE gm3.kingdom_id = (SELECT kingdom_id FROM new_member)
+      AND gm3.role = 'invited'
+      AND gm3.guild_id != @guild_id
+)
+SELECT kingdom_id FROM new_member;
 
 -- name: ListActiveGuilds :many
 SELECT

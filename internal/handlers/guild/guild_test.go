@@ -382,3 +382,308 @@ func TestHandleCreate_DescriptionTooLong(t *testing.T) {
 		`{"guild_name":"Valid Name","guild_description":"`+strings.Repeat("x", 501)+`"}`, leaderKingdom))
 	testhelper.AssertContains(t, w.Body.String(), "cannot exceed 500")
 }
+
+// ── Stub extensions for invitation handlers ───────────────────────────────────
+
+type inviteStubQuerier struct {
+	stubQuerier
+	onGetKingdomByName          func(ctx context.Context, name string) (db.Kingdom, error)
+	onGetKingdomGuildInvitation func(ctx context.Context, arg db.GetKingdomGuildInvitationParams) (int, error)
+	onCreateGuildInvitation     func(ctx context.Context, arg db.CreateGuildInvitationParams) error
+	onRevokeGuildInvitation     func(ctx context.Context, arg db.RevokeGuildInvitationParams) (int, error)
+	onAcceptGuildInvitation     func(ctx context.Context, arg db.AcceptGuildInvitationParams) (int, error)
+	onDeclineGuildInvitation    func(ctx context.Context, arg db.DeclineGuildInvitationParams) (int, error)
+	onListGuildInvitations      func(ctx context.Context, guildID int) ([]db.ListGuildInvitationsRow, error)
+	onListPendingRequests       func(ctx context.Context, guildID int) ([]db.ListPendingRequestsRow, error)
+}
+
+func (s *inviteStubQuerier) GetKingdomByName(ctx context.Context, name string) (db.Kingdom, error) {
+	if s.onGetKingdomByName != nil {
+		return s.onGetKingdomByName(ctx, name)
+	}
+	panic("inviteStubQuerier: unexpected call to GetKingdomByName")
+}
+
+func (s *inviteStubQuerier) GetKingdomGuildInvitation(ctx context.Context, arg db.GetKingdomGuildInvitationParams) (int, error) {
+	if s.onGetKingdomGuildInvitation != nil {
+		return s.onGetKingdomGuildInvitation(ctx, arg)
+	}
+	panic("inviteStubQuerier: unexpected call to GetKingdomGuildInvitation")
+}
+
+func (s *inviteStubQuerier) CreateGuildInvitation(ctx context.Context, arg db.CreateGuildInvitationParams) error {
+	if s.onCreateGuildInvitation != nil {
+		return s.onCreateGuildInvitation(ctx, arg)
+	}
+	panic("inviteStubQuerier: unexpected call to CreateGuildInvitation")
+}
+
+func (s *inviteStubQuerier) RevokeGuildInvitation(ctx context.Context, arg db.RevokeGuildInvitationParams) (int, error) {
+	if s.onRevokeGuildInvitation != nil {
+		return s.onRevokeGuildInvitation(ctx, arg)
+	}
+	panic("inviteStubQuerier: unexpected call to RevokeGuildInvitation")
+}
+
+func (s *inviteStubQuerier) AcceptGuildInvitation(ctx context.Context, arg db.AcceptGuildInvitationParams) (int, error) {
+	if s.onAcceptGuildInvitation != nil {
+		return s.onAcceptGuildInvitation(ctx, arg)
+	}
+	panic("inviteStubQuerier: unexpected call to AcceptGuildInvitation")
+}
+
+func (s *inviteStubQuerier) DeclineGuildInvitation(ctx context.Context, arg db.DeclineGuildInvitationParams) (int, error) {
+	if s.onDeclineGuildInvitation != nil {
+		return s.onDeclineGuildInvitation(ctx, arg)
+	}
+	panic("inviteStubQuerier: unexpected call to DeclineGuildInvitation")
+}
+
+func (s *inviteStubQuerier) ListGuildInvitations(ctx context.Context, guildID int) ([]db.ListGuildInvitationsRow, error) {
+	if s.onListGuildInvitations != nil {
+		return s.onListGuildInvitations(ctx, guildID)
+	}
+	panic("inviteStubQuerier: unexpected call to ListGuildInvitations")
+}
+
+func (s *inviteStubQuerier) ListPendingRequests(ctx context.Context, guildID int) ([]db.ListPendingRequestsRow, error) {
+	if s.onListPendingRequests != nil {
+		return s.onListPendingRequests(ctx, guildID)
+	}
+	panic("inviteStubQuerier: unexpected call to ListPendingRequests")
+}
+
+// ── Handler extractors for invitation handlers ────────────────────────────────
+
+func sendInviteHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	guild.RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.GuildInvitePath]
+}
+
+func revokeInviteHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	guild.RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.GuildInvitationRevokePath]
+}
+
+func acceptInviteHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	guild.RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.GuildInvitationAcceptPath]
+}
+
+func declineInviteHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	guild.RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.GuildInvitationDeclinePath]
+}
+
+// ── handleSendInvitation tests ────────────────────────────────────────────────
+
+// baseInviteStub returns a stub wired for a leader viewer with no existing
+// membership for the target kingdom in this guild and no other guild commitment.
+func baseInviteStub(targetKingdom db.Kingdom) *inviteStubQuerier {
+	return &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, arg db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				if arg.KingdomID == leaderKingdom.ID {
+					return membershipFor(leaderKingdom.ID, activeGuild.ID, "leader"), nil
+				}
+				return db.GuildMembership{}, pgx.ErrNoRows
+			},
+			onGetKingdomGuildMembership: func(_ context.Context, _ int) (db.GetKingdomGuildMembershipRow, error) {
+				return db.GetKingdomGuildMembershipRow{}, pgx.ErrNoRows
+			},
+		},
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return targetKingdom, nil
+		},
+	}
+}
+
+func TestHandleSendInvitation_NonManagerDenied(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, _ db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				return membershipFor(memberKingdom.ID, activeGuild.ID, "member"), nil
+			},
+		},
+	}
+	h := sendInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, signalsReq("POST", routes.GuildInvitePath,
+		`{"invite_kingdom_name":"Avalon"}`, memberKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "not authorized")
+}
+
+func TestHandleSendInvitation_TargetNotFound(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, _ db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				return membershipFor(leaderKingdom.ID, activeGuild.ID, "leader"), nil
+			},
+		},
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return db.Kingdom{}, pgx.ErrNoRows
+		},
+	}
+	h := sendInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, signalsReq("POST", routes.GuildInvitePath,
+		`{"invite_kingdom_name":"Unknown"}`, leaderKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "not found")
+}
+
+func TestHandleSendInvitation_TargetAlreadyInvited(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, arg db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				if arg.KingdomID == leaderKingdom.ID {
+					return membershipFor(leaderKingdom.ID, activeGuild.ID, "leader"), nil
+				}
+				// Target already has an invited row.
+				return membershipFor(memberKingdom.ID, activeGuild.ID, "invited"), nil
+			},
+		},
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return *memberKingdom, nil
+		},
+	}
+	h := sendInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, signalsReq("POST", routes.GuildInvitePath,
+		`{"invite_kingdom_name":"Avalon"}`, leaderKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "already been invited")
+}
+
+func TestHandleSendInvitation_TargetAlreadyMember(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, arg db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				if arg.KingdomID == leaderKingdom.ID {
+					return membershipFor(leaderKingdom.ID, activeGuild.ID, "leader"), nil
+				}
+				// Target is already a full member of this guild.
+				return membershipFor(memberKingdom.ID, activeGuild.ID, "member"), nil
+			},
+		},
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return *memberKingdom, nil
+		},
+	}
+	h := sendInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, signalsReq("POST", routes.GuildInvitePath,
+		`{"invite_kingdom_name":"Avalon"}`, leaderKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "already a member of this guild")
+}
+
+func TestHandleSendInvitation_TargetCommittedElsewhere(t *testing.T) {
+	otherGuild := db.Guild{ID: 99, Name: "Other Guild", Slug: "other-guild", Status: "active"}
+	stub := baseInviteStub(*memberKingdom)
+	// Override: target IS committed to a different guild.
+	stub.stubQuerier.onGetKingdomGuildMembership = func(_ context.Context, kingdomID int) (db.GetKingdomGuildMembershipRow, error) {
+		if kingdomID == memberKingdom.ID {
+			return db.GetKingdomGuildMembershipRow{GuildID: otherGuild.ID, GuildSlug: otherGuild.Slug}, nil
+		}
+		return db.GetKingdomGuildMembershipRow{}, pgx.ErrNoRows
+	}
+	h := sendInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, signalsReq("POST", routes.GuildInvitePath,
+		`{"invite_kingdom_name":"Avalon"}`, leaderKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "already a member of another guild")
+}
+
+// ── handleRevokeInvitation tests ──────────────────────────────────────────────
+
+func TestHandleRevokeInvitation_NonManagerDenied(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, _ db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				return membershipFor(memberKingdom.ID, activeGuild.ID, "member"), nil
+			},
+		},
+	}
+	h := revokeInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, slugIDReq("POST", routes.GuildInvitationRevokePath, activeGuild.Slug, "5", memberKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "not authorized")
+}
+
+func TestHandleRevokeInvitation_AlreadyGone(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+			onGetMembershipByKingdomAndGuild: func(_ context.Context, _ db.GetMembershipByKingdomAndGuildParams) (db.GuildMembership, error) {
+				return membershipFor(leaderKingdom.ID, activeGuild.ID, "leader"), nil
+			},
+			onGetKingdomsByIDs: func(_ context.Context, _ []int) ([]db.Kingdom, error) {
+				return nil, nil
+			},
+		},
+		onRevokeGuildInvitation: func(_ context.Context, _ db.RevokeGuildInvitationParams) (int, error) {
+			return 0, pgx.ErrNoRows
+		},
+	}
+	h := revokeInviteHandler(stub)
+	w := httptest.NewRecorder()
+	// ErrNoRows on a gone invitation must not show an error; it publishes and returns 200.
+	h(w, slugIDReq("POST", routes.GuildInvitationRevokePath, activeGuild.Slug, "5", leaderKingdom))
+	testhelper.AssertNotContains(t, w.Body.String(), "internal error")
+}
+
+// ── handleAcceptInvitation tests ──────────────────────────────────────────────
+
+func TestHandleAcceptInvitation_GuildFullOrInvitationGone(t *testing.T) {
+	stub := &inviteStubQuerier{
+		stubQuerier: stubQuerier{
+			onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+				return activeGuild, nil
+			},
+		},
+		onAcceptGuildInvitation: func(_ context.Context, _ db.AcceptGuildInvitationParams) (int, error) {
+			return 0, pgx.ErrNoRows
+		},
+	}
+	h := acceptInviteHandler(stub)
+	w := httptest.NewRecorder()
+	h(w, slugIDReq("POST", routes.GuildInvitationAcceptPath, activeGuild.Slug, "7", memberKingdom))
+	testhelper.AssertContains(t, w.Body.String(), "no longer valid or the guild is full")
+}
+
+// ── handleDeclineInvitation tests ─────────────────────────────────────────────
+
+func TestHandleDeclineInvitation_AlreadyGone(t *testing.T) {
+	stub := &inviteStubQuerier{
+		onDeclineGuildInvitation: func(_ context.Context, _ db.DeclineGuildInvitationParams) (int, error) {
+			return 0, pgx.ErrNoRows
+		},
+	}
+	h := declineInviteHandler(stub)
+	w := httptest.NewRecorder()
+	// ErrNoRows on a gone invitation should redirect silently, not return an error.
+	h(w, slugIDReq("POST", routes.GuildInvitationDeclinePath, activeGuild.Slug, "7", memberKingdom))
+	testhelper.AssertNotContains(t, w.Body.String(), "internal error")
+}

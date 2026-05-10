@@ -12,6 +12,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const acceptGuildInvitation = `-- name: AcceptGuildInvitation :one
+WITH member_count AS (
+    SELECT COUNT(*) AS cnt
+    FROM guild_memberships gm
+    WHERE gm.guild_id = $1 AND gm.role IN ('member', 'officer', 'leader')
+),
+new_member AS (
+    UPDATE guild_memberships AS gm_inv
+    SET role = 'member', joined_at = NOW()
+    WHERE gm_inv.id = $2
+      AND gm_inv.kingdom_id = $3
+      AND gm_inv.guild_id = $1
+      AND gm_inv.role = 'invited'
+      AND (SELECT cnt FROM member_count) < 20
+    RETURNING gm_inv.kingdom_id
+),
+cancel_requests AS (
+    DELETE FROM guild_memberships gm2
+    WHERE gm2.kingdom_id = (SELECT kingdom_id FROM new_member)
+      AND gm2.role = 'pending_approval'
+),
+cancel_invitations AS (
+    DELETE FROM guild_memberships gm3
+    WHERE gm3.kingdom_id = (SELECT kingdom_id FROM new_member)
+      AND gm3.role = 'invited'
+      AND gm3.guild_id != $1
+)
+SELECT kingdom_id FROM new_member
+`
+
+type AcceptGuildInvitationParams struct {
+	GuildID      int
+	InvitationID int
+	KingdomID    int
+}
+
+// Atomically promotes the invited row to member if the guild is not full (< 20),
+// cancels any pending join requests for the kingdom in other guilds, and
+// cancels any other outstanding invitations. Returns no rows if the invitation
+// is not found or the guild is at capacity.
+func (q *Queries) AcceptGuildInvitation(ctx context.Context, arg AcceptGuildInvitationParams) (int, error) {
+	row := q.db.QueryRow(ctx, acceptGuildInvitation, arg.GuildID, arg.InvitationID, arg.KingdomID)
+	var kingdom_id int
+	err := row.Scan(&kingdom_id)
+	return kingdom_id, err
+}
+
 const activateGuild = `-- name: ActivateGuild :exec
 WITH activate AS (
     UPDATE guilds
@@ -57,6 +104,11 @@ cleanup AS (
     WHERE gm2.kingdom_id = (SELECT kingdom_id FROM approved)
       AND gm2.role = 'pending_approval'
       AND gm2.guild_id != $1
+),
+cancel_invitations AS (
+    DELETE FROM guild_memberships gm3
+    WHERE gm3.kingdom_id = (SELECT kingdom_id FROM approved)
+      AND gm3.role = 'invited'
 )
 SELECT kingdom_id FROM approved
 `
@@ -179,6 +231,21 @@ func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (Creat
 	return i, err
 }
 
+const createGuildInvitation = `-- name: CreateGuildInvitation :exec
+INSERT INTO guild_memberships (guild_id, kingdom_id, role)
+VALUES ($1, $2, 'invited')
+`
+
+type CreateGuildInvitationParams struct {
+	GuildID   int
+	KingdomID int
+}
+
+func (q *Queries) CreateGuildInvitation(ctx context.Context, arg CreateGuildInvitationParams) error {
+	_, err := q.db.Exec(ctx, createGuildInvitation, arg.GuildID, arg.KingdomID)
+	return err
+}
+
 const createGuildMembership = `-- name: CreateGuildMembership :exec
 INSERT INTO guild_memberships (guild_id, kingdom_id, role)
 VALUES ($1, $2, $3)
@@ -193,6 +260,22 @@ type CreateGuildMembershipParams struct {
 func (q *Queries) CreateGuildMembership(ctx context.Context, arg CreateGuildMembershipParams) error {
 	_, err := q.db.Exec(ctx, createGuildMembership, arg.GuildID, arg.KingdomID, arg.Role)
 	return err
+}
+
+const declineGuildInvitation = `-- name: DeclineGuildInvitation :one
+DELETE FROM guild_memberships WHERE id = $1 AND kingdom_id = $2 AND role = 'invited' RETURNING guild_id
+`
+
+type DeclineGuildInvitationParams struct {
+	ID        int
+	KingdomID int
+}
+
+func (q *Queries) DeclineGuildInvitation(ctx context.Context, arg DeclineGuildInvitationParams) (int, error) {
+	row := q.db.QueryRow(ctx, declineGuildInvitation, arg.ID, arg.KingdomID)
+	var guild_id int
+	err := row.Scan(&guild_id)
+	return guild_id, err
 }
 
 const disbandGuild = `-- name: DisbandGuild :exec
@@ -252,6 +335,22 @@ func (q *Queries) GetGuildBySlug(ctx context.Context, slug string) (Guild, error
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getKingdomGuildInvitation = `-- name: GetKingdomGuildInvitation :one
+SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited' LIMIT 1
+`
+
+type GetKingdomGuildInvitationParams struct {
+	KingdomID int
+	GuildID   int
+}
+
+func (q *Queries) GetKingdomGuildInvitation(ctx context.Context, arg GetKingdomGuildInvitationParams) (int, error) {
+	row := q.db.QueryRow(ctx, getKingdomGuildInvitation, arg.KingdomID, arg.GuildID)
+	var id int
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getKingdomGuildMembership = `-- name: GetKingdomGuildMembership :one
@@ -385,6 +484,49 @@ func (q *Queries) ListActiveGuilds(ctx context.Context) ([]ListActiveGuildsRow, 
 	return items, nil
 }
 
+const listGuildInvitations = `-- name: ListGuildInvitations :many
+SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.created_at,
+       k.name AS kingdom_name
+FROM guild_memberships gm
+JOIN kingdoms k ON k.id = gm.kingdom_id
+WHERE gm.guild_id = $1 AND gm.role = 'invited'
+ORDER BY gm.created_at DESC
+`
+
+type ListGuildInvitationsRow struct {
+	ID          int
+	GuildID     int
+	KingdomID   int
+	CreatedAt   time.Time
+	KingdomName string
+}
+
+func (q *Queries) ListGuildInvitations(ctx context.Context, guildID int) ([]ListGuildInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, listGuildInvitations, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuildInvitationsRow
+	for rows.Next() {
+		var i ListGuildInvitationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GuildID,
+			&i.KingdomID,
+			&i.CreatedAt,
+			&i.KingdomName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGuildMembersWithNames = `-- name: ListGuildMembersWithNames :many
 SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.role, gm.joined_at, gm.created_at,
        k.name AS kingdom_name
@@ -430,6 +572,52 @@ func (q *Queries) ListGuildMembersWithNames(ctx context.Context, guildID int) ([
 			&i.JoinedAt,
 			&i.CreatedAt,
 			&i.KingdomName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listKingdomInvitations = `-- name: ListKingdomInvitations :many
+SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.created_at,
+       g.name AS guild_name,
+       g.slug AS guild_slug
+FROM guild_memberships gm
+JOIN guilds g ON g.id = gm.guild_id
+WHERE gm.kingdom_id = $1 AND gm.role = 'invited'
+ORDER BY gm.created_at DESC
+`
+
+type ListKingdomInvitationsRow struct {
+	ID        int
+	GuildID   int
+	KingdomID int
+	CreatedAt time.Time
+	GuildName string
+	GuildSlug string
+}
+
+func (q *Queries) ListKingdomInvitations(ctx context.Context, kingdomID int) ([]ListKingdomInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, listKingdomInvitations, kingdomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListKingdomInvitationsRow
+	for rows.Next() {
+		var i ListKingdomInvitationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GuildID,
+			&i.KingdomID,
+			&i.CreatedAt,
+			&i.GuildName,
+			&i.GuildSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -602,6 +790,22 @@ func (q *Queries) RequestJoinIfNotFull(ctx context.Context, arg RequestJoinIfNot
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const revokeGuildInvitation = `-- name: RevokeGuildInvitation :one
+DELETE FROM guild_memberships WHERE id = $1 AND guild_id = $2 AND role = 'invited' RETURNING kingdom_id
+`
+
+type RevokeGuildInvitationParams struct {
+	ID      int
+	GuildID int
+}
+
+func (q *Queries) RevokeGuildInvitation(ctx context.Context, arg RevokeGuildInvitationParams) (int, error) {
+	row := q.db.QueryRow(ctx, revokeGuildInvitation, arg.ID, arg.GuildID)
+	var kingdom_id int
+	err := row.Scan(&kingdom_id)
+	return kingdom_id, err
 }
 
 const setMembershipRole = `-- name: SetMembershipRole :exec

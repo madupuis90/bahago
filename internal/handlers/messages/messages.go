@@ -384,11 +384,18 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 			),
 			Div(Class("message-detail-body"), Text(m.Body)),
 			Div(Class("message-detail-footer"),
-				A(Href(replyURL), Class("btn btn-text"), Text("Reply")),
-				Button(
-					Class("btn btn-text"),
-					ds.On("click", datastar.PostSSE("%s", deleteURL(m.ID))),
-					Text("Delete"),
+				Div(
+					Iff(m.ActionUrl.Valid && m.ActionUrl.String != "", func() Node {
+						return A(Href(m.ActionUrl.String), Class("btn"), Text(m.ActionText.String))
+					}),
+				),
+				Div(
+					A(Href(replyURL), Class("btn btn-text"), Text("Reply")),
+					Button(
+						Class("btn btn-text"),
+						ds.On("click", datastar.PostSSE("%s", deleteURL(m.ID))),
+						Text("Delete"),
+					),
 				),
 			),
 		),

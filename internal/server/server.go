@@ -103,5 +103,5 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // StartGameTicker begins the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func (s *Server) StartGameTicker(ctx context.Context) {
-	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 20*time.Second)
+	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 3600*time.Second)
 }

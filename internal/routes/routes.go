@@ -45,6 +45,7 @@ const (
 	KingdomPrayerCancelPath   = "/kingdom/prayers/cancel/{id}"
 
 	GuildPath                   = "/guild"
+	GuildRefreshPath            = "/guild/refresh"
 	GuildListPath               = "/guild/list"
 	GuildNewPath                = "/guild/new"
 	GuildCreatePath             = "/guild/create"
@@ -66,6 +67,10 @@ const (
 	GuildLeavePath              = "/guild/{slug}/leave"
 	GuildDisbandPath            = "/guild/{slug}/disband"
 	GuildEditDescriptionPath    = "/guild/{slug}/edit-description"
+	GuildInvitePath             = "/guild/{slug}/invite"
+	GuildInvitationAcceptPath   = "/guild/{slug}/invitations/{id}/accept"
+	GuildInvitationDeclinePath  = "/guild/{slug}/invitations/{id}/decline"
+	GuildInvitationRevokePath   = "/guild/{slug}/invitations/{id}/revoke"
 
 	LoginPath              = "/login"
 	RegisterPath           = "/register"

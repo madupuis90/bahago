@@ -131,3 +131,11 @@ func AssertContains(t *testing.T, body, want string) {
 		t.Errorf("response body = %q; want to contain %q", body, want)
 	}
 }
+
+// AssertNotContains fails the test if body contains want.
+func AssertNotContains(t *testing.T, body, want string) {
+	t.Helper()
+	if strings.Contains(body, want) {
+		t.Errorf("response body = %q; must not contain %q", body, want)
+	}
+}

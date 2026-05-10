@@ -135,6 +135,8 @@ type KingdomMessage struct {
 	ReadAt        pgtype.Timestamptz
 	DeletedAt     pgtype.Timestamptz
 	CreatedAt     time.Time
+	ActionUrl     pgtype.Text
+	ActionText    pgtype.Text
 }
 
 type KingdomPrayer struct {

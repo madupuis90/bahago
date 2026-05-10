@@ -22,6 +22,8 @@ SELECT
     m.to_kingdom_id,
     m.subject,
     m.body,
+    m.action_url,
+    m.action_text,
     m.read_at,
     m.created_at,
     fk.name AS from_kingdom_name,
@@ -34,8 +36,8 @@ WHERE m.id = $1
   AND m.deleted_at IS NULL;
 
 -- name: BulkCreateMessages :exec
-INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body)
-SELECT @from_kingdom_id::bigint, unnest(@to_kingdom_ids::bigint[]), @subject::text, @body::text;
+INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text)
+SELECT @from_kingdom_id::bigint, unnest(@to_kingdom_ids::bigint[]), @subject::text, @body::text, @action_url::text, @action_text::text;
 
 -- name: MarkMessageRead :exec
 UPDATE kingdom_messages

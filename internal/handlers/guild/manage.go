@@ -32,6 +32,10 @@ type transferLeaderSignals struct {
 	TargetKingdomID int `json:"target_kingdom_id"`
 }
 
+type inviteSignals struct {
+	InviteKingdomName string `json:"invite_kingdom_name"`
+}
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func (h *handler) handleManage() http.HandlerFunc {
@@ -54,8 +58,22 @@ func (h *handler) handleManage() http.HandlerFunc {
 			return
 		}
 
+		pending, err := h.queries.ListPendingRequests(r.Context(), guild.ID)
+		if err != nil {
+			log.Printf("guild manage: list pending: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		invitations, err := h.queries.ListGuildInvitations(r.Context(), guild.ID)
+		if err != nil {
+			log.Printf("guild manage: list invitations: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
 		KingdomLayout(r, "Manage "+guild.Name, r.URL.Path, kingdom,
-			guildManageContent(guild, members, viewerRole),
+			guildManageContent(guild, members, viewerRole, pending, invitations),
 		).Render(w)
 	}
 }
@@ -91,7 +109,17 @@ func (h *handler) handleManageRefresh() http.HandlerFunc {
 					}
 					return
 				}
-				if err := sse.PatchElementGostar(MainContent(guildManageContent(guild, members, viewerRole))); err != nil {
+				pending, err := h.queries.ListPendingRequests(r.Context(), guild.ID)
+				if err != nil {
+					log.Printf("guild manage refresh: list pending: %v", err)
+					return
+				}
+				invitations, err := h.queries.ListGuildInvitations(r.Context(), guild.ID)
+				if err != nil {
+					log.Printf("guild manage refresh: list invitations: %v", err)
+					return
+				}
+				if err := sse.PatchElementGostar(MainContent(guildManageContent(guild, members, viewerRole, pending, invitations))); err != nil {
 					log.Printf("guild manage refresh: patch: %v", err)
 					return
 				}
@@ -149,11 +177,10 @@ func (h *handler) handleApprove() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{approvedKingdomID},
 			"Guild Application Accepted",
 			fmt.Sprintf("Your request to join %s has been accepted. Welcome!", g.Name),
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
-			log.Printf("guild approve: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
@@ -210,11 +237,10 @@ func (h *handler) handleReject() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{membership.KingdomID},
 			"Guild Application Declined",
 			fmt.Sprintf("Your request to join %s has been declined.", g.Name),
+			"", "",
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
-			log.Printf("guild reject: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
@@ -271,11 +297,10 @@ func (h *handler) handleRemove() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
 			"Removed from "+g.Name,
 			"You have been removed from "+g.Name+".",
+			"", "",
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
-			log.Printf("guild remove: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
@@ -324,6 +349,7 @@ func (h *handler) handleLeave() http.HandlerFunc {
 			h.sendNotifications(r, kingdom.ID, managerIDs,
 				"Member Left",
 				kingdom.Name+" has left "+g.Name+".",
+				slugURL(routes.GuildViewPath, slug), "Visit Guild",
 			)
 		}
 
@@ -385,11 +411,10 @@ func (h *handler) handlePromote() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
 			"Promoted to Officer",
 			"You have been promoted to Officer in "+g.Name+".",
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
-			log.Printf("guild promote: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
@@ -447,11 +472,10 @@ func (h *handler) handleDemote() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
 			"Demoted to Member",
 			"You have been demoted to Member in "+g.Name+".",
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
-			log.Printf("guild demote: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
@@ -487,6 +511,19 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 			return
 		}
 
+		targetMembership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
+			KingdomID: input.TargetKingdomID,
+			GuildID:   g.ID,
+		})
+		if err != nil {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("target is not a member of this guild")))
+			return
+		}
+		if role := MemberRole(targetMembership.Role); role != RoleMember && role != RoleOfficer {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("leadership can only be transferred to a full member or officer")))
+			return
+		}
+
 		if err := h.queries.TransferLeadership(r.Context(), db.TransferLeadershipParams{
 			NewLeaderKingdomID: input.TargetKingdomID,
 			GuildID:            g.ID,
@@ -499,6 +536,7 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, []int{input.TargetKingdomID},
 			"Guild Leadership Transferred",
 			"You are now the leader of "+g.Name+".",
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
 		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
@@ -551,6 +589,7 @@ func (h *handler) handleDisband() http.HandlerFunc {
 		h.sendNotifications(r, kingdom.ID, memberIDs,
 			"Guild Disbanded",
 			g.Name+" has been disbanded.",
+			"", "",
 		)
 
 		if err := sse.Redirect(routes.GuildPath); err != nil {
@@ -601,15 +640,179 @@ func (h *handler) handleEditDescription() http.HandlerFunc {
 			return
 		}
 
-		if err := sse.Redirect(slugURL(routes.GuildManagePath, slug)); err != nil {
-			log.Printf("guild edit description: redirect: %v", err)
-		}
+		h.publishUpdates(r, []int{kingdom.ID})
 	}
 }
 
 // ── Page components ───────────────────────────────────────────────────────────
 
-func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole) Node {
+func (h *handler) handleSendInvitation() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		slug := r.PathValue("slug")
+
+		input := &inviteSignals{}
+		if err := datastar.ReadSignals(r, input); err != nil {
+			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("invalid request")))
+			return
+		}
+		sse := datastar.NewSSE(w, r)
+
+		name := strings.TrimSpace(input.InviteKingdomName)
+		if name == "" {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("please enter a kingdom name")))
+			return
+		}
+
+		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
+		if errors.Is(err, errGuildNotFound) {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			return
+		}
+		if err != nil {
+			log.Printf("guild send invitation: get guild: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+		if !viewerRole.CanManage() {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			return
+		}
+
+		target, err := h.queries.GetKingdomByName(r.Context(), name)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("kingdom %q not found", name)))
+				return
+			}
+			log.Printf("guild send invitation: get kingdom: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+
+		if target.ID == kingdom.ID {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("you cannot invite yourself")))
+			return
+		}
+
+		// Reject if the kingdom already has any membership row for this guild.
+		if existing, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
+			KingdomID: target.ID,
+			GuildID:   g.ID,
+		}); err == nil {
+			switch MemberRole(existing.Role) {
+			case RoleInvited:
+				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s has already been invited to this guild", target.Name)))
+			case RolePendingApproval:
+				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s already has a pending join request — approve it instead", target.Name)))
+			default:
+				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s is already a member of this guild", target.Name)))
+			}
+			return
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("guild send invitation: check membership: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+
+		// Reject if the target is already committed to a different guild.
+		if _, err := h.queries.GetKingdomGuildMembership(r.Context(), target.ID); err == nil {
+			sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s is already a member of another guild", target.Name)))
+			return
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("guild send invitation: check target commitment: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+
+		if err := h.queries.CreateGuildInvitation(r.Context(), db.CreateGuildInvitationParams{
+			GuildID:   g.ID,
+			KingdomID: target.ID,
+		}); err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s has already been invited to this guild", target.Name)))
+				return
+			}
+			log.Printf("guild send invitation: create: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+
+		h.sendNotifications(r, kingdom.ID, []int{target.ID},
+			"Guild Invitation from "+g.Name,
+			fmt.Sprintf("You have been invited to join %s. Visit the guild page to accept or decline.", g.Name),
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
+		)
+
+		// Publish to all managers so their pending invitations panel refreshes.
+		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
+			managerIDs := make([]int, 0)
+			for _, m := range members {
+				if MemberRole(m.Role).CanManage() {
+					managerIDs = append(managerIDs, m.KingdomID)
+				}
+			}
+			h.publishUpdates(r, managerIDs)
+		}
+	}
+}
+
+func (h *handler) handleRevokeInvitation() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		slug := r.PathValue("slug")
+		sse := datastar.NewSSE(w, r)
+
+		invitationID, err := strconv.Atoi(r.PathValue("id"))
+		if err != nil {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid invitation id")))
+			return
+		}
+
+		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
+		if errors.Is(err, errGuildNotFound) {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			return
+		}
+		if err != nil {
+			log.Printf("guild revoke invitation: get guild: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+		if !viewerRole.CanManage() {
+			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			return
+		}
+
+		invitedKingdomID, err := h.queries.RevokeGuildInvitation(r.Context(), db.RevokeGuildInvitationParams{
+			ID:      invitationID,
+			GuildID: g.ID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Already gone; refresh the actor's page to reflect current state.
+				h.publishUpdates(r, []int{kingdom.ID})
+				return
+			}
+			log.Printf("guild revoke invitation: %v", err)
+			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			return
+		}
+
+		// Publish to the invited kingdom and all managers so their UI refreshes.
+		toNotify := []int{invitedKingdomID}
+		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
+			for _, m := range members {
+				if MemberRole(m.Role).CanManage() {
+					toNotify = append(toNotify, m.KingdomID)
+				}
+			}
+		}
+		h.publishUpdates(r, toNotify)
+	}
+}
+
+func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole, pending []db.ListPendingRequestsRow, invitations []db.ListGuildInvitationsRow) Node {
 	slug := g.Slug
 	isLeader := viewerRole.IsLeader()
 
@@ -624,7 +827,30 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	return Div(
 		H1(Class("page-title"), Text("Manage "+g.Name)),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
+		guildErrorComponent(nil),
 		A(Href(slugURL(routes.GuildViewPath, slug)), Text("← Back to guild page")),
+
+		// ── Join Requests section
+		Iff(len(pending) > 0, func() Node {
+			return Div(Class("guild-manage-section panel"),
+				P(Class("panel-title"), Text("Join Requests")),
+				Table(Class("guild-member-table"),
+					THead(Tr(
+						Th(Text("Kingdom")),
+						Th(Text("Actions")),
+					)),
+					TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
+						return Tr(
+							Td(Text(p.KingdomName)),
+							Td(
+								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))), Text("Approve")),
+								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))), Text("Reject")),
+							),
+						)
+					})),
+				),
+			)
+		}),
 
 		// ── Members section
 		Div(Class("guild-manage-section panel"),
@@ -663,10 +889,48 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 			),
 		),
 
+		// ── Invite section
+		Div(Class("guild-manage-section panel"),
+			P(Class("panel-title"), Text("Invite a Kingdom")),
+			ds.Signals(map[string]any{"invite_kingdom_name": ""}),
+			Div(Class("form-fields"),
+				Label(For("guild-invite-input"), Text("Kingdom Name")),
+				Input(ID("guild-invite-input"), Type("text"), ds.Bind("invite_kingdom_name"),
+					Placeholder("Kingdom name"),
+				),
+			),
+			Button(Class("btn"),
+				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildInvitePath, slug))),
+				Text("Send Invitation"),
+			),
+		),
+
+		// ── Pending invitations
+		Iff(len(invitations) > 0, func() Node {
+			return Div(Class("guild-manage-section panel"),
+				P(Class("panel-title"), Text("Pending Invitations")),
+				Table(Class("guild-member-table"),
+					THead(Tr(
+						Th(Text("Kingdom")),
+						Th(Text("Actions")),
+					)),
+					TBody(Map(invitations, func(inv db.ListGuildInvitationsRow) Node {
+						return Tr(
+							Td(Text(inv.KingdomName)),
+							Td(
+								Button(Class("btn btn--danger"),
+									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildInvitationRevokePath, slug, inv.ID))),
+									Text("Revoke"),
+								),
+							),
+						)
+					})),
+				),
+			)
+		}),
+
 		// ── Leader-only section
 		If(isLeader, guildLeaderActions(g, eligibleMembers)),
-
-		guildErrorComponent(nil),
 	)
 }
 
@@ -694,8 +958,8 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 		),
 
 		// Transfer leadership
-		If(len(eligibleMembers) > 0,
-			Div(Class("guild-transfer"),
+		Iff(len(eligibleMembers) > 0, func() Node {
+			return Div(Class("guild-transfer"),
 				ds.Signals(map[string]any{
 					"target_kingdom_id": eligibleMembers[0].KingdomID,
 				}),
@@ -710,8 +974,8 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 					ds.On("click", datastar.PostSSE("%s", transferURL)),
 					Text("Transfer Leadership"),
 				),
-			),
-		),
+			)
+		}),
 
 		// Disband
 		Button(Class("btn btn--danger"),
