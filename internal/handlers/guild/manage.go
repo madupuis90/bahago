@@ -18,6 +18,7 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	_guild "bahago/internal/guild"
 	. "bahago/internal/layout"
 	"bahago/internal/routes"
 )
@@ -280,7 +281,7 @@ func (h *handler) handleRemove() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
 			return
 		}
-		if !viewerRole.CanRemoveTarget(MemberRole(target.Role)) {
+		if !viewerRole.CanRemoveTarget(_guild.MemberRole(target.Role)) {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("officers can only remove regular members")))
 			return
 		}
@@ -320,9 +321,9 @@ func (h *handler) handleLeave() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
 			return
 		}
-		if viewerRole != RoleMember && viewerRole != RoleOfficer {
+		if viewerRole != _guild.RoleMember && viewerRole != _guild.RoleOfficer {
 			msg := "permission denied"
-			if viewerRole == RoleLeader {
+			if viewerRole == _guild.RoleLeader {
 				msg = "the guild leader must transfer leadership before leaving"
 			}
 			sse.PatchElementGostar(guildErrorComponent(errors.New(msg)))
@@ -342,7 +343,7 @@ func (h *handler) handleLeave() http.HandlerFunc {
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			managerIDs := make([]int, 0)
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					managerIDs = append(managerIDs, m.KingdomID)
 				}
 			}
@@ -389,7 +390,7 @@ func (h *handler) handlePromote() http.HandlerFunc {
 		// Enforce the 4-officer cap.
 		officerCount := 0
 		for _, m := range members {
-			if MemberRole(m.Role) == RoleOfficer {
+			if _guild.MemberRole(m.Role) == _guild.RoleOfficer {
 				officerCount++
 			}
 		}
@@ -399,7 +400,7 @@ func (h *handler) handlePromote() http.HandlerFunc {
 		}
 
 		if err := h.queries.SetMembershipRole(r.Context(), db.SetMembershipRoleParams{
-			Role:      string(RoleOfficer),
+			Role:      string(_guild.RoleOfficer),
 			KingdomID: targetKingdomID,
 			GuildID:   g.ID,
 		}); err != nil {
@@ -454,13 +455,13 @@ func (h *handler) handleDemote() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
 			return
 		}
-		if !viewerRole.CanRemoveTarget(MemberRole(demoteTarget.Role)) {
+		if !viewerRole.CanRemoveTarget(_guild.MemberRole(demoteTarget.Role)) {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("officers cannot demote other officers")))
 			return
 		}
 
 		if err := h.queries.SetMembershipRole(r.Context(), db.SetMembershipRoleParams{
-			Role:      string(RoleMember),
+			Role:      string(_guild.RoleMember),
 			KingdomID: targetKingdomID,
 			GuildID:   g.ID,
 		}); err != nil {
@@ -519,7 +520,7 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("target is not a member of this guild")))
 			return
 		}
-		if role := MemberRole(targetMembership.Role); role != RoleMember && role != RoleOfficer {
+		if role := _guild.MemberRole(targetMembership.Role); role != _guild.RoleMember && role != _guild.RoleOfficer {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("leadership can only be transferred to a full member or officer")))
 			return
 		}
@@ -575,7 +576,7 @@ func (h *handler) handleDisband() http.HandlerFunc {
 		}
 		memberIDs := make([]int, 0, len(members))
 		for _, m := range members {
-			if m.KingdomID != kingdom.ID && MemberRole(m.Role).IsActiveMember() {
+			if m.KingdomID != kingdom.ID && _guild.MemberRole(m.Role).IsActiveMember() {
 				memberIDs = append(memberIDs, m.KingdomID)
 			}
 		}
@@ -700,10 +701,10 @@ func (h *handler) handleSendInvitation() http.HandlerFunc {
 			KingdomID: target.ID,
 			GuildID:   g.ID,
 		}); err == nil {
-			switch MemberRole(existing.Role) {
-			case RoleInvited:
+			switch _guild.MemberRole(existing.Role) {
+			case _guild.RoleInvited:
 				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s has already been invited to this guild", target.Name)))
-			case RolePendingApproval:
+			case _guild.RolePendingApproval:
 				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s already has a pending join request — approve it instead", target.Name)))
 			default:
 				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s is already a member of this guild", target.Name)))
@@ -748,7 +749,7 @@ func (h *handler) handleSendInvitation() http.HandlerFunc {
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			managerIDs := make([]int, 0)
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					managerIDs = append(managerIDs, m.KingdomID)
 				}
 			}
@@ -803,7 +804,7 @@ func (h *handler) handleRevokeInvitation() http.HandlerFunc {
 		toNotify := []int{invitedKingdomID}
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					toNotify = append(toNotify, m.KingdomID)
 				}
 			}
@@ -812,14 +813,14 @@ func (h *handler) handleRevokeInvitation() http.HandlerFunc {
 	}
 }
 
-func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole, pending []db.ListPendingRequestsRow, invitations []db.ListGuildInvitationsRow) Node {
+func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole _guild.MemberRole, pending []db.ListPendingRequestsRow, invitations []db.ListGuildInvitationsRow) Node {
 	slug := g.Slug
 	isLeader := viewerRole.IsLeader()
 
 	// Build member options for transfer leadership select.
 	eligibleMembers := make([]db.ListGuildMembersWithNamesRow, 0)
 	for _, m := range members {
-		if r := MemberRole(m.Role); r == RoleMember || r == RoleOfficer {
+		if r := _guild.MemberRole(m.Role); r == _guild.RoleMember || r == _guild.RoleOfficer {
 			eligibleMembers = append(eligibleMembers, m)
 		}
 	}
@@ -862,22 +863,22 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 					Th(Text("Actions")),
 				)),
 				TBody(Map(members, func(m db.ListGuildMembersWithNamesRow) Node {
-					if MemberRole(m.Role) == RoleLeader {
+					if _guild.MemberRole(m.Role) == _guild.RoleLeader {
 						return Tr(
 							Td(Text(m.KingdomName)),
 							Td(Text("Leader")),
 							Td(),
 						)
 					}
-					canRemove := viewerRole.CanRemoveTarget(MemberRole(m.Role))
+					canRemove := viewerRole.CanRemoveTarget(_guild.MemberRole(m.Role))
 					return Tr(
 						Td(Text(m.KingdomName)),
-						Td(Text(MemberRole(m.Role).Display())),
+						Td(Text(_guild.MemberRole(m.Role).Display())),
 						Td(
-							If(isLeader && MemberRole(m.Role) == RoleMember,
+							If(isLeader && _guild.MemberRole(m.Role) == _guild.RoleMember,
 								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildPromotePath, slug, m.KingdomID))), Text("Promote")),
 							),
-							If(isLeader && MemberRole(m.Role) == RoleOfficer,
+							If(isLeader && _guild.MemberRole(m.Role) == _guild.RoleOfficer,
 								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildDemotePath, slug, m.KingdomID))), Text("Demote")),
 							),
 							If(canRemove,
@@ -931,6 +932,12 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 
 		// ── Leader-only section
 		If(isLeader, guildLeaderActions(g, eligibleMembers)),
+		If(isLeader,
+			Div(Class("guild-manage-section panel"),
+				P(Class("panel-title"), Text("Guild Settings")),
+				A(Href(slugURL(routes.GuildSettingsPath, slug)), Class("btn"), Text("Manage Settings")),
+			),
+		),
 	)
 }
 

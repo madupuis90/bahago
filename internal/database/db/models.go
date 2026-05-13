@@ -32,6 +32,7 @@ type Guild struct {
 	FoundingKingdomIds []int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Settings           []byte
 }
 
 type GuildMembership struct {
@@ -127,16 +128,17 @@ type KingdomConstruction struct {
 }
 
 type KingdomMessage struct {
-	ID            int
-	FromKingdomID int
-	ToKingdomID   int
-	Subject       string
-	Body          string
-	ReadAt        pgtype.Timestamptz
-	DeletedAt     pgtype.Timestamptz
-	CreatedAt     time.Time
-	ActionUrl     pgtype.Text
-	ActionText    pgtype.Text
+	ID             int
+	FromKingdomID  int
+	ToKingdomID    int
+	Subject        string
+	Body           string
+	ReadAt         pgtype.Timestamptz
+	DeletedAt      pgtype.Timestamptz
+	CreatedAt      time.Time
+	ActionUrl      pgtype.Text
+	ActionText     pgtype.Text
+	IsGuildMessage bool
 }
 
 type KingdomPrayer struct {

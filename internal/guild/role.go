@@ -12,10 +12,33 @@ const (
 	RoleMember          MemberRole = "member"
 	RoleOfficer         MemberRole = "officer"
 	RoleLeader          MemberRole = "leader"
-	// RoleInOtherGuild is a pseudo-role used only in the view layer to indicate the
-	// viewer has an active commitment to a different guild. Never stored in the database.
+
+	// RoleInOtherGuild is a view-layer pseudo-role used only when rendering a
+	// guild page for a kingdom that is committed to a different guild. It is
+	// never stored in the database.
 	RoleInOtherGuild MemberRole = "in_other_guild"
 )
+
+// Rank returns the seniority level of the role within the active-member hierarchy.
+// Only member, officer, and leader carry a rank; all other roles return 0.
+func (r MemberRole) Rank() int {
+	switch r {
+	case RoleMember:
+		return 1
+	case RoleOfficer:
+		return 2
+	case RoleLeader:
+		return 3
+	default:
+		return 0
+	}
+}
+
+// AtLeast reports whether the role's rank is at least as high as min's rank.
+// Roles with rank 0 (non-active) always return false.
+func (r MemberRole) AtLeast(min MemberRole) bool {
+	return r.Rank() > 0 && r.Rank() >= min.Rank()
+}
 
 // IsActiveMember reports whether the role counts as a full guild member
 // (i.e. the kingdom holds a seat, not merely an application-phase role).
@@ -50,6 +73,17 @@ func (r MemberRole) CanRemoveTarget(target MemberRole) bool {
 // IsLeader reports whether the role is the guild leader.
 func (r MemberRole) IsLeader() bool {
 	return r == RoleLeader
+}
+
+// CanReceiveInvitation reports whether the role allows receiving a guild invitation.
+// A kingdom can be invited if it has no conflicting membership in this guild.
+func (r MemberRole) CanReceiveInvitation() bool {
+	return r == RoleNone || r == RoleInOtherGuild || r == RoleInvited
+}
+
+// CanLeave reports whether the role allows a kingdom to voluntarily leave a guild.
+func (r MemberRole) CanLeave() bool {
+	return r == RoleMember || r == RoleOfficer
 }
 
 // Display returns a human-readable label for the role.

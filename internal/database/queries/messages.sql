@@ -36,8 +36,8 @@ WHERE m.id = $1
   AND m.deleted_at IS NULL;
 
 -- name: BulkCreateMessages :exec
-INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text)
-SELECT @from_kingdom_id::bigint, unnest(@to_kingdom_ids::bigint[]), @subject::text, @body::text, @action_url::text, @action_text::text;
+INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text, is_guild_message)
+SELECT @from_kingdom_id::bigint, unnest(@to_kingdom_ids::bigint[]), @subject::text, @body::text, @action_url::text, @action_text::text, @is_guild_message::boolean;
 
 -- name: MarkMessageRead :exec
 UPDATE kingdom_messages
@@ -51,6 +51,12 @@ UPDATE kingdom_messages
 SET deleted_at = NOW()
 WHERE id = $1
   AND to_kingdom_id = $2;
+
+-- name: DeleteMessages :exec
+UPDATE kingdom_messages
+SET deleted_at = NOW()
+WHERE id = ANY(@ids::bigint[])
+  AND to_kingdom_id = @to_kingdom_id;
 
 -- name: CountUnreadMessages :one
 SELECT COUNT(*)

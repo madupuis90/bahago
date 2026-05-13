@@ -183,13 +183,13 @@ const createGuild = `-- name: CreateGuild :one
 WITH new_guild AS (
     INSERT INTO guilds (name, slug, description)
     VALUES ($1, $2, $3)
-    RETURNING id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at
+    RETURNING id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings
 ), insert_membership AS (
     INSERT INTO guild_memberships (guild_id, kingdom_id, role)
     SELECT id, $4::bigint, 'applicant'
     FROM new_guild
 )
-SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at FROM new_guild
+SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM new_guild
 `
 
 type CreateGuildParams struct {
@@ -208,6 +208,7 @@ type CreateGuildRow struct {
 	FoundingKingdomIds []int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Settings           []byte
 }
 
 func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (CreateGuildRow, error) {
@@ -227,6 +228,7 @@ func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (Creat
 		&i.FoundingKingdomIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -298,7 +300,7 @@ func (q *Queries) ExpirePendingGuilds(ctx context.Context) error {
 }
 
 const getGuildByID = `-- name: GetGuildByID :one
-SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at FROM guilds WHERE id = $1 LIMIT 1
+SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetGuildByID(ctx context.Context, id int) (Guild, error) {
@@ -313,12 +315,13 @@ func (q *Queries) GetGuildByID(ctx context.Context, id int) (Guild, error) {
 		&i.FoundingKingdomIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Settings,
 	)
 	return i, err
 }
 
 const getGuildBySlug = `-- name: GetGuildBySlug :one
-SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at FROM guilds WHERE slug = $1 LIMIT 1
+SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE slug = $1 LIMIT 1
 `
 
 func (q *Queries) GetGuildBySlug(ctx context.Context, slug string) (Guild, error) {
@@ -333,6 +336,7 @@ func (q *Queries) GetGuildBySlug(ctx context.Context, slug string) (Guild, error
 		&i.FoundingKingdomIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Settings,
 	)
 	return i, err
 }
@@ -527,6 +531,39 @@ func (q *Queries) ListGuildInvitations(ctx context.Context, guildID int) ([]List
 	return items, nil
 }
 
+const listGuildMembersExcludingSelf = `-- name: ListGuildMembersExcludingSelf :many
+SELECT kingdom_id
+FROM guild_memberships
+WHERE guild_id = $1
+  AND kingdom_id != $2
+  AND role IN ('member', 'officer', 'leader')
+`
+
+type ListGuildMembersExcludingSelfParams struct {
+	GuildID          int
+	ExcludeKingdomID int
+}
+
+func (q *Queries) ListGuildMembersExcludingSelf(ctx context.Context, arg ListGuildMembersExcludingSelfParams) ([]int, error) {
+	rows, err := q.db.Query(ctx, listGuildMembersExcludingSelf, arg.GuildID, arg.ExcludeKingdomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int
+	for rows.Next() {
+		var kingdom_id int
+		if err := rows.Scan(&kingdom_id); err != nil {
+			return nil, err
+		}
+		items = append(items, kingdom_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGuildMembersWithNames = `-- name: ListGuildMembersWithNames :many
 SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.role, gm.joined_at, gm.created_at,
        k.name AS kingdom_name
@@ -576,6 +613,39 @@ func (q *Queries) ListGuildMembersWithNames(ctx context.Context, guildID int) ([
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuildOfficersExcludingSelf = `-- name: ListGuildOfficersExcludingSelf :many
+SELECT kingdom_id
+FROM guild_memberships
+WHERE guild_id = $1
+  AND kingdom_id != $2
+  AND role IN ('officer', 'leader')
+`
+
+type ListGuildOfficersExcludingSelfParams struct {
+	GuildID          int
+	ExcludeKingdomID int
+}
+
+func (q *Queries) ListGuildOfficersExcludingSelf(ctx context.Context, arg ListGuildOfficersExcludingSelfParams) ([]int, error) {
+	rows, err := q.db.Query(ctx, listGuildOfficersExcludingSelf, arg.GuildID, arg.ExcludeKingdomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int
+	for rows.Next() {
+		var kingdom_id int
+		if err := rows.Scan(&kingdom_id); err != nil {
+			return nil, err
+		}
+		items = append(items, kingdom_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -862,6 +932,22 @@ type UpdateGuildDescriptionParams struct {
 
 func (q *Queries) UpdateGuildDescription(ctx context.Context, arg UpdateGuildDescriptionParams) error {
 	_, err := q.db.Exec(ctx, updateGuildDescription, arg.Description, arg.ID)
+	return err
+}
+
+const updateGuildSettings = `-- name: UpdateGuildSettings :exec
+UPDATE guilds
+SET settings = $1, updated_at = NOW()
+WHERE id = $2
+`
+
+type UpdateGuildSettingsParams struct {
+	Settings []byte
+	ID       int
+}
+
+func (q *Queries) UpdateGuildSettings(ctx context.Context, arg UpdateGuildSettingsParams) error {
+	_, err := q.db.Exec(ctx, updateGuildSettings, arg.Settings, arg.ID)
 	return err
 }
 

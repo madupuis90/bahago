@@ -66,6 +66,7 @@ type Querier interface {
 	DeleteEmailVerificationByUserID(ctx context.Context, userID int) error
 	DeleteKingdomPrayers(ctx context.Context, ids []int) error
 	DeleteMessage(ctx context.Context, arg DeleteMessageParams) error
+	DeleteMessages(ctx context.Context, arg DeleteMessagesParams) error
 	DeletePasswordResetTokensByUserID(ctx context.Context, userID int) error
 	DeletePrayer(ctx context.Context, arg DeletePrayerParams) error
 	DeleteSession(ctx context.Context, id string) error
@@ -110,7 +111,9 @@ type Querier interface {
 	ListActiveGuilds(ctx context.Context) ([]ListActiveGuildsRow, error)
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
 	ListGuildInvitations(ctx context.Context, guildID int) ([]ListGuildInvitationsRow, error)
+	ListGuildMembersExcludingSelf(ctx context.Context, arg ListGuildMembersExcludingSelfParams) ([]int, error)
 	ListGuildMembersWithNames(ctx context.Context, guildID int) ([]ListGuildMembersWithNamesRow, error)
+	ListGuildOfficersExcludingSelf(ctx context.Context, arg ListGuildOfficersExcludingSelfParams) ([]int, error)
 	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
 	ListKingdomInvitations(ctx context.Context, kingdomID int) ([]ListKingdomInvitationsRow, error)
 	ListKingdomPrayers(ctx context.Context, kingdomID int) ([]KingdomPrayer, error)
@@ -132,6 +135,7 @@ type Querier interface {
 	StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error
 	TransferLeadership(ctx context.Context, arg TransferLeadershipParams) error
 	UpdateGuildDescription(ctx context.Context, arg UpdateGuildDescriptionParams) error
+	UpdateGuildSettings(ctx context.Context, arg UpdateGuildSettingsParams) error
 	UpdateKingdomAllocations(ctx context.Context, arg UpdateKingdomAllocationsParams) (Kingdom, error)
 	UpdateLastLogin(ctx context.Context, id int) error
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error

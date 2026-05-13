@@ -1180,7 +1180,14 @@ h1 {
   padding: 1rem;
 }
 
-.messages-compose-btn {
+.messages-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.messages-compose-btn,
+.messages-guild-btn {
   width: 100%;
 }
 
@@ -1191,8 +1198,28 @@ h1 {
   overflow-y: auto;
 }
 
+.messages-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  gap: 0.5rem;
+}
+
+.messages-select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+}
+
 .message-item {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
   padding: 0.5rem 0.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 0.3rem;
@@ -1206,26 +1233,49 @@ h1 {
     background: rgba(0, 0, 0, 0.06);
   }
 
-  .message-item-header {
+  .message-item-check {
+    padding-top: 0.1rem;
+    flex-shrink: 0;
+  }
+
+  .message-item-link {
+    flex: 1;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .message-item-subject {
     font-size: 0.9rem;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .message-item-from {
-    font-weight: 600;
+  .message-item-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-top: 0.15rem;
   }
 
-  .message-item-subject {
-    opacity: 0.8;
+  .message-item-from {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .message-item-date {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--panel-link-color);
     opacity: 0.7;
-    margin-top: 0.1rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 
@@ -1234,13 +1284,13 @@ h1 {
   padding-left: calc(0.5rem - 3px);
   background: rgba(122, 74, 0, 0.07);
 
-  .message-item-from {
+  .message-item-subject {
     color: var(--panel-link-color);
   }
 
-  .message-item-subject {
-    font-weight: bold;
+  .message-item-from {
     opacity: 1;
+    font-weight: 600;
   }
 }
 
@@ -1253,7 +1303,7 @@ h1 {
     background: rgba(122, 74, 0, 0.14);
   }
 
-  .message-item-from {
+  .message-item-subject {
     color: var(--panel-link-color);
   }
 }
@@ -1266,12 +1316,26 @@ h1 {
 }
 
 .messages-empty-state {
+  width: 100%;
   color: rgba(0, 0, 0, 0.45);
   padding: 1rem 0;
+  text-align: center;
 }
 
 .messages-right .messages-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
   color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+
+  p:first-child {
+    font-size: 2.5rem;
+    line-height: 1;
+  }
 }
 
 .messages-loading {
@@ -1392,6 +1456,40 @@ h1 {
     display: flex;
     gap: 0.5rem;
   }
+}
+
+/* =============================================================================
+   15. Guild Settings
+   ============================================================================= */
+
+.guild-settings {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.guild-settings-hint {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-top: -0.5rem;
+}
+
+.guild-settings-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+
+  label {
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+}
+
+.guild-settings-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 /* Nav badge */

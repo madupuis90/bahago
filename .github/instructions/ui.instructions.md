@@ -358,7 +358,7 @@ ds.Bind("signalName")
 > Select(ds.Bind("unit_type"), ...)
 > ```
 
-> **`<select>` elements bound to an `int` signal need no JavaScript coercion.** Datastar's bind plugin reads `typeof <current signal value>` on every change event and calls `+el.value` (numeric coercion) automatically when the existing signal is a number. Initialize the signal with a Go `int` value and use `ds.Bind` alone — never write `$field = parseInt($event.target.value, 10)` manually:
+> **`<select>` elements bound to an `int` signal need no JavaScript coercion.** Datastar's bind plugin reads `typeof <current signal value>` on every change event and calls `+el.value` (numeric coercion) automatically when the existing signal is a number. Initialize the signal with a Go `int` value and use `ds.Bind` alone — never write `$field = parseInt(evt.target.value, 10)` manually:
 > ```go
 > // Correct — int signal, ds.Bind handles coercion
 > ds.Signals(map[string]any{
@@ -368,9 +368,18 @@ ds.Bind("signalName")
 >
 > // Wrong — parseInt is redundant and adds noise
 > Select(
->     ds.On("change", "$target_kingdom_id = parseInt($event.target.value, 10)"),
+>     ds.On("change", "$target_kingdom_id = parseInt(evt.target.value, 10)"),
 >     ...
 > )
+> ```
+
+> **In `ds.On` expressions, the DOM event is `evt`, not `$event`.** Datastar compiles `data-on-*` expressions as `Function("el", "$", "__action", "evt", ..., expression)`. Writing `$event` triggers Datastar's signal-substitution and becomes `$['event']` — an undefined signal — at runtime. Always use `evt`:
+> ```go
+> // Correct
+> ds.On("change", "doSomething(evt.target.checked)")
+>
+> // Wrong — $event is not the DOM event
+> ds.On("change", "doSomething($event.target.checked)")
 > ```
 
 ```go

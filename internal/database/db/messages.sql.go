@@ -13,17 +13,18 @@ import (
 )
 
 const bulkCreateMessages = `-- name: BulkCreateMessages :exec
-INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text)
-SELECT $1::bigint, unnest($2::bigint[]), $3::text, $4::text, $5::text, $6::text
+INSERT INTO kingdom_messages (from_kingdom_id, to_kingdom_id, subject, body, action_url, action_text, is_guild_message)
+SELECT $1::bigint, unnest($2::bigint[]), $3::text, $4::text, $5::text, $6::text, $7::boolean
 `
 
 type BulkCreateMessagesParams struct {
-	FromKingdomID int
-	ToKingdomIds  []int
-	Subject       string
-	Body          string
-	ActionUrl     string
-	ActionText    string
+	FromKingdomID  int
+	ToKingdomIds   []int
+	Subject        string
+	Body           string
+	ActionUrl      string
+	ActionText     string
+	IsGuildMessage bool
 }
 
 func (q *Queries) BulkCreateMessages(ctx context.Context, arg BulkCreateMessagesParams) error {
@@ -34,6 +35,7 @@ func (q *Queries) BulkCreateMessages(ctx context.Context, arg BulkCreateMessages
 		arg.Body,
 		arg.ActionUrl,
 		arg.ActionText,
+		arg.IsGuildMessage,
 	)
 	return err
 }
@@ -67,6 +69,23 @@ type DeleteMessageParams struct {
 
 func (q *Queries) DeleteMessage(ctx context.Context, arg DeleteMessageParams) error {
 	_, err := q.db.Exec(ctx, deleteMessage, arg.ID, arg.ToKingdomID)
+	return err
+}
+
+const deleteMessages = `-- name: DeleteMessages :exec
+UPDATE kingdom_messages
+SET deleted_at = NOW()
+WHERE id = ANY($1::bigint[])
+  AND to_kingdom_id = $2
+`
+
+type DeleteMessagesParams struct {
+	Ids         []int
+	ToKingdomID int
+}
+
+func (q *Queries) DeleteMessages(ctx context.Context, arg DeleteMessagesParams) error {
+	_, err := q.db.Exec(ctx, deleteMessages, arg.Ids, arg.ToKingdomID)
 	return err
 }
 

@@ -249,6 +249,25 @@ cancel_invitations AS (
 )
 SELECT kingdom_id FROM new_member;
 
+-- name: ListGuildMembersExcludingSelf :many
+SELECT kingdom_id
+FROM guild_memberships
+WHERE guild_id = @guild_id
+  AND kingdom_id != @exclude_kingdom_id
+  AND role IN ('member', 'officer', 'leader');
+
+-- name: ListGuildOfficersExcludingSelf :many
+SELECT kingdom_id
+FROM guild_memberships
+WHERE guild_id = @guild_id
+  AND kingdom_id != @exclude_kingdom_id
+  AND role IN ('officer', 'leader');
+
+-- name: UpdateGuildSettings :exec
+UPDATE guilds
+SET settings = @settings, updated_at = NOW()
+WHERE id = @id;
+
 -- name: ListActiveGuilds :many
 SELECT
     g.name,

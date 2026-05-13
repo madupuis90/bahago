@@ -25,6 +25,7 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
+	_guild "bahago/internal/guild"
 	"bahago/internal/hub"
 	. "bahago/internal/layout"
 	"bahago/internal/router"
@@ -93,6 +94,8 @@ func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tic
 	r.HandleFunc("POST "+routes.GuildInvitationRevokePath, h.handleRevokeInvitation())
 	r.HandleFunc("POST "+routes.GuildInvitationAcceptPath, h.handleAcceptInvitation())
 	r.HandleFunc("POST "+routes.GuildInvitationDeclinePath, h.handleDeclineInvitation())
+	r.HandleFunc("GET "+routes.GuildSettingsPath, h.handleSettings())
+	r.HandleFunc("POST "+routes.GuildSettingsSavePath, h.handleSettingsSave())
 }
 
 type handler struct {
@@ -282,7 +285,7 @@ func (h *handler) handleView() http.HandlerFunc {
 		}
 
 		var invitationID int
-		if viewerRole == RoleNone || viewerRole == RoleInOtherGuild || viewerRole == RoleInvited {
+		if viewerRole.CanReceiveInvitation() {
 			if id, err := h.queries.GetKingdomGuildInvitation(r.Context(), db.GetKingdomGuildInvitationParams{
 				KingdomID: kingdom.ID,
 				GuildID:   guild.ID,
@@ -323,7 +326,7 @@ func (h *handler) handleViewRefresh() http.HandlerFunc {
 					return
 				}
 				var invitationID int
-				if viewerRole == RoleNone || viewerRole == RoleInOtherGuild || viewerRole == RoleInvited {
+				if viewerRole.CanReceiveInvitation() {
 					if id, idErr := h.queries.GetKingdomGuildInvitation(r.Context(), db.GetKingdomGuildInvitationParams{
 						KingdomID: k.ID,
 						GuildID:   guild.ID,
@@ -366,7 +369,7 @@ func (h *handler) handleSupport() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
 			return
 		}
-		if !GuildStatus(g.Status).IsPending() {
+		if !_guild.GuildStatus(g.Status).IsPending() {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("this guild is no longer accepting support")))
 			return
 		}
@@ -374,7 +377,7 @@ func (h *handler) handleSupport() http.HandlerFunc {
 		if err := txq.CreateGuildMembership(r.Context(), db.CreateGuildMembershipParams{
 			GuildID:   g.ID,
 			KingdomID: kingdom.ID,
-			Role:      string(RoleSupporter),
+			Role:      string(_guild.RoleSupporter),
 		}); err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
 				sse.PatchElementGostar(guildErrorComponent(errors.New("you are already committed to a guild")))
@@ -489,7 +492,7 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 			KingdomID: kingdom.ID,
 			GuildID:   g.ID,
 		})
-		if err != nil || MemberRole(membership.Role) != RoleApplicant {
+		if err != nil || _guild.MemberRole(membership.Role) != _guild.RoleApplicant {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
 			return
 		}
@@ -522,7 +525,7 @@ func (h *handler) handleRequestJoin() http.HandlerFunc {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
 			return
 		}
-		if !GuildStatus(g.Status).IsActive() {
+		if !_guild.GuildStatus(g.Status).IsActive() {
 			sse.PatchElementGostar(guildErrorComponent(errors.New("this guild is not accepting requests")))
 			return
 		}
@@ -559,7 +562,7 @@ func (h *handler) handleRequestJoin() http.HandlerFunc {
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			managerIDs := make([]int, 0)
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					managerIDs = append(managerIDs, m.KingdomID)
 				}
 			}
@@ -604,7 +607,7 @@ func (h *handler) handleCancelRequest() http.HandlerFunc {
 		toNotify := []int{kingdom.ID}
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					toNotify = append(toNotify, m.KingdomID)
 				}
 			}
@@ -661,7 +664,7 @@ func (h *handler) handleAcceptInvitation() http.HandlerFunc {
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
 			managerIDs := make([]int, 0)
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					managerIDs = append(managerIDs, m.KingdomID)
 				}
 			}
@@ -711,7 +714,7 @@ func (h *handler) handleDeclineInvitation() http.HandlerFunc {
 		refreshIDs := []int{kingdom.ID}
 		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), guildID); err == nil {
 			for _, m := range members {
-				if MemberRole(m.Role).CanManage() {
+				if _guild.MemberRole(m.Role).CanManage() {
 					refreshIDs = append(refreshIDs, m.KingdomID)
 				}
 			}
@@ -722,56 +725,56 @@ func (h *handler) handleDeclineInvitation() http.HandlerFunc {
 
 var errGuildNotFound = errors.New("guild not found")
 
-func (h *handler) loadGuildAndMembership(r *http.Request, slug string, kingdomID int) (db.Guild, []db.ListGuildMembersWithNamesRow, MemberRole, error) {
+func (h *handler) loadGuildAndMembership(r *http.Request, slug string, kingdomID int) (db.Guild, []db.ListGuildMembersWithNamesRow, _guild.MemberRole, error) {
 	g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Guild{}, nil, RoleNone, errGuildNotFound
+			return db.Guild{}, nil, _guild.RoleNone, errGuildNotFound
 		}
-		return db.Guild{}, nil, RoleNone, fmt.Errorf("get guild: %w", err)
+		return db.Guild{}, nil, _guild.RoleNone, fmt.Errorf("get guild: %w", err)
 	}
 
 	members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID)
 	if err != nil {
-		return db.Guild{}, nil, RoleNone, fmt.Errorf("list members: %w", err)
+		return db.Guild{}, nil, _guild.RoleNone, fmt.Errorf("list members: %w", err)
 	}
 
 	membership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
 		KingdomID: kingdomID,
 		GuildID:   g.ID,
 	})
-	viewerRole := RoleNone
+	viewerRole := _guild.RoleNone
 	if err == nil {
-		viewerRole = MemberRole(membership.Role)
+		viewerRole = _guild.MemberRole(membership.Role)
 	}
 
-	// Promote to RoleInOtherGuild when the kingdom has no role in this guild but
+	// Promote to _guild.RoleInOtherGuild when the kingdom has no role in this guild but
 	// is committed elsewhere — view functions use this instead of a separate bool.
-	if viewerRole == RoleNone {
+	if viewerRole == _guild.RoleNone {
 		if km, err := h.queries.GetKingdomGuildMembership(r.Context(), kingdomID); err == nil && km.GuildID != g.ID {
-			viewerRole = RoleInOtherGuild
+			viewerRole = _guild.RoleInOtherGuild
 		}
 	}
 
 	return g, members, viewerRole, nil
 }
 
-func (h *handler) getGuildAndViewerRole(r *http.Request, slug string, kingdomID int) (db.Guild, MemberRole, error) {
+func (h *handler) getGuildAndViewerRole(r *http.Request, slug string, kingdomID int) (db.Guild, _guild.MemberRole, error) {
 	g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Guild{}, RoleNone, errGuildNotFound
+			return db.Guild{}, _guild.RoleNone, errGuildNotFound
 		}
-		return db.Guild{}, RoleNone, fmt.Errorf("get guild: %w", err)
+		return db.Guild{}, _guild.RoleNone, fmt.Errorf("get guild: %w", err)
 	}
 	membership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
 		KingdomID: kingdomID,
 		GuildID:   g.ID,
 	})
 	if err != nil {
-		return g, RoleNone, nil
+		return g, _guild.RoleNone, nil
 	}
-	return g, MemberRole(membership.Role), nil
+	return g, _guild.MemberRole(membership.Role), nil
 }
 
 // publishUpdates fetches the kingdoms for the given IDs and publishes each to the hub,
@@ -893,8 +896,8 @@ func guildNewContent() Node {
 	)
 }
 
-func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole MemberRole, invitationID int) Node {
-	isPending := GuildStatus(g.Status).IsPending()
+func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole _guild.MemberRole, invitationID int) Node {
+	isPending := _guild.GuildStatus(g.Status).IsPending()
 
 	titleSuffix := ""
 	if isPending {
@@ -904,10 +907,10 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 	supportCount := 0
 	activeCount := 0
 	for _, m := range members {
-		if MemberRole(m.Role).IsApplicationPhase() {
+		if _guild.MemberRole(m.Role).IsApplicationPhase() {
 			supportCount++
 		}
-		if MemberRole(m.Role).IsActiveMember() {
+		if _guild.MemberRole(m.Role).IsActiveMember() {
 			activeCount++
 		}
 	}
@@ -942,33 +945,33 @@ func guildMemberTable(members []db.ListGuildMembersWithNamesRow) Node {
 		TBody(Map(members, func(m db.ListGuildMembersWithNamesRow) Node {
 			return Tr(
 				Td(Text(m.KingdomName)),
-				Td(Text(MemberRole(m.Role).Display())),
+				Td(Text(_guild.MemberRole(m.Role).Display())),
 			)
 		})),
 	)
 }
 
-func guildActionButtons(g db.Guild, viewerRole MemberRole, invitationID int) Node {
+func guildActionButtons(g db.Guild, viewerRole _guild.MemberRole, invitationID int) Node {
 	slug := g.Slug
-	guildStatus := GuildStatus(g.Status)
+	guildStatus := _guild.GuildStatus(g.Status)
 	isPending := guildStatus.IsPending()
 	isActive := guildStatus.IsActive()
 
 	return Div(Class("guild-actions"),
 		// Application-phase actions
-		If(isPending && viewerRole == RoleNone,
+		If(isPending && viewerRole == _guild.RoleNone,
 			Button(Class("btn"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildSupportPath, slug))),
 				Text("Support Application"),
 			),
 		),
-		If(isPending && viewerRole == RoleSupporter,
+		If(isPending && viewerRole == _guild.RoleSupporter,
 			Button(Class("btn btn--danger"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildWithdrawSupportPath, slug))),
 				Text("Withdraw Support"),
 			),
 		),
-		If(isPending && viewerRole == RoleApplicant,
+		If(isPending && viewerRole == _guild.RoleApplicant,
 			Button(Class("btn btn--danger"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildCancelProposalPath, slug))),
 				Text("Withdraw Application"),
@@ -976,7 +979,7 @@ func guildActionButtons(g db.Guild, viewerRole MemberRole, invitationID int) Nod
 		),
 
 		// Active guild actions for non-members
-		If(isActive && viewerRole == RoleNone && invitationID == 0,
+		If(isActive && viewerRole == _guild.RoleNone && invitationID == 0,
 			Button(Class("btn"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildRequestJoinPath, slug))),
 				Text("Request to Join"),
@@ -995,7 +998,7 @@ func guildActionButtons(g db.Guild, viewerRole MemberRole, invitationID int) Nod
 				),
 			),
 		),
-		If(isActive && viewerRole == RolePendingApproval,
+		If(isActive && viewerRole == _guild.RolePendingApproval,
 			Button(Class("btn"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildCancelRequestPath, slug))),
 				Text("Cancel Request"),
@@ -1003,7 +1006,7 @@ func guildActionButtons(g db.Guild, viewerRole MemberRole, invitationID int) Nod
 		),
 
 		// Active guild: member/officer can leave
-		If(isActive && (viewerRole == RoleMember || viewerRole == RoleOfficer),
+		If(isActive && viewerRole.CanLeave(),
 			Button(Class("btn btn--danger"),
 				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildLeavePath, slug))),
 				Text("Leave Guild"),
