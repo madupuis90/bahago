@@ -274,6 +274,13 @@ func fetchAllKingdomPrayers(ctx context.Context, q db.Querier) (byCaster, byTarg
 	return byCaster, byTarget, nil
 }
 
+// alignedTick returns the next tick time aligned to the interval boundary.
+// For example, with interval=1h and now=9:43, it returns 10:00.
+// With interval=30m and now=9:15, it returns 9:30.
+func alignedTick(now time.Time, interval time.Duration) time.Time {
+	return now.Truncate(interval).Add(interval)
+}
+
 // StartTicker starts the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func StartTicker(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom), interval time.Duration) {
@@ -287,12 +294,12 @@ func StartTicker(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	}
 	log.Printf("game ticker started at tick %d (interval: %s)", latestTickID, interval)
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
 	for {
+		next := alignedTick(time.Now(), interval)
+		log.Printf("next tick at %s (waiting %s)", next.Format("15:04:05"), time.Until(next).Round(time.Second))
+
 		select {
-		case <-ticker.C:
+		case <-time.After(time.Until(next)):
 			if err := ProcessTick(ctx, pool, notify); err != nil {
 				log.Printf("tick error: %v", err)
 			}
