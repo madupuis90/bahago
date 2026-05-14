@@ -117,7 +117,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		return fmt.Errorf("tick: expire pending guilds: %w", err)
 	}
 
-	// Resolve combat for all active campaigns on a 4-tick boundary.
+	// Resolve combat for all active campaigns.
 	// AdvanceCampaigns runs first, so freshly activated campaigns (ticks_remaining = action_ticks)
 	// fire their first combat round on the same tick they arrive. This is intentional:
 	// arrival and first strike are simultaneous.

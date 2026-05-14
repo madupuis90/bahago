@@ -38,8 +38,7 @@ SELECT * FROM decremented WHERE ticks_remaining = 0;
 -- name: GetActiveCampaignsReadyForCombat :many
 SELECT * FROM kingdom_campaigns
 WHERE status = 'active'
-  AND ticks_remaining > 0
-  AND ticks_remaining % 4 = 0;
+  AND ticks_remaining > 0;
 
 -- name: BulkActivateCampaigns :exec
 UPDATE kingdom_campaigns

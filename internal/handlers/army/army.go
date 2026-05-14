@@ -138,11 +138,11 @@ func (h *handler) handleSend() http.HandlerFunc {
 			return
 		}
 
-		maxDuration := 20
+		maxDuration := 5
 		if input.Action == "defend" {
-			maxDuration = 96
+			maxDuration = 24
 		}
-		if input.DurationTicks < 4 || input.DurationTicks > maxDuration || input.DurationTicks%4 != 0 {
+		if input.DurationTicks < 1 || input.DurationTicks > maxDuration {
 			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid duration")))
 			return
 		}

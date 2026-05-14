@@ -9,7 +9,7 @@ import (
 
 // TravelTicks returns the number of ticks required to travel between two world
 // coordinates. Uses Chebyshev distance (max of horizontal/vertical delta) with
-// a minimum of 12 ticks (3 hours) so nearby kingdoms still require real travel time.
+// a minimum of 3 ticks (3 hours) so nearby kingdoms still require real travel time.
 func TravelTicks(x1, y1, x2, y2 int) int {
 	dx := x1 - x2
 	if dx < 0 {
@@ -23,8 +23,8 @@ func TravelTicks(x1, y1, x2, y2 int) int {
 	if dy > d {
 		d = dy
 	}
-	if d < 12 {
-		d = 12
+	if d < 3 {
+		d = 3
 	}
 	return d
 }

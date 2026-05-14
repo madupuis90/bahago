@@ -231,7 +231,6 @@ const getActiveCampaignsReadyForCombat = `-- name: GetActiveCampaignsReadyForCom
 SELECT id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM kingdom_campaigns
 WHERE status = 'active'
   AND ticks_remaining > 0
-  AND ticks_remaining % 4 = 0
 `
 
 func (q *Queries) GetActiveCampaignsReadyForCombat(ctx context.Context) ([]KingdomCampaign, error) {

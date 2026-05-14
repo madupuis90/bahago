@@ -30,7 +30,7 @@ type ResourceRates struct {
 //
 // starvationDivisor controls the maximum population loss per tick when fully starving:
 // loss = population / starvationDivisor. A value of 100 means at most 1% per tick,
-// halving a fully starving population in roughly 17 hours (69 ticks at 15min intervals).
+// halving a fully starving population in roughly 69 hours (69 ticks at 1h intervals).
 // Partial shortages cause proportionally less loss, scaling linearly with the deficit ratio.
 const (
 	starvationDivisor = 100
