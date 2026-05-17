@@ -9,7 +9,7 @@ CREATE TABLE kingdom_campaigns (
     status            TEXT NOT NULL DEFAULT 'en_route',
     ticks_remaining   INT NOT NULL CHECK (ticks_remaining >= 0),
     action_ticks      INT NOT NULL CHECK (action_ticks > 0),
-    travel_ticks      INT NOT NULL CHECK (travel_ticks >= 12),
+    travel_ticks      INT NOT NULL CHECK (travel_ticks >= 3),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT kingdom_campaigns_action_valid CHECK (action IN ('attack', 'defend')),

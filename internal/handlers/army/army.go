@@ -432,8 +432,8 @@ func armyUnitsSection(units []db.GetAvailableKingdomUnitsRow) Node {
 }
 
 func sendForm(allOrdered []string, ownedSet map[string]bool) Node {
-	attackOptions := durationOptions(4, 20, 4)
-	defendOptions := durationOptions(4, 96, 4)
+	attackOptions := durationOptions(1, 5)
+	defendOptions := durationOptions(1, 24)
 
 	return Div(Class("army-section panel"),
 		P(Class("panel-title"), Text("Send Units")),
@@ -499,11 +499,10 @@ func sendForm(allOrdered []string, ownedSet map[string]bool) Node {
 	)
 }
 
-func durationOptions(min, max, step int) []Node {
+func durationOptions(min, max int) []Node {
 	var opts []Node
-	for t := min; t <= max; t += step {
-		hours := t / 4
-		label := fmt.Sprintf("%d ticks (%dh)", t, hours)
+	for t := min; t <= max; t++ {
+		label := fmt.Sprintf("%d ticks", t)
 		opts = append(opts, Option(Value(strconv.Itoa(t)), Text(label)))
 	}
 	return opts
