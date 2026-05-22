@@ -1,5 +1,9 @@
 # Bahago
 
+## Domain Docs
+- `CONTEXT.md` at the repo root defines the ubiquitous language for this codebase — canonical terms, what to avoid, and how domain experts talk about the game. Read it when naming things or discussing game concepts.
+- `docs/adr/` (created lazily) contains architectural decision records for hard-to-reverse, non-obvious decisions.
+
 ## Communication & Approach
 - Never make up information — if uncertain, research or ask for clarification
 - Always use project instructions when present, or research best practices when none are provided
