@@ -19,7 +19,7 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -137,22 +137,22 @@ func (h *handler) handleApprove() http.HandlerFunc {
 
 		membershipID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid membership id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid membership id"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild approve: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
@@ -162,15 +162,15 @@ func (h *handler) handleApprove() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild is full or request no longer exists")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild is full or request no longer exists"))))
 				return
 			}
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("this kingdom is already committed to another guild")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("this kingdom is already committed to another guild"))))
 				return
 			}
 			log.Printf("guild approve: approve membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -193,22 +193,22 @@ func (h *handler) handleReject() http.HandlerFunc {
 
 		membershipID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid membership id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid membership id"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild reject: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
@@ -218,11 +218,11 @@ func (h *handler) handleReject() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("request not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("request not found"))))
 				return
 			}
 			log.Printf("guild reject: get membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -231,7 +231,7 @@ func (h *handler) handleReject() http.HandlerFunc {
 			GuildID:      g.ID,
 		}); err != nil {
 			log.Printf("guild reject: reject membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -253,22 +253,22 @@ func (h *handler) handleRemove() http.HandlerFunc {
 
 		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid kingdom id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild remove: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
@@ -278,11 +278,11 @@ func (h *handler) handleRemove() http.HandlerFunc {
 		})
 		if err != nil {
 			log.Printf("guild remove: check target role: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanRemoveTarget(_guild.MemberRole(target.Role)) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("officers can only remove regular members")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("officers can only remove regular members"))))
 			return
 		}
 
@@ -291,7 +291,7 @@ func (h *handler) handleRemove() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild remove: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -313,12 +313,12 @@ func (h *handler) handleLeave() http.HandlerFunc {
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild leave: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if viewerRole != _guild.RoleMember && viewerRole != _guild.RoleOfficer {
@@ -326,7 +326,7 @@ func (h *handler) handleLeave() http.HandlerFunc {
 			if viewerRole == _guild.RoleLeader {
 				msg = "the guild leader must transfer leadership before leaving"
 			}
-			sse.PatchElementGostar(guildErrorComponent(errors.New(msg)))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New(msg))))
 			return
 		}
 
@@ -335,7 +335,7 @@ func (h *handler) handleLeave() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild leave: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -368,22 +368,22 @@ func (h *handler) handlePromote() http.HandlerFunc {
 
 		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid kingdom id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
 			return
 		}
 
 		g, members, viewerRole, err := h.loadGuildAndMembership(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild promote: load: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("only the guild leader can promote officers")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can promote officers"))))
 			return
 		}
 
@@ -395,7 +395,7 @@ func (h *handler) handlePromote() http.HandlerFunc {
 			}
 		}
 		if officerCount >= 4 {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("a guild can have at most 4 officers")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("a guild can have at most 4 officers"))))
 			return
 		}
 
@@ -405,7 +405,7 @@ func (h *handler) handlePromote() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild promote: set role: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -427,22 +427,22 @@ func (h *handler) handleDemote() http.HandlerFunc {
 
 		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid kingdom id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild demote: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
@@ -452,11 +452,11 @@ func (h *handler) handleDemote() http.HandlerFunc {
 		})
 		if err != nil {
 			log.Printf("guild demote: check target role: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanRemoveTarget(_guild.MemberRole(demoteTarget.Role)) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("officers cannot demote other officers")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("officers cannot demote other officers"))))
 			return
 		}
 
@@ -466,7 +466,7 @@ func (h *handler) handleDemote() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild demote: set role: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -487,28 +487,28 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 
 		input := &transferLeaderSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 		sse := datastar.NewSSE(w, r)
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild transfer: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("only the guild leader can transfer leadership")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can transfer leadership"))))
 			return
 		}
 
 		if input.TargetKingdomID == 0 || input.TargetKingdomID == kingdom.ID {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("please select a valid member to transfer leadership to")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("please select a valid member to transfer leadership to"))))
 			return
 		}
 
@@ -517,11 +517,11 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 			GuildID:   g.ID,
 		})
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("target is not a member of this guild")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("target is not a member of this guild"))))
 			return
 		}
 		if role := _guild.MemberRole(targetMembership.Role); role != _guild.RoleMember && role != _guild.RoleOfficer {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("leadership can only be transferred to a full member or officer")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("leadership can only be transferred to a full member or officer"))))
 			return
 		}
 
@@ -530,7 +530,7 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 			GuildID:            g.ID,
 		}); err != nil {
 			log.Printf("guild transfer leadership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -554,16 +554,16 @@ func (h *handler) handleDisband() http.HandlerFunc {
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild disband: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("only the guild leader can disband the guild")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can disband the guild"))))
 			return
 		}
 
@@ -571,7 +571,7 @@ func (h *handler) handleDisband() http.HandlerFunc {
 		members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID)
 		if err != nil {
 			log.Printf("guild disband: list members: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		memberIDs := make([]int, 0, len(members))
@@ -583,7 +583,7 @@ func (h *handler) handleDisband() http.HandlerFunc {
 
 		if err := h.queries.DisbandGuild(r.Context(), g.ID); err != nil {
 			log.Printf("guild disband: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -606,29 +606,29 @@ func (h *handler) handleEditDescription() http.HandlerFunc {
 
 		input := &editDescriptionSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 		sse := datastar.NewSSE(w, r)
 
 		description := strings.TrimSpace(input.GuildDescription)
 		if len(description) > 500 {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("description cannot exceed 500 characters")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("description cannot exceed 500 characters"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild edit description: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("only the guild leader can edit the description")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can edit the description"))))
 			return
 		}
 
@@ -637,7 +637,7 @@ func (h *handler) handleEditDescription() http.HandlerFunc {
 			ID:          g.ID,
 		}); err != nil {
 			log.Printf("guild edit description: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -654,45 +654,45 @@ func (h *handler) handleSendInvitation() http.HandlerFunc {
 
 		input := &inviteSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 		sse := datastar.NewSSE(w, r)
 
 		name := strings.TrimSpace(input.InviteKingdomName)
 		if name == "" {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("please enter a kingdom name")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("please enter a kingdom name"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild send invitation: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
 		target, err := h.queries.GetKingdomByName(r.Context(), name)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("kingdom %q not found", name)))
+				sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("kingdom %q not found", name))))
 				return
 			}
 			log.Printf("guild send invitation: get kingdom: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		if target.ID == kingdom.ID {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("you cannot invite yourself")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("you cannot invite yourself"))))
 			return
 		}
 
@@ -703,26 +703,26 @@ func (h *handler) handleSendInvitation() http.HandlerFunc {
 		}); err == nil {
 			switch _guild.MemberRole(existing.Role) {
 			case _guild.RoleInvited:
-				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s has already been invited to this guild", target.Name)))
+				sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("%s has already been invited to this guild", target.Name))))
 			case _guild.RolePendingApproval:
-				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s already has a pending join request — approve it instead", target.Name)))
+				sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("%s already has a pending join request — approve it instead", target.Name))))
 			default:
-				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s is already a member of this guild", target.Name)))
+				sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("%s is already a member of this guild", target.Name))))
 			}
 			return
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			log.Printf("guild send invitation: check membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		// Reject if the target is already committed to a different guild.
 		if _, err := h.queries.GetKingdomGuildMembership(r.Context(), target.ID); err == nil {
-			sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s is already a member of another guild", target.Name)))
+			sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("%s is already a member of another guild", target.Name))))
 			return
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			log.Printf("guild send invitation: check target commitment: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -731,11 +731,11 @@ func (h *handler) handleSendInvitation() http.HandlerFunc {
 			KingdomID: target.ID,
 		}); err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildErrorComponent(fmt.Errorf("%s has already been invited to this guild", target.Name)))
+				sse.PatchElementGostar(guildAlert(AlertError(fmt.Errorf("%s has already been invited to this guild", target.Name))))
 				return
 			}
 			log.Printf("guild send invitation: create: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -766,22 +766,22 @@ func (h *handler) handleRevokeInvitation() http.HandlerFunc {
 
 		invitationID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid invitation id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid invitation id"))))
 			return
 		}
 
 		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild revoke invitation: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
@@ -796,7 +796,7 @@ func (h *handler) handleRevokeInvitation() http.HandlerFunc {
 				return
 			}
 			log.Printf("guild revoke invitation: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -828,7 +828,7 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	return Div(
 		H1(Class("page-title"), Text("Manage "+g.Name)),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
-		guildErrorComponent(nil),
+		guildAlert(nil),
 		A(Href(slugURL(routes.GuildViewPath, slug)), Text("← Back to guild page")),
 
 		// ── Join Requests section

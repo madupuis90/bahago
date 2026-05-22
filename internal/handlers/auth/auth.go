@@ -13,6 +13,7 @@ import (
 
 	"bahago/internal/database/db"
 	"bahago/internal/email"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )
@@ -65,31 +66,7 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, ap
 
 // ── Shared templates & helpers ──────────────────────────────────────
 
-// alertComponent is the single SSE patch target for all auth feedback.
-// Always patch this — never patch errorComponent or successComponent directly.
-func alertComponent(inner Node) Node {
-	return Div(ID("auth-alert"), inner)
-}
-
-// errorComponent returns the inner error content for use inside alertComponent.
-// Returns nil when errs is empty, producing a clean empty placeholder.
-func errorComponent(errs []error) Node {
-	if len(errs) == 0 {
-		return nil
-	}
-	return Div(Class("alert--error"),
-		Map(errs, func(e error) Node {
-			return P(Text(e.Error()))
-		}),
-	)
-}
-
-// successComponent returns the inner success content for use inside alertComponent.
-func successComponent(msg string) Node {
-	return Div(Class("alert--success"),
-		P(Text(msg)),
-	)
-}
+func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 
 func invalidTokenContent() Node {
 	return Div(Class("auth-card panel"),

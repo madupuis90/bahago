@@ -16,7 +16,7 @@ import (
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )
@@ -95,19 +95,19 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 				buildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
 				if err != nil {
 					log.Printf("allocation refresh: get buildings: %v", err)
-					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 					return
 				}
 				prayers, err := h.queries.ListKingdomPrayers(r.Context(), k.ID)
 				if err != nil {
 					log.Printf("allocation refresh: get prayers: %v", err)
-					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 					return
 				}
 				targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), k.ID)
 				if err != nil {
 					log.Printf("allocation refresh: get targeted prayers: %v", err)
-					sse.PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 					return
 				}
 				rates := game.ComputeRates(k, buildings, targetedPrayers, prayers)
@@ -128,7 +128,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		input := &allocationSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("save-allocation: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
@@ -138,7 +138,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		}
 		for _, v := range values {
 			if v < 0 || v > 100 {
-				datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("allocation values must be between 0 and 100")))
+				datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("allocation values must be between 0 and 100"))))
 				return
 			}
 		}
@@ -146,7 +146,7 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		total := input.WoodPct + input.StonePct + input.FoodPct +
 			input.ManaPct + input.DevotionPct + input.KnowledgePct
 		if total > 100 {
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("allocation cannot exceed 100%")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("allocation cannot exceed 100%"))))
 			return
 		}
 
@@ -163,26 +163,26 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 		updatedKingdom, err := h.queries.UpdateKingdomAllocations(r.Context(), params)
 		if err != nil {
 			log.Printf("save-allocation: update allocations: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("failed to save allocation")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("failed to save allocation"))))
 			return
 		}
 
 		buildings, err := h.queries.GetKingdomBuildings(r.Context(), updatedKingdom.ID)
 		if err != nil {
 			log.Printf("save-allocation: get buildings: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		prayers, err := h.queries.ListKingdomPrayers(r.Context(), updatedKingdom.ID)
 		if err != nil {
 			log.Printf("save-allocation: get prayers: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), updatedKingdom.ID)
 		if err != nil {
 			log.Printf("save-allocation: get targeted prayers: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		rates := game.ComputeRates(updatedKingdom, buildings, targetedPrayers, prayers)
@@ -238,18 +238,12 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					Text("Save"),
 				),
 			),
-			allocationErrorComponent(nil),
+			allocationAlert(nil),
 		),
 	)
 }
 
-func allocationErrorComponent(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(ID("allocation-alert"), Text(msg))
-}
+func allocationAlert(inner Node) Node { return AlertContainer("allocation-alert", inner) }
 
 func allocationRow(roleName string, key string, resourceLabel string, initialValue int, production, upkeep int) Node {
 	ref := "$" + key

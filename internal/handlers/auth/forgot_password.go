@@ -13,7 +13,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -39,7 +39,7 @@ func forgotPasswordContent() Node {
 			Text("Send reset link"),
 			ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
 		),
-		alertComponent(nil),
+		authAlert(nil),
 	)
 }
 
@@ -48,14 +48,14 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ForgotPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid request")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
 		var errs []error
 		validateEmail(&errs, data.Email)
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
@@ -93,6 +93,6 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 
 func genericMessage(w http.ResponseWriter, r *http.Request) {
 	datastar.NewSSE(w, r).PatchElementGostar(
-		alertComponent(successComponent("If that email is registered, you'll receive a reset link shortly.")),
+		authAlert(AlertSuccess("If that email is registered, you'll receive a reset link shortly.")),
 	)
 }

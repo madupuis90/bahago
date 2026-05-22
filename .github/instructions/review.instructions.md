@@ -47,11 +47,12 @@ Apply all active instructions. The items below are the most commonly violated �
 - [ ] `Iff` used (not `If`) when condition guards a nil pointer dereference
 - [ ] SSE `MergeFragments` called before `MergeSignals` (signals after fragments)
 - [ ] Full-page responses use `HomeLayout` or `KingdomLayout` — no raw `HTML5()`
+- [ ] Alert components use `AlertError`/`AlertSuccess`/`AlertContainer` from `internal/ui/` — no per-feature reimplementations
 
 ### Structure & Conventions
 - [ ] New files placed in the correct package (`internal/handlers/<feature>/`, `internal/routes/`, etc.)
 - [ ] Route path constants defined in `internal/routes/routes.go`
-- [ ] Reusable components stay in the feature package until a second package needs them, then move to `internal/layout/`
+- [ ] Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
 - [ ] No features added to `main.go` beyond wiring (routes, middleware, server start)
 - [ ] `task gen` run after any SQL query change
 - [ ] `task test` passes

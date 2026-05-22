@@ -16,7 +16,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -64,7 +64,7 @@ func registerContent() Node {
 			Text("Already have an account? "),
 			A(Href(routes.LoginPath), Text("Login")),
 		),
-		alertComponent(nil),
+		authAlert(nil),
 	)
 }
 
@@ -82,21 +82,21 @@ func (h *handler) register() http.HandlerFunc {
 		validatePassword(&errs, data.Password)
 
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("register: bcrypt hash: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to create account"))))
 			return
 		}
 
 		tx, err := h.pool.Begin(r.Context())
 		if err != nil {
 			log.Printf("register: begin transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to create account"))))
 			return
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
@@ -109,11 +109,11 @@ func (h *handler) register() http.HandlerFunc {
 		})
 		if err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("email already in use")})))
+				datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("email already in use"))))
 				return
 			}
 			log.Printf("register: create user: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to create account"))))
 			return
 		}
 
@@ -127,7 +127,7 @@ func (h *handler) register() http.HandlerFunc {
 
 		if err := qtx.CreateEmailVerification(r.Context(), verifyEmail); err != nil {
 			log.Printf("register: create email verification: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to create account"))))
 			return
 		}
 
@@ -136,18 +136,18 @@ func (h *handler) register() http.HandlerFunc {
 
 		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
 			log.Printf("send verification email: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to send verification email — please try again")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to send verification email — please try again"))))
 			return
 		}
 
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("register: commit transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create account")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to create account"))))
 			return
 		}
 
 		datastar.NewSSE(w, r).PatchElementGostar(
-			alertComponent(successComponent("Account created! Check your email to verify your account.")),
+			authAlert(AlertSuccess("Account created! Check your email to verify your account.")),
 		)
 	}
 }

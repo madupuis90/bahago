@@ -76,7 +76,7 @@ All code lives under `internal/` — nothing is intended to be imported external
 - `internal/database/migrations/` — goose migration files
 - `internal/database/queries/` — SQL query files for sqlc
 - `internal/email/` — email sending
-- `internal/layout/` — shared gomponents: layout shell (`HomeLayout`, `KingdomLayout`) and nav components; dot-imported
+- `internal/ui/` — shared gomponents: layout shell (`HomeLayout`, `KingdomLayout`), nav components, and shared UI helpers (alerts, etc.); dot-imported
 - `internal/middleware/` — HTTP middleware (auth, and future: logging, CSRF, etc.)
 - `internal/handlers/<feature>/` — one package per feature; HTTP handlers, page functions, and components
 - `internal/router/` — router interface (avoids circular imports when injecting middleware)
@@ -88,7 +88,7 @@ Each feature in `internal/handlers/<feature>/` follows this pattern:
 - One file exports route constants in `internal/routes/`, registers routes, and defines the `handler` struct
 - Handler methods return `http.HandlerFunc` and are kept thin — read input, call queries, render response
 - Content functions are pure functions returning `Node` — take only domain data as parameters, never user/path/request
-- Reusable components stay in the feature package until a second package needs them, then move to `internal/layout/`
+- Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
 
 ### Handlers
 Handlers return `http.HandlerFunc` closures, allowing pre-computation outside the request loop:
@@ -103,7 +103,7 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 ```
 
 - Full-page responses call `HomeLayout(r, title, content...)` or `KingdomLayout(r, title, content...)`
-- `internal/layout` is dot-imported in all handler packages
+- `internal/ui` is dot-imported in all handler packages
 - SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)
 - Do not re-check middleware guarantees inside handlers — if a route is behind `RequireAuth`, trust that a user is in context

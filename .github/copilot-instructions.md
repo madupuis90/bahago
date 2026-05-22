@@ -100,7 +100,7 @@ All code lives under `internal/` — nothing is intended to be imported external
 - `internal/database/migrations/` — goose migration files
 - `internal/database/queries/` — SQL query files for sqlc
 - `internal/email/` — email sending
-- `internal/layout/` — shared gomponents: layout shell (`HomeLayout`, `KingdomLayout`) and nav components used across all handlers. Dot-imported.
+- `internal/ui/` — shared gomponents: layout shell (`HomeLayout`, `KingdomLayout`), nav components, and shared UI helpers (alerts, etc.). Dot-imported.
 - `internal/middleware/` — HTTP middleware (auth, and future: logging, CSRF, etc.)
 - `internal/handlers/<feature>/` — one package per feature; contains HTTP handlers, page functions, and components specific to that feature
 - `internal/router/` — router interface (avoids circular imports when injecting middleware)
@@ -113,7 +113,7 @@ Each feature in `internal/handlers/<feature>/` follows this pattern:
 - One file (typically `<feature>.go`) exports route constants **in `internal/routes/`**, registers routes, and defines the `handler` struct
 - Handler methods return `http.HandlerFunc` and are kept thin — they read input, call queries, and render responses
 - Content functions are pure functions returning `Node` — they take only domain data as parameters, never user, path, or request. Co-located with their handlers.
-- Reusable components stay in the feature package until a second package needs them, then move to `internal/layout/`
+- Reusable components stay in the feature package until a second package needs them, then move to `internal/ui/`
 
 ### Handlers
 
@@ -129,7 +129,7 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 ```
 
 - Full-page responses call `HomeLayout(r, title, content...)` or `KingdomLayout(r, title, content...)` — these read user/kingdom/path from the request context directly; no explicit `Content-Type` needed (gomponents sets it)
-- `internal/layout` is dot-imported in all handler packages so `HomeLayout` and `KingdomLayout` are used without a prefix
+- `internal/ui` is dot-imported in all handler packages so `HomeLayout` and `KingdomLayout` are used without a prefix
 - SSE handlers use `datastar.NewSSE` — see `ui.instructions.md` for ordering rules
 - Log errors server-side; return generic messages to clients
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)

@@ -39,3 +39,6 @@ Thumbs.db
 
 # Sql extension queries
 *.session.sql
+
+# handoff
+.handoff

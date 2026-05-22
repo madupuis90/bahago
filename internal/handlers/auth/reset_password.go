@@ -12,7 +12,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -58,7 +58,7 @@ func resetPasswordContent(token string) Node {
 			Text("Reset password"),
 			ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
 		),
-		alertComponent(nil),
+		authAlert(nil),
 	)
 }
 
@@ -66,26 +66,26 @@ func (h *handler) resetPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ResetPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid request")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
 		if data.Token == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("missing token")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("missing token"))))
 			return
 		}
 
 		var errs []error
 		validatePassword(&errs, data.Password)
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
 		tx, err := h.pool.Begin(r.Context())
 		if err != nil {
 			log.Printf("reset-password: begin transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
 			return
 		}
 		defer tx.Rollback(r.Context()) // no-op after Commit
@@ -94,14 +94,14 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token)
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("reset link is invalid or has expired")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("reset link is invalid or has expired"))))
 			return
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("reset-password: bcrypt hash: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
 			return
 		}
 
@@ -110,7 +110,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 			PwHash: string(hashedPassword),
 		}); err != nil {
 			log.Printf("reset-password: update password: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
 			return
 		}
 
@@ -120,13 +120,13 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("reset-password: commit transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to reset password")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
 			return
 		}
 
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(routes.LoginPath + "?" + resetParam + "=true"); err != nil {
-			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to redirect")})))
+			sse.PatchElementGostar(authAlert(AlertError(errors.New("failed to redirect"))))
 		}
 	}
 }

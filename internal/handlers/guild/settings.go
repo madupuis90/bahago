@@ -9,13 +9,12 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -63,7 +62,7 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 		input := &settingsSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("guild settings save: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(guildSettingsError(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(guildSettingsAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
@@ -71,23 +70,23 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 
 		guild, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildSettingsError(errors.New("guild not found")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("guild not found"))))
 			return
 		}
 		if err != nil {
 			log.Printf("guild settings save: get guild: %v", err)
-			sse.PatchElementGostar(guildSettingsError(errors.New("internal error")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildSettingsError(errors.New("only the guild leader can change settings")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("only the guild leader can change settings"))))
 			return
 		}
 
 		msgAll := _guild.MemberRole(input.GuildMsgAll)
 		msgOfficers := _guild.MemberRole(input.GuildMsgOfficers)
 		if msgAll.Rank() == 0 || msgOfficers.Rank() == 0 {
-			sse.PatchElementGostar(guildSettingsError(errors.New("invalid permission value")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("invalid permission value"))))
 			return
 		}
 
@@ -98,7 +97,7 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 		raw, err := json.Marshal(perms)
 		if err != nil {
 			log.Printf("guild settings save: marshal: %v", err)
-			sse.PatchElementGostar(guildSettingsError(errors.New("internal error")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -107,14 +106,11 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 			Settings: raw,
 		}); err != nil {
 			log.Printf("guild settings save: update: %v", err)
-			sse.PatchElementGostar(guildSettingsError(errors.New("internal error")))
+			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		if err := sse.PatchElementGostar(guildSettingsError(nil)); err != nil { // clear any previous error
-			log.Printf("guild settings save: clear error: %v", err)
-		}
-		if err := sse.PatchElementGostar(guildSettingsSavedBanner()); err != nil {
+		if err := sse.PatchElementGostar(guildSettingsAlert(AlertSuccess("Settings saved."))); err != nil {
 			log.Printf("guild settings save: patch: %v", err)
 		}
 	}
@@ -134,8 +130,7 @@ func guildSettingsContent(guild db.Guild, perms _guild.MessagePermissions) Node 
 
 	return Group([]Node{
 		H1(Class("page-title"), Text("Guild Settings — "+guild.Name)),
-		guildSettingsError(nil),
-		Div(ID("guild-settings-saved")),
+		guildSettingsAlert(nil),
 		Div(Class("guild-settings panel"),
 			ds.Signals(map[string]any{
 				"guild_msg_all":      string(perms.MsgAll),
@@ -180,18 +175,4 @@ func guildSettingsContent(guild db.Guild, perms _guild.MessagePermissions) Node 
 	})
 }
 
-func guildSettingsSavedBanner() Node {
-	return Div(ID("guild-settings-saved"), Class("alert--success"), Text("Settings saved."))
-}
-
-func guildSettingsError(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(
-		ID("guild-settings-alert"),
-		Classes{"alert--error": err != nil},
-		Text(msg),
-	)
-}
+func guildSettingsAlert(inner Node) Node { return AlertContainer("guild-settings-alert", inner) }

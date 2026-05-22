@@ -8,7 +8,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )

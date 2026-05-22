@@ -20,7 +20,7 @@ import (
 	"bahago/internal/database/db"
 	g "bahago/internal/guild"
 	"bahago/internal/hub"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )

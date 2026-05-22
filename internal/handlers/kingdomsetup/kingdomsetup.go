@@ -23,7 +23,7 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )

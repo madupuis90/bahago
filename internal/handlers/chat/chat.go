@@ -10,7 +10,7 @@ import (
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 )
 

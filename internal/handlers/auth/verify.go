@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 

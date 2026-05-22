@@ -17,7 +17,7 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/routes"
 )
 
@@ -64,7 +64,7 @@ func loginContent(verified bool, reset bool) Node {
 		P(
 			A(Href(routes.ForgotPasswordPath), Text("Forgot your password?")),
 		),
-		alertComponent(nil),
+		authAlert(nil),
 		Div(ID("resend-verification")),
 	)
 }
@@ -89,7 +89,7 @@ func (h *handler) login() http.HandlerFunc {
 		validateEmail(&errs, data.Email)
 
 		if len(errs) > 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent(errs)))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
@@ -102,13 +102,13 @@ func (h *handler) login() http.HandlerFunc {
 		}
 
 		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password)); err != nil || dbErr != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("invalid email or password")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid email or password"))))
 			return
 		}
 
 		if !user.IsVerified {
 			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("please verify your email before logging in")})))
+			sse.PatchElementGostar(authAlert(AlertError(errors.New("please verify your email before logging in"))))
 			sse.PatchElementGostar(resendVerificationComponent())
 			return
 		}
@@ -122,7 +122,7 @@ func (h *handler) login() http.HandlerFunc {
 		ip, err := netip.ParseAddr(host)
 		if err != nil {
 			log.Printf("login: parse remote addr %q: %v", host, err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("could not process request")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("could not process request"))))
 			return
 		}
 
@@ -138,12 +138,12 @@ func (h *handler) login() http.HandlerFunc {
 
 		if _, err := h.queries.CreateSession(r.Context(), s); err != nil {
 			log.Printf("login: create session: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 			return
 		}
 
 		if err := h.queries.UpdateLastLogin(r.Context(), user.ID); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 			return
 		}
 
@@ -159,7 +159,7 @@ func (h *handler) login() http.HandlerFunc {
 
 		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(routes.KingdomPath); err != nil {
-			sse.PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to login")})))
+			sse.PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 		}
 	}
 }

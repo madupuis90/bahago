@@ -27,7 +27,7 @@ import (
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
 	"bahago/internal/hub"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )
@@ -217,24 +217,29 @@ func (h *handler) handleCreate() http.HandlerFunc {
 		input := &createGuildSignals{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("guild create: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
+		sse := datastar.NewSSE(w, r)
+
+		var errs []error
 		name := strings.TrimSpace(input.GuildName)
 		if len(name) < 5 || len(name) > 60 {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("guild name must be between 5 and 60 characters")))
-			return
+			errs = append(errs, errors.New("guild name must be between 5 and 60 characters"))
 		}
 		description := strings.TrimSpace(input.GuildDescription)
 		if len(description) > 500 {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("description cannot exceed 500 characters")))
+			errs = append(errs, errors.New("description cannot exceed 500 characters"))
+		}
+		if len(errs) > 0 {
+			sse.PatchElementGostar(guildAlert(AlertError(errs...)))
 			return
 		}
 
 		slug := generateSlug(name)
 		if slug == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("guild name must contain at least one letter or number")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild name must contain at least one letter or number"))))
 			return
 		}
 
@@ -253,15 +258,14 @@ func (h *handler) handleCreate() http.HandlerFunc {
 				default:
 					msg = "you are already committed to a guild"
 				}
-				datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New(msg)))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New(msg))))
 				return
 			}
 			log.Printf("guild create: insert: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		sse := datastar.NewSSE(w, r)
 		if err := sse.Redirect(slugURL(routes.GuildViewPath, guild.Slug)); err != nil {
 			log.Printf("guild create: redirect: %v", err)
 		}
@@ -352,7 +356,7 @@ func (h *handler) handleSupport() http.HandlerFunc {
 		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
 		if err != nil {
 			log.Printf("guild support: begin tx: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		defer tx.Rollback(r.Context()) //nolint:errcheck
@@ -362,15 +366,15 @@ func (h *handler) handleSupport() http.HandlerFunc {
 		g, err := txq.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild support: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !_guild.GuildStatus(g.Status).IsPending() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("this guild is no longer accepting support")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("this guild is no longer accepting support"))))
 			return
 		}
 
@@ -380,11 +384,11 @@ func (h *handler) handleSupport() http.HandlerFunc {
 			Role:      string(_guild.RoleSupporter),
 		}); err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("you are already committed to a guild")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("you are already committed to a guild"))))
 				return
 			}
 			log.Printf("guild support: create membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -393,28 +397,28 @@ func (h *handler) handleSupport() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild support: cancel pending requests: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		count, err := txq.CountGuildSupporters(r.Context(), g.ID)
 		if err != nil {
 			log.Printf("guild support: count supporters: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		if count >= 5 {
 			if err := txq.ActivateGuild(r.Context(), g.ID); err != nil {
 				log.Printf("guild support: activate guild: %v", err)
-				sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 				return
 			}
 		}
 
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("guild support: commit: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -444,11 +448,11 @@ func (h *handler) handleWithdrawSupport() http.HandlerFunc {
 		g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild withdraw support: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -457,7 +461,7 @@ func (h *handler) handleWithdrawSupport() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild withdraw support: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -480,11 +484,11 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 		g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild cancel proposal: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -493,13 +497,13 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 			GuildID:   g.ID,
 		})
 		if err != nil || _guild.MemberRole(membership.Role) != _guild.RoleApplicant {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("not authorized")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
 
 		if err := h.queries.CancelProposal(r.Context(), g.ID); err != nil {
 			log.Printf("guild cancel proposal: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -518,25 +522,25 @@ func (h *handler) handleRequestJoin() http.HandlerFunc {
 		g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild request join: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if !_guild.GuildStatus(g.Status).IsActive() {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("this guild is not accepting requests")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("this guild is not accepting requests"))))
 			return
 		}
 
 		// Server-side guard: reject if the kingdom is already committed to any guild.
 		if _, kmErr := h.queries.GetKingdomGuildMembership(r.Context(), kingdom.ID); kmErr == nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("you are already committed to a guild")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("you are already committed to a guild"))))
 			return
 		} else if !errors.Is(kmErr, pgx.ErrNoRows) {
 			log.Printf("guild request join: check membership: %v", kmErr)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -546,15 +550,15 @@ func (h *handler) handleRequestJoin() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("this guild is full")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("this guild is full"))))
 				return
 			}
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("you already have a pending request to this guild")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("you already have a pending request to this guild"))))
 				return
 			}
 			log.Printf("guild request join: create membership: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -586,11 +590,11 @@ func (h *handler) handleCancelRequest() http.HandlerFunc {
 		g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild cancel request: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -599,7 +603,7 @@ func (h *handler) handleCancelRequest() http.HandlerFunc {
 			GuildID:   g.ID,
 		}); err != nil {
 			log.Printf("guild cancel request: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -626,18 +630,18 @@ func (h *handler) handleAcceptInvitation() http.HandlerFunc {
 
 		invitationID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid invitation id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid invitation id"))))
 			return
 		}
 
 		g, err := h.queries.GetGuildBySlug(r.Context(), slug)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("guild not found")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
 				return
 			}
 			log.Printf("guild accept invitation: get guild: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -648,15 +652,15 @@ func (h *handler) handleAcceptInvitation() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("this invitation is no longer valid or the guild is full")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("this invitation is no longer valid or the guild is full"))))
 				return
 			}
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildErrorComponent(errors.New("you are already committed to a guild")))
+				sse.PatchElementGostar(guildAlert(AlertError(errors.New("you are already committed to a guild"))))
 				return
 			}
 			log.Printf("guild accept invitation: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -689,7 +693,7 @@ func (h *handler) handleDeclineInvitation() http.HandlerFunc {
 
 		invitationID, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildErrorComponent(errors.New("invalid invitation id")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid invitation id"))))
 			return
 		}
 
@@ -706,7 +710,7 @@ func (h *handler) handleDeclineInvitation() http.HandlerFunc {
 				return
 			}
 			log.Printf("guild decline invitation: %v", err)
-			sse.PatchElementGostar(guildErrorComponent(errors.New("internal error")))
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -816,13 +820,7 @@ func (h *handler) sendNotifications(r *http.Request, fromKingdomID int, toKingdo
 
 // ── Page components ───────────────────────────────────────────────────────────
 
-func guildErrorComponent(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(ID("guild-alert"), Text(msg))
-}
+func guildAlert(inner Node) Node { return AlertContainer("guild-alert", inner) }
 
 func guildLandingContent(invitations []db.ListKingdomInvitationsRow) Node {
 	return Div(
@@ -866,7 +864,7 @@ func guildLandingContent(invitations []db.ListKingdomInvitationsRow) Node {
 				A(Href(routes.GuildNewPath), Class("btn"), Text("Guild Application")),
 			),
 		),
-		guildErrorComponent(nil),
+		guildAlert(nil),
 	)
 }
 
@@ -891,7 +889,7 @@ func guildNewContent() Node {
 				Text("Submit Application"),
 			),
 			P(Class("guild-application-note"), Text("4 other kingdoms must support the application before the guild is officially founded.")),
-			guildErrorComponent(nil),
+			guildAlert(nil),
 		),
 	)
 }
@@ -929,7 +927,7 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 			guildMemberTable(members),
 			guildActionButtons(g, viewerRole, invitationID),
 		),
-		guildErrorComponent(nil),
+		guildAlert(nil),
 	)
 }
 

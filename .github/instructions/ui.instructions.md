@@ -15,7 +15,7 @@ import (
     . "maragu.dev/gomponents/html"         // Div(), P(), Input(), Class(), Href(), etc.
     ds "maragu.dev/gomponents-datastar"    // reactive attributes — kept aliased for clarity
     "github.com/starfederation/datastar-go/datastar" // SSE + ReadSignals
-    . "bahago/internal/layout"            // HomeLayout(), KingdomLayout(), shared components — dot-imported
+    . "bahago/internal/ui"               // HomeLayout(), KingdomLayout(), AlertError(), AlertSuccess(), shared components — dot-imported
 )
 ```
 
@@ -112,8 +112,8 @@ Classes{
 - Kingdom game pages use `KingdomLayout(r, title, content...)` — reads user and kingdom from context
 - Content functions return `Node` with only domain data as parameters — no user, path, or request
 - Handlers call the appropriate layout function directly and chain `.Render(w)` for full-page responses
-- Components extracted to `internal/layout/` only when used by 2+ handler packages
-- **`internal/layout` is dot-imported** — `HomeLayout`, `KingdomLayout`, nav components, and shared helpers are used without a package prefix
+- Components extracted to `internal/ui/` only when used by 2+ handler packages
+- **`internal/ui` is dot-imported** — `HomeLayout`, `KingdomLayout`, `AlertError`, `AlertSuccess`, nav components, and shared helpers are used without a package prefix
 
 ```go
 // A content function — takes domain data, returns just the body
@@ -153,7 +153,7 @@ func alertBanner(msg string) Node {
 }
 ```
 
-If a component is used only within one feature package, keep it in that package. Move it to `internal/layout/` only when a second package needs it.
+If a component is used only within one feature package, keep it in that package. Move it to `internal/ui/` only when a second package needs it.
 
 ## Styling
 
@@ -549,41 +549,50 @@ Signals prefixed with `_` are excluded from SSE requests by default.
 
 ### Alert feedback via SSE
 
-Use a three-function pattern so that a single SSE patch always replaces any previous alert — error clears success, success clears error:
+Use the shared `AlertError`, `AlertSuccess`, and `AlertContainer` functions from `internal/ui/` (dot-imported). Each feature defines a one-line wrapper that supplies its stable DOM ID, then passes inner content from the shared helpers:
 
 ```go
-// Declare one ID per feature
-const myAlertID = "my-alert"
+// One-liner per feature — provides the stable DOM ID
+func guildAlert(inner Node) Node { return AlertContainer("guild-alert", inner) }
 
-// alertComponent is the single patch target — always patch this, never the inner components
-func alertComponent(inner Node) Node {
-    return Div(ID(myAlertID), inner)
-}
+// In page content — empty placeholder so the element exists before any SSE patch
+guildAlert(nil)
 
-// Inner content — pass nil to clear
-func errorComponent(errs []error) Node {
-    if len(errs) == 0 {
-        return nil
-    }
-    return Div(Class("alert-error"),
-        Map(errs, func(e error) Node { return P(Text(e.Error())) }),
-    )
-}
-
-func successComponent(msg string) Node {
-    return Div(Class("alert-success"), P(Text(msg)))
-}
-
-// In page content — placeholder so the element exists in DOM before any patch
-alertComponent(nil)
-
-// In SSE handlers — always patch alertComponent
-sse.PatchElementGostar(alertComponent(errorComponent(errs)))
-sse.PatchElementGostar(alertComponent(successComponent("Done!")))
-sse.PatchElementGostar(alertComponent(nil)) // clear
+// In SSE handlers — always patch the feature wrapper, never the inner components directly
+sse.PatchElementGostar(guildAlert(AlertError(err)))                     // single error
+sse.PatchElementGostar(guildAlert(AlertError(errs...)))                 // multiple errors
+sse.PatchElementGostar(guildAlert(AlertSuccess("Settings saved.")))     // success
+sse.PatchElementGostar(guildAlert(nil))                                 // clear
 ```
 
-CSS classes `alert-success` and `alert-error` are defined in section 5 of `styles.css`.
+Patching success replaces any prior error and vice versa — one DOM target, mutual clearing.
+
+**Validation strategy:**
+
+Multi-error accumulation for independent form fields (show all problems at once):
+```go
+var errs []error
+if len(name) < 5 || len(name) > 60 {
+    errs = append(errs, errors.New("name must be between 5 and 60 characters"))
+}
+if len(desc) > 500 {
+    errs = append(errs, errors.New("description cannot exceed 500 characters"))
+}
+if len(errs) > 0 {
+    sse.PatchElementGostar(guildAlert(AlertError(errs...)))
+    return
+}
+```
+
+Immediate single-error return for state/authorization checks (order matters, no accumulation):
+```go
+if !viewerRole.CanManage() {
+    sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
+    return
+}
+```
+
+CSS classes `alert--success` and `alert--error` are defined in section 5 of `styles.css`.
 
 ### Redirect after action
 

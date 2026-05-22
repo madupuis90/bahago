@@ -15,14 +15,13 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/layout"
+	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
 )
@@ -116,25 +115,25 @@ func (h *handler) handleSend() http.HandlerFunc {
 		if err := datastar.ReadSignals(r, input); err != nil {
 
 			log.Printf("army send: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 		if _, ok := game.UnitDefs[input.UnitType]; !ok {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("unknown unit type")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("unknown unit type"))))
 			return
 		}
 
 		if input.SendCount <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("count must be at least 1")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("count must be at least 1"))))
 			return
 		}
 		if input.SendCount > game.MaxUnitInput {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("count is too large")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("count is too large"))))
 			return
 		}
 
 		if input.Action != "attack" && input.Action != "defend" {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid action")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid action"))))
 			return
 		}
 
@@ -143,23 +142,23 @@ func (h *handler) handleSend() http.HandlerFunc {
 			maxDuration = 24
 		}
 		if input.DurationTicks < 1 || input.DurationTicks > maxDuration {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid duration")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid duration"))))
 			return
 		}
 
 		if input.TargetName == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("target kingdom name is required")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("target kingdom name is required"))))
 			return
 		}
 
 		target, err := h.queries.GetKingdomByName(r.Context(), input.TargetName)
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(fmt.Errorf("kingdom %q not found", input.TargetName)))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(fmt.Errorf("kingdom %q not found", input.TargetName))))
 			return
 		}
 
 		if target.ID == kingdom.ID {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("cannot target your own kingdom")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("cannot target your own kingdom"))))
 			return
 		}
 
@@ -178,34 +177,34 @@ func (h *handler) handleSend() http.HandlerFunc {
 		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
 		if err != nil {
 			log.Printf("army send: begin tx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		defer tx.Rollback(r.Context()) //nolint:errcheck
 		_, err = db.New(tx).CreateCampaignIfAvailable(r.Context(), params)
 		if errors.Is(err, pgx.ErrNoRows) {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("not enough units")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("not enough units"))))
 			return
 		}
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("not enough units")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("not enough units"))))
 			return
 		}
 		if err != nil {
 			log.Printf("army send: create campaign: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		if err := tx.Commit(r.Context()); err != nil {
 			log.Printf("army send: commit: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		data, err := h.loadArmyData(r, kingdom.ID)
 		if err != nil {
 			log.Printf("army send: reload data: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		sse := datastar.NewSSE(w, r)
@@ -222,7 +221,7 @@ func (h *handler) handleCancel() http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.Atoi(idStr)
 		if err != nil || id <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("invalid campaign id")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid campaign id"))))
 			return
 		}
 
@@ -231,12 +230,12 @@ func (h *handler) handleCancel() http.HandlerFunc {
 			KingdomID: kingdom.ID,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("campaign not found or already returning")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("campaign not found or already returning"))))
 			return
 		}
 		if err != nil {
 			log.Printf("army cancel: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -313,7 +312,7 @@ func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) 
 			"duration_ticks": 4,
 		}, ds.ModifierIfMissing),
 		Div(ds.Init(GetSSENoSignals(routes.KingdomArmyRefreshPath))),
-		armyError(nil),
+		armyAlert(nil),
 		campaignsSection(data.campaigns, otherIndex),
 		armyUnitsSection(data.availableUnits),
 		sendForm(allOrdered, availableSet),
@@ -508,14 +507,4 @@ func durationOptions(min, max int) []Node {
 	return opts
 }
 
-func armyError(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(
-		ID("army-alert"),
-		Classes{"alert--error": err != nil},
-		Text(msg),
-	)
-}
+func armyAlert(inner Node) Node { return AlertContainer("army-alert", inner) }

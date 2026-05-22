@@ -1,7 +1,7 @@
 package routes
 
 // Route paths for all feature packages.
-// Centralised here to break the import cycle between internal/layout and handler packages.
+// Centralised here to break the import cycle between internal/ui and handler packages.
 const (
 	HomePath = "/home"
 	ChatPath = "/chat"
