@@ -1,8 +1,10 @@
 package guild
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -32,7 +34,7 @@ func (h *handler) handleSettings() http.HandlerFunc {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
 
-		guild, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
+		guild, viewerRole, err := h.getGuildAndViewerRole(r.Context(), slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
@@ -66,46 +68,19 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 			return
 		}
 
+		if errs := validateSettingsInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(guildSettingsAlert(AlertError(errs...)))
+			return
+		}
+
 		sse := datastar.NewSSE(w, r)
 
-		guild, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
-		if err != nil {
-			log.Printf("guild settings save: get guild: %v", err)
-			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("only the guild leader can change settings"))))
-			return
-		}
-
-		msgAll := _guild.MemberRole(input.GuildMsgAll)
-		msgOfficers := _guild.MemberRole(input.GuildMsgOfficers)
-		if msgAll.Rank() == 0 || msgOfficers.Rank() == 0 {
-			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("invalid permission value"))))
-			return
-		}
-
-		perms := _guild.MessagePermissions{
-			MsgAll:      msgAll,
-			MsgOfficers: msgOfficers,
-		}
-		raw, err := json.Marshal(perms)
-		if err != nil {
-			log.Printf("guild settings save: marshal: %v", err)
-			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		if err := h.queries.UpdateGuildSettings(r.Context(), db.UpdateGuildSettingsParams{
-			ID:       guild.ID,
-			Settings: raw,
-		}); err != nil {
-			log.Printf("guild settings save: update: %v", err)
+		if err := h.updateGuildSettings(r.Context(), slug, kingdom.ID, input); err != nil {
+			if isSettingsSaveUserError(err) {
+				sse.PatchElementGostar(guildSettingsAlert(AlertError(err)))
+				return
+			}
+			log.Printf("guild settings save: %v", err)
 			sse.PatchElementGostar(guildSettingsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
@@ -114,6 +89,60 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 			log.Printf("guild settings save: patch: %v", err)
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+var ErrInvalidPermissionValue = errors.New("invalid permission value")
+var ErrOnlyLeaderCanChangeSettings = errors.New("only the guild leader can change settings")
+
+func validateSettingsInput(in *settingsSignals) []error {
+	var errs []error
+	msgAll := _guild.MemberRole(in.GuildMsgAll)
+	msgOfficers := _guild.MemberRole(in.GuildMsgOfficers)
+	if msgAll.Rank() == 0 || msgOfficers.Rank() == 0 {
+		errs = append(errs, ErrInvalidPermissionValue)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// updateGuildSettings loads the guild, enforces leader-only access, marshals
+// the permissions JSON, and writes the settings row. Returns sentinels for
+// guild-not-found and not-leader cases.
+func (h *handler) updateGuildSettings(ctx context.Context, slug string, kingdomID int, input *settingsSignals) error {
+	guild, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, kingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return ErrGuildNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.IsLeader() {
+		return ErrOnlyLeaderCanChangeSettings
+	}
+
+	perms := _guild.MessagePermissions{
+		MsgAll:      _guild.MemberRole(input.GuildMsgAll),
+		MsgOfficers: _guild.MemberRole(input.GuildMsgOfficers),
+	}
+	raw, err := json.Marshal(perms)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+
+	if err := h.queries.UpdateGuildSettings(ctx, db.UpdateGuildSettingsParams{
+		ID:       guild.ID,
+		Settings: raw,
+	}); err != nil {
+		return fmt.Errorf("update settings: %w", err)
+	}
+	return nil
+}
+
+func isSettingsSaveUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) || errors.Is(err, ErrOnlyLeaderCanChangeSettings)
 }
 
 // ── Components ────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,37 +39,47 @@ func (h *handler) resendVerification() http.HandlerFunc {
 			return
 		}
 
-		// Always respond generically to prevent enumeration.
-		user, err := h.queries.GetUserByEmail(r.Context(), data.Email)
-		if err != nil || user.IsVerified {
-			genericResendMessage(w, r)
-			return
-		}
-
-		if err := h.queries.DeleteEmailVerificationByUserID(r.Context(), user.ID); err != nil {
-			log.Printf("resend-verification: delete old tokens: %v", err)
-		}
-
-		token := generateToken()
-		params := db.CreateEmailVerificationParams{
-			Token:     token,
-			UserID:    user.ID,
-			ExpiresAt: time.Now().Add(24 * time.Hour),
-		}
-		if err := h.queries.CreateEmailVerification(r.Context(), params); err != nil {
-			log.Printf("resend-verification: create token: %v", err)
-			genericResendMessage(w, r)
-			return
-		}
-
-		verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
-		fmt.Println(verifyURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
-
-		if err := h.sender.Send(r.Context(), data.Email, "Verify your email", verificationEmail(verifyURL)); err != nil {
-			log.Printf("resend-verification: send email: %v", err)
+		// Always respond generically to prevent user-enumeration via the
+		// response. Orchestrator errors are logged but do not change the UI.
+		if err := h.resendEmailVerification(r.Context(), data.Email); err != nil {
+			log.Printf("resend-verification: %v", err)
 		}
 		genericResendMessage(w, r)
 	}
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// resendEmailVerification regenerates and sends a verification email for the
+// given address. Silently absorbs unknown emails and already-verified accounts
+// (no user-enumeration leak). Returns wrapped errors for true infra failures
+// so they can be logged by the caller.
+func (h *handler) resendEmailVerification(ctx context.Context, email string) error {
+	user, err := h.queries.GetUserByEmail(ctx, email)
+	if err != nil || user.IsVerified {
+		return nil
+	}
+
+	if err := h.queries.DeleteEmailVerificationByUserID(ctx, user.ID); err != nil {
+		log.Printf("resend-verification: delete old tokens: %v", err)
+	}
+
+	token := generateToken()
+	if err := h.queries.CreateEmailVerification(ctx, db.CreateEmailVerificationParams{
+		Token:     token,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}); err != nil {
+		return fmt.Errorf("create token: %w", err)
+	}
+
+	verifyURL := h.appURL + routes.VerifyPath + "?" + tokenParam + "=" + token
+	fmt.Println(verifyURL) // TODO: remove once domain is set up
+
+	if err := h.sender.Send(ctx, email, "Verify your email", verificationEmail(verifyURL)); err != nil {
+		return fmt.Errorf("send email: %w", err)
+	}
+	return nil
 }
 
 func genericResendMessage(w http.ResponseWriter, r *http.Request) {

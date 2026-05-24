@@ -1,6 +1,7 @@
 package units
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -34,6 +35,18 @@ type trainInput struct {
 	UnitType string `json:"unit_type"`
 	Count    int    `json:"train_count"`
 }
+
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	ErrUnknownUnitType       = errors.New("unknown unit type")
+	ErrInvalidCount          = errors.New("count must be at least 1")
+	ErrCountTooLarge         = errors.New("count is too large")
+	ErrSummonsNotUnlocked    = errors.New("summons not unlocked")
+	ErrUnitNotAvailable      = errors.New("unit not available")
+	ErrTrainingInProgress    = errors.New("training already in progress")
+	ErrInsufficientResources = errors.New("not enough resources")
+)
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -74,7 +87,7 @@ func (h *handler) handleUnitsPage() http.HandlerFunc {
 			return
 		}
 
-		training, err := loadTraining(r, h.queries, kingdom.ID)
+		training, err := loadTraining(r.Context(), h.queries, kingdom.ID)
 		if err != nil {
 			log.Printf("units page: get training: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -108,10 +121,10 @@ func (h *handler) handleUnitsRefresh() http.HandlerFunc {
 					log.Printf("units refresh: get buildings: %v", err)
 					return
 				}
-				training, err := loadTraining(r, h.queries, k.ID)
+				training, err := loadTraining(r.Context(), h.queries, k.ID)
 				if err != nil {
 					log.Printf("units refresh: get training: %v", err)
-					sse.PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+					sse.PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 					return
 				}
 				page := unitsContent(&k, units, buildings, training)
@@ -131,105 +144,22 @@ func (h *handler) handleTrain() http.HandlerFunc {
 		input := &trainInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("train: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
-		utype := input.UnitType
-		unit, ok := game.UnitDefs[utype]
-		if !ok {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("unknown unit type")))
+		if errs := validateTrainInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errs...)))
 			return
 		}
 
-		count := input.Count
-		if count <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("count must be at least 1")))
-			return
-		}
-		if count > game.MaxUnitInput {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("count is too large")))
-			return
-		}
-
-		if unit.IsSummon && !game.CanTrainSummons(*kingdom) {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("summons not unlocked")))
-			return
-		}
-
-		// Prerequisite check (outside tx — no concurrency concern here).
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("train: get buildings: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-		buildingCounts := game.BuildingCountMap(buildings)
-		if !game.CanTrain(utype, buildingCounts) {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("unit not available")))
-			return
-		}
-
-		// SERIALIZABLE transaction: the training count read and the insert must
-		// share the same transaction so PostgreSQL SSI detects concurrent double-starts.
-		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
-		if err != nil {
-			log.Printf("train: begin tx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-		defer tx.Rollback(r.Context())
-
-		txq := db.New(tx)
-
-		// One active training order at a time — enforced inside the serializable tx so
-		// concurrent requests cannot both pass the check simultaneously.
-		// A future perk can raise this limit without a schema change.
-		existing, err := loadTraining(r, txq, kingdom.ID)
-		if err != nil {
-			log.Printf("train: check existing training: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-		if existing != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("training already in progress")))
-			return
-		}
-		costParams := db.DeductUnitCostParams{
-			KingdomID: kingdom.ID,
-			WoodCost:  unit.Cost.Wood * count,
-			StoneCost: unit.Cost.Stone * count,
-			ManaCost:  unit.Cost.Mana * count,
-		}
-		_, err = txq.DeductUnitCost(r.Context(), costParams)
-		if errors.Is(err, pgx.ErrNoRows) {
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("not enough resources")))
-			return
-		}
-		if err != nil {
-			log.Printf("train: deduct cost: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-
-		if err := txq.StartTraining(r.Context(), db.StartTrainingParams{
-			KingdomID:      kingdom.ID,
-			UnitType:       utype,
-			Count:          count,
-			TicksRemaining: unit.Ticks,
-		}); err != nil {
-			log.Printf("train: start training: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
-			return
-		}
-
-		if err := tx.Commit(r.Context()); err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
-				datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("training already in progress")))
+		if err := h.trainUnits(r.Context(), kingdom, input); err != nil {
+			if isTrainUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(err)))
 				return
 			}
-			log.Printf("train: commit: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			log.Printf("train: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -237,25 +167,25 @@ func (h *handler) handleTrain() http.HandlerFunc {
 		k, err := h.queries.GetKingdomByID(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("train: reload kingdom: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		allUnits, err := h.queries.GetKingdomUnits(r.Context(), k.ID)
 		if err != nil {
 			log.Printf("train: reload units: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 		allBuildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
 		if err != nil {
 			log.Printf("train: reload buildings: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
-		training, err := loadTraining(r, h.queries, k.ID)
+		training, err := loadTraining(r.Context(), h.queries, k.ID)
 		if err != nil {
 			log.Printf("train: reload training: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(unitsErrorComponent(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(unitsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -267,12 +197,108 @@ func (h *handler) handleTrain() http.HandlerFunc {
 	}
 }
 
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateTrainInput runs every field-level rule that does not need DB access.
+// Summons-unlock and building-prerequisite checks need kingdom/building data,
+// so they live in the orchestrator.
+func validateTrainInput(input *trainInput) []error {
+	var errs []error
+	if _, ok := game.UnitDefs[input.UnitType]; !ok {
+		errs = append(errs, ErrUnknownUnitType)
+	}
+	if input.Count <= 0 {
+		errs = append(errs, ErrInvalidCount)
+	} else if input.Count > game.MaxUnitInput {
+		errs = append(errs, ErrCountTooLarge)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// trainUnits enforces the summons-unlock and prerequisite checks, then opens a
+// SERIALIZABLE transaction to enforce the one-active-training cap and deduct
+// cost. PostgreSQL SSI detects concurrent double-starts; the
+// SerializationFailure that fires at commit-time is translated back to
+// ErrTrainingInProgress.
+func (h *handler) trainUnits(ctx context.Context, kingdom *db.Kingdom, input *trainInput) error {
+	unit := game.UnitDefs[input.UnitType]
+
+	if unit.IsSummon && !game.CanTrainSummons(*kingdom) {
+		return ErrSummonsNotUnlocked
+	}
+
+	// Prerequisite check (outside tx — no concurrency concern here).
+	buildings, err := h.queries.GetKingdomBuildings(ctx, kingdom.ID)
+	if err != nil {
+		return fmt.Errorf("get buildings: %w", err)
+	}
+	if !game.CanTrain(input.UnitType, game.BuildingCountMap(buildings)) {
+		return ErrUnitNotAvailable
+	}
+
+	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	txq := db.New(tx)
+
+	// One active training order at a time — enforced inside the serializable tx
+	// so concurrent requests cannot both pass the check simultaneously.
+	existing, err := loadTraining(ctx, txq, kingdom.ID)
+	if err != nil {
+		return fmt.Errorf("check existing training: %w", err)
+	}
+	if existing != nil {
+		return ErrTrainingInProgress
+	}
+
+	if _, err := txq.DeductUnitCost(ctx, db.DeductUnitCostParams{
+		KingdomID: kingdom.ID,
+		WoodCost:  unit.Cost.Wood * input.Count,
+		StoneCost: unit.Cost.Stone * input.Count,
+		ManaCost:  unit.Cost.Mana * input.Count,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInsufficientResources
+		}
+		return fmt.Errorf("deduct cost: %w", err)
+	}
+
+	if err := txq.StartTraining(ctx, db.StartTrainingParams{
+		KingdomID:      kingdom.ID,
+		UnitType:       input.UnitType,
+		Count:          input.Count,
+		TicksRemaining: unit.Ticks,
+	}); err != nil {
+		return fmt.Errorf("start training: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
+			return ErrTrainingInProgress
+		}
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+func isTrainUserError(err error) bool {
+	return errors.Is(err, ErrSummonsNotUnlocked) ||
+		errors.Is(err, ErrUnitNotAvailable) ||
+		errors.Is(err, ErrTrainingInProgress) ||
+		errors.Is(err, ErrInsufficientResources)
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // loadTraining fetches the active training order for a kingdom.
 // Returns (nil, nil) if no training is active, (nil, err) on a real DB error.
-func loadTraining(r *http.Request, queries db.Querier, kingdomID int) (*db.KingdomTraining, error) {
-	t, err := queries.GetKingdomTraining(r.Context(), kingdomID)
+func loadTraining(ctx context.Context, queries db.Querier, kingdomID int) (*db.KingdomTraining, error) {
+	t, err := queries.GetKingdomTraining(ctx, kingdomID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -292,7 +318,7 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 	return Div(
 		H1(Class("page-title"), Text("Units")),
 		Div(ds.Init(GetSSENoSignals(routes.KingdomUnitsRefreshPath))),
-		unitsErrorComponent(nil),
+		unitsAlert(nil),
 		Iff(training != nil, func() Node { return activeTrainingBanner(training) }),
 		unitsTable(counts, buildingCounts),
 		If(canSummon, summonTable(counts, buildingCounts)),
@@ -448,13 +474,7 @@ func trainForm(buildingCounts map[string]int, canSummon bool, busy bool) Node {
 	)
 }
 
-func unitsErrorComponent(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(ID("units-alert"), Text(msg))
-}
+func unitsAlert(inner Node) Node { return AlertContainer("units-alert", inner) }
 
 func attributeList(attrs []game.Attribute) string {
 	if len(attrs) == 0 {

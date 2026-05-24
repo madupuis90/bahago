@@ -1,10 +1,13 @@
 package auth
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
@@ -66,60 +69,21 @@ func (h *handler) resetPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ResetPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid request"))))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
 		}
 
-		if data.Token == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("missing token"))))
-			return
-		}
-
-		var errs []error
-		validatePassword(&errs, data.Password)
-		if len(errs) > 0 {
+		if errs := validateResetPasswordInput(data); len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
-		tx, err := h.pool.Begin(r.Context())
-		if err != nil {
-			log.Printf("reset-password: begin transaction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
-			return
-		}
-		defer tx.Rollback(r.Context()) // no-op after Commit
-
-		qtx := db.New(tx)
-
-		userID, err := qtx.ConsumePasswordResetToken(r.Context(), data.Token)
-		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("reset link is invalid or has expired"))))
-			return
-		}
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-		if err != nil {
-			log.Printf("reset-password: bcrypt hash: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
-			return
-		}
-
-		if err := qtx.UpdatePassword(r.Context(), db.UpdatePasswordParams{
-			ID:     userID,
-			PwHash: string(hashedPassword),
-		}); err != nil {
-			log.Printf("reset-password: update password: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
-			return
-		}
-
-		if err := qtx.DeleteSessionsByUserID(r.Context(), userID); err != nil {
-			log.Printf("reset-password: delete sessions: %v", err)
-		}
-
-		if err := tx.Commit(r.Context()); err != nil {
-			log.Printf("reset-password: commit transaction: %v", err)
+		if err := h.resetUserPassword(r.Context(), data.Token, data.Password); err != nil {
+			if isResetPasswordUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(err)))
+				return
+			}
+			log.Printf("reset-password: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to reset password"))))
 			return
 		}
@@ -129,4 +93,67 @@ func (h *handler) resetPassword() http.HandlerFunc {
 			sse.PatchElementGostar(authAlert(AlertError(errors.New("failed to redirect"))))
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+func validateResetPasswordInput(in *ResetPasswordForm) []error {
+	var errs []error
+	if in.Token == "" {
+		errs = append(errs, ErrMissingToken)
+	}
+	if err := validatePassword(in.Password); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// resetUserPassword consumes the reset token, updates the password hash, and
+// invalidates all existing sessions for the user — all inside a single
+// transaction. Returns ErrInvalidOrExpiredToken when the token lookup fails;
+// session deletion failure is logged but not fatal (a stale session won't
+// have valid credentials anyway).
+func (h *handler) resetUserPassword(ctx context.Context, token, newPassword string) error {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := db.New(tx)
+
+	userID, err := qtx.ConsumePasswordResetToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidOrExpiredToken
+		}
+		return fmt.Errorf("consume token: %w", err)
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("bcrypt hash: %w", err)
+	}
+
+	if err := qtx.UpdatePassword(ctx, db.UpdatePasswordParams{
+		ID:     userID,
+		PwHash: string(hashedPassword),
+	}); err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+
+	if err := qtx.DeleteSessionsByUserID(ctx, userID); err != nil {
+		log.Printf("reset-password: delete sessions: %v", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+func isResetPasswordUserError(err error) bool {
+	return errors.Is(err, ErrInvalidOrExpiredToken)
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/starfederation/datastar-go/datastar"
 	"golang.org/x/crypto/bcrypt"
 	. "maragu.dev/gomponents"
@@ -69,87 +71,69 @@ func loginContent(verified bool, reset bool) Node {
 	)
 }
 
-func (h *handler) login() http.HandlerFunc {
+// sessionDuration is how long a freshly minted login session lasts.
+const sessionDuration = 90 * 24 * time.Hour // 3 months
 
-	// Sentinel password to compare when doing dummy comparaison
-	sentinelHash, err := bcrypt.GenerateFromPassword([]byte("sentinel-password"), bcrypt.DefaultCost)
+// sentinelHash is a precomputed bcrypt hash used for the user-not-found timing
+// side-channel defence. Set in init so the per-request authenticateUser call
+// has constant work regardless of whether the user exists.
+var sentinelHash []byte
+
+func init() {
+	h, err := bcrypt.GenerateFromPassword([]byte("sentinel-password"), bcrypt.DefaultCost)
 	if err != nil {
 		panic(fmt.Sprintf("failed to generate sentinel hash: %v", err))
 	}
+	sentinelHash = h
+}
 
+func (h *handler) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		var errs []error
-
 		data := &LoginForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			errs = append(errs, errors.New("invalid request"))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
+			return
 		}
 
-		validateEmail(&errs, data.Email)
-
-		if len(errs) > 0 {
+		if errs := validateLoginInput(data); len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
-		// Look up user. If not found, run a dummy bcrypt comparison against the
-		// sentinel hash to prevent user-enumeration via timing side-channel.
-		user, dbErr := h.queries.GetUserByEmail(r.Context(), data.Email)
-		hashToCompare := []byte(user.PwHash)
-		if dbErr != nil {
-			hashToCompare = sentinelHash
-		}
-
-		if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(data.Password)); err != nil || dbErr != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid email or password"))))
-			return
-		}
-
-		if !user.IsVerified {
-			sse := datastar.NewSSE(w, r)
-			sse.PatchElementGostar(authAlert(AlertError(errors.New("please verify your email before logging in"))))
-			sse.PatchElementGostar(resendVerificationComponent())
-			return
-		}
-
-		// TODO: behind a reverse proxy, r.RemoteAddr will be the proxy's address.
-		// Read X-Forwarded-For or X-Real-IP instead when deploying with a proxy.
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		user, err := h.authenticateUser(r.Context(), data.Email, data.Password)
 		if err != nil {
-			host = r.RemoteAddr // fallback if no port present
-		}
-		ip, err := netip.ParseAddr(host)
-		if err != nil {
-			log.Printf("login: parse remote addr %q: %v", host, err)
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("could not process request"))))
-			return
-		}
-
-		const sessionDuration = 90 * 24 * time.Hour // 3 months
-
-		s := db.CreateSessionParams{
-			ID:        generateToken(),
-			UserID:    user.ID,
-			IpAddress: ip,
-			UserAgent: r.UserAgent(),
-			ExpiresAt: time.Now().Add(sessionDuration),
-		}
-
-		if _, err := h.queries.CreateSession(r.Context(), s); err != nil {
-			log.Printf("login: create session: %v", err)
+			if errors.Is(err, ErrUnverifiedEmail) {
+				sse := datastar.NewSSE(w, r)
+				sse.PatchElementGostar(authAlert(AlertError(err)))
+				sse.PatchElementGostar(resendVerificationComponent())
+				return
+			}
+			if isLoginUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(err)))
+				return
+			}
+			log.Printf("login: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 			return
 		}
 
-		if err := h.queries.UpdateLastLogin(r.Context(), user.ID); err != nil {
+		ip, err := parseRemoteIP(r.RemoteAddr)
+		if err != nil {
+			log.Printf("login: parse remote addr %q: %v", r.RemoteAddr, err)
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("could not process request"))))
+			return
+		}
+
+		token, err := h.startSession(r.Context(), user.ID, ip, r.UserAgent())
+		if err != nil {
+			log.Printf("login: start session: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 			return
 		}
 
 		http.SetCookie(w, &http.Cookie{
 			Name:     string(contextkeys.SessionCookieName),
-			Value:    s.ID,
+			Value:    token,
 			Path:     "/",
 			MaxAge:   int(sessionDuration.Seconds()),
 			HttpOnly: true,
@@ -162,4 +146,72 @@ func (h *handler) login() http.HandlerFunc {
 			sse.PatchElementGostar(authAlert(AlertError(errors.New("failed to login"))))
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+func validateLoginInput(in *LoginForm) []error {
+	var errs []error
+	if err := validateEmail(in.Email); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// authenticateUser verifies the email+password pair using a constant-time
+// fallback hash when the user is not found (defence against user-enumeration
+// via timing side-channels). Returns ErrInvalidCredentials on any auth failure,
+// ErrUnverifiedEmail when credentials match but the email is not verified.
+func (h *handler) authenticateUser(ctx context.Context, email, password string) (*db.User, error) {
+	user, dbErr := h.queries.GetUserByEmail(ctx, email)
+	hashToCompare := []byte(user.PwHash)
+	if dbErr != nil {
+		hashToCompare = sentinelHash
+	}
+	if dbErr != nil && !errors.Is(dbErr, pgx.ErrNoRows) {
+		log.Printf("login: get user: %v", dbErr)
+	}
+	if err := bcrypt.CompareHashAndPassword(hashToCompare, []byte(password)); err != nil || dbErr != nil {
+		return nil, ErrInvalidCredentials
+	}
+	if !user.IsVerified {
+		return nil, ErrUnverifiedEmail
+	}
+	return &user, nil
+}
+
+// startSession creates a new session row and updates the user's last-login
+// timestamp. Returns the session token to be set as the cookie.
+func (h *handler) startSession(ctx context.Context, userID int, ip netip.Addr, userAgent string) (string, error) {
+	token := generateToken()
+	s := db.CreateSessionParams{
+		ID:        token,
+		UserID:    userID,
+		IpAddress: ip,
+		UserAgent: userAgent,
+		ExpiresAt: time.Now().Add(sessionDuration),
+	}
+	if _, err := h.queries.CreateSession(ctx, s); err != nil {
+		return "", fmt.Errorf("create session: %w", err)
+	}
+	if err := h.queries.UpdateLastLogin(ctx, userID); err != nil {
+		return "", fmt.Errorf("update last login: %w", err)
+	}
+	return token, nil
+}
+
+// parseRemoteIP extracts a netip.Addr from an http.Request.RemoteAddr value,
+// falling back to the raw string if the host has no port.
+func parseRemoteIP(remoteAddr string) (netip.Addr, error) {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	return netip.ParseAddr(host)
+}
+
+func isLoginUserError(err error) bool {
+	return errors.Is(err, ErrInvalidCredentials)
 }

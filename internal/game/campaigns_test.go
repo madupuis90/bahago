@@ -40,8 +40,10 @@ func TestAdvanceCampaigns_StateMachine(t *testing.T) {
 		t.Fatalf("upsert units: %v", err)
 	}
 
-	// Create campaign with ticks_remaining=1, action_ticks=1, travel_ticks=1
-	// so each Advance call triggers exactly one transition.
+	// Create campaign with ticks_remaining=1, action_ticks=1, travel_ticks=3
+	// (3 is the schema minimum). The en_route→active and active→returning
+	// transitions still take one advance each; the returning leg requires
+	// travel_ticks=3 decrements before deletion.
 	campaign, err := q.CreateCampaignIfAvailable(ctx, db.CreateCampaignIfAvailableParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
@@ -50,7 +52,7 @@ func TestAdvanceCampaigns_StateMachine(t *testing.T) {
 		Action:          "attack",
 		TicksRemaining:  1,
 		ActionTicks:     1,
-		TravelTicks:     1,
+		TravelTicks:     3,
 	})
 	if err != nil {
 		t.Fatalf("CreateCampaignIfAvailable: %v", err)
@@ -93,12 +95,24 @@ func TestAdvanceCampaigns_StateMachine(t *testing.T) {
 		t.Errorf("after advance 2: status = %q, want returning", c.Status)
 	}
 
-	// Advance 3: returning → deleted
+	// Advances 3-4: returning, ticks_remaining decrements but stays > 0.
+	for i := 3; i <= 4; i++ {
+		if err := AdvanceCampaigns(ctx, q); err != nil {
+			t.Fatalf("AdvanceCampaigns (%d): %v", i, err)
+		}
+		if c, ok := findCampaign(t); !ok {
+			t.Fatalf("campaign missing after advance %d", i)
+		} else if c.Status != "returning" {
+			t.Errorf("after advance %d: status = %q, want returning", i, c.Status)
+		}
+	}
+
+	// Advance 5: returning → deleted (ticks_remaining hits 0).
 	if err := AdvanceCampaigns(ctx, q); err != nil {
-		t.Fatalf("AdvanceCampaigns (3): %v", err)
+		t.Fatalf("AdvanceCampaigns (5): %v", err)
 	}
 	if _, ok := findCampaign(t); ok {
-		t.Error("campaign still present after advance 3, expected it to be deleted")
+		t.Error("campaign still present after advance 5, expected it to be deleted")
 	}
 }
 
@@ -112,27 +126,27 @@ func TestTravelTicks(t *testing.T) {
 		{
 			name: "same tile enforces minimum",
 			x1:   5, y1: 5, x2: 5, y2: 5,
-			wantTicks: 12,
+			wantTicks: 3,
 		},
 		{
 			name: "adjacent tile enforces minimum",
 			x1:   0, y1: 0, x2: 1, y2: 0,
-			wantTicks: 12,
+			wantTicks: 3,
 		},
 		{
 			name: "diagonal 1 step enforces minimum",
 			x1:   0, y1: 0, x2: 1, y2: 1,
-			wantTicks: 12,
+			wantTicks: 3,
 		},
 		{
-			name: "exactly minimum distance",
-			x1:   0, y1: 0, x2: 12, y2: 0,
-			wantTicks: 12,
+			name: "exactly at minimum boundary",
+			x1:   0, y1: 0, x2: 3, y2: 0,
+			wantTicks: 3,
 		},
 		{
 			name: "one beyond minimum",
-			x1:   0, y1: 0, x2: 13, y2: 0,
-			wantTicks: 13,
+			x1:   0, y1: 0, x2: 4, y2: 0,
+			wantTicks: 4,
 		},
 		{
 			name: "non-square uses max of dx dy",

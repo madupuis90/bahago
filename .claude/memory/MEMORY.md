@@ -1,0 +1,3 @@
+- [Subagent restraint](feedback_subagent_restraint.md) — default to grep/find/Read; subagents are expensive and hidden
+- [Handoff over re-exploration](feedback_handoff_over_reexploration.md) — use /handoff across sessions to avoid paying for rediscovery
+- [Token cost awareness](user_token_cost_awareness.md) — user is quota-sensitive; surface expensive ops before doing them

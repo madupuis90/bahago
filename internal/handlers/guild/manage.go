@@ -1,12 +1,15 @@
 package guild
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
@@ -29,14 +32,58 @@ type transferLeaderSignals struct {
 	TargetKingdomID int `json:"target_kingdom_id"`
 }
 
-// ── Handlers ──────────────────────────────────────────────────────────────────
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	ErrInvalidKingdomID             = errors.New("invalid kingdom id")
+	ErrCannotRemoveTarget           = errors.New("officers can only remove regular members")
+	ErrLeaderMustTransferFirst      = errors.New("the guild leader must transfer leadership before leaving")
+	ErrCannotLeave                  = errors.New("permission denied")
+	ErrOnlyLeaderCanPromote         = errors.New("only the guild leader can promote officers")
+	ErrOfficerCapReached            = errors.New("a guild can have at most 4 officers")
+	ErrCannotDemoteOfficer          = errors.New("officers cannot demote other officers")
+	ErrInvalidTransferTarget        = errors.New("please select a valid member to transfer leadership to")
+	ErrOnlyLeaderCanTransfer        = errors.New("only the guild leader can transfer leadership")
+	ErrTargetNotMember              = errors.New("target is not a member of this guild")
+	ErrTargetCannotBeLeader         = errors.New("leadership can only be transferred to a full member or officer")
+	ErrOnlyLeaderCanDisband         = errors.New("only the guild leader can disband the guild")
+	ErrOnlyLeaderCanEditDescription = errors.New("only the guild leader can edit the description")
+)
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+func validateKingdomID(s string) (int, error) {
+	id, err := strconv.Atoi(s)
+	if err != nil || id <= 0 {
+		return 0, ErrInvalidKingdomID
+	}
+	return id, nil
+}
+
+func validateTransferInput(in *transferLeaderSignals, actorKingdomID int) []error {
+	var errs []error
+	if in.TargetKingdomID == 0 || in.TargetKingdomID == actorKingdomID {
+		errs = append(errs, ErrInvalidTransferTarget)
+	}
+	return errs
+}
+
+func validateEditDescription(in *editDescriptionSignals) []error {
+	var errs []error
+	if len(strings.TrimSpace(in.GuildDescription)) > 500 {
+		errs = append(errs, ErrDescriptionTooLong)
+	}
+	return errs
+}
+
+// ── Page handlers ─────────────────────────────────────────────────────────────
 
 func (h *handler) handleManage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
 
-		guild, members, viewerRole, err := h.loadGuildAndMembership(r, slug, kingdom.ID)
+		guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
@@ -85,7 +132,7 @@ func (h *handler) handleManageRefresh() http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			case k := <-ch:
-				guild, members, viewerRole, err := h.loadGuildAndMembership(r, slug, k.ID)
+				guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, k.ID)
 				if errors.Is(err, errGuildNotFound) {
 					if err := sse.Redirect(routes.GuildPath); err != nil {
 						log.Printf("guild manage refresh: redirect: %v", err)
@@ -121,63 +168,37 @@ func (h *handler) handleManageRefresh() http.HandlerFunc {
 	}
 }
 
+// ── Action handlers ───────────────────────────────────────────────────────────
+
 func (h *handler) handleRemove() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
-		sse := datastar.NewSSE(w, r)
 
-		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
+		targetKingdomID, err := validateKingdomID(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
 			return
 		}
 
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, err := h.removeMember(r.Context(), kingdom.ID, slug, targetKingdomID)
 		if err != nil {
-			log.Printf("guild remove: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
-			return
-		}
-
-		target, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
-			KingdomID: targetKingdomID,
-			GuildID:   g.ID,
-		})
-		if err != nil {
-			log.Printf("guild remove: check target role: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.CanRemoveTarget(_guild.MemberRole(target.Role)) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("officers can only remove regular members"))))
-			return
-		}
-
-		if err := h.queries.RemoveMembership(r.Context(), db.RemoveMembershipParams{
-			KingdomID: targetKingdomID,
-			GuildID:   g.ID,
-		}); err != nil {
+			if isRemoveUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
+				return
+			}
 			log.Printf("guild remove: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
-			"Removed from "+g.Name,
-			"You have been removed from "+g.Name+".",
+		h.sendNotifications(r.Context(), kingdom.ID, []int{targetKingdomID},
+			"Removed from "+guildName,
+			"You have been removed from "+guildName+".",
 			"", "",
 		)
 
-		h.publishUpdates(r, []int{kingdom.ID})
+		h.publishUpdates(r.Context(), []int{kingdom.ID})
 	}
 }
 
@@ -187,48 +208,22 @@ func (h *handler) handleLeave() http.HandlerFunc {
 		slug := r.PathValue("slug")
 		sse := datastar.NewSSE(w, r)
 
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, managerIDs, err := h.leaveGuild(r.Context(), kingdom.ID, slug)
 		if err != nil {
-			log.Printf("guild leave: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if viewerRole != _guild.RoleMember && viewerRole != _guild.RoleOfficer {
-			msg := "permission denied"
-			if viewerRole == _guild.RoleLeader {
-				msg = "the guild leader must transfer leadership before leaving"
+			if isLeaveUserError(err) {
+				sse.PatchElementGostar(guildAlert(AlertError(err)))
+				return
 			}
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New(msg))))
-			return
-		}
-
-		if err := h.queries.RemoveMembership(r.Context(), db.RemoveMembershipParams{
-			KingdomID: kingdom.ID,
-			GuildID:   g.ID,
-		}); err != nil {
 			log.Printf("guild leave: %v", err)
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		// Notify members managers that a member has left.
-		if members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
-			managerIDs := make([]int, 0)
-			for _, m := range members {
-				if _guild.MemberRole(m.Role).CanManage() {
-					managerIDs = append(managerIDs, m.KingdomID)
-				}
-			}
-			h.sendNotifications(r, kingdom.ID, managerIDs,
-				"Member Left",
-				kingdom.Name+" has left "+g.Name+".",
-				slugURL(routes.GuildViewPath, slug), "Visit Guild",
-			)
-		}
+		h.sendNotifications(r.Context(), kingdom.ID, managerIDs,
+			"Member Left",
+			kingdom.Name+" has left "+guildName+".",
+			slugURL(routes.GuildViewPath, slug), "Visit Guild",
+		)
 
 		if err := sse.Redirect(routes.GuildPath); err != nil {
 			log.Printf("guild leave: redirect: %v", err)
@@ -240,58 +235,31 @@ func (h *handler) handlePromote() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
-		sse := datastar.NewSSE(w, r)
 
-		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
+		targetKingdomID, err := validateKingdomID(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
 			return
 		}
 
-		g, members, viewerRole, err := h.loadGuildAndMembership(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, err := h.promoteToOfficer(r.Context(), kingdom.ID, slug, targetKingdomID)
 		if err != nil {
-			log.Printf("guild promote: load: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can promote officers"))))
-			return
-		}
-
-		// Enforce the 4-officer cap.
-		officerCount := 0
-		for _, m := range members {
-			if _guild.MemberRole(m.Role) == _guild.RoleOfficer {
-				officerCount++
+			if isPromoteUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
+				return
 			}
-		}
-		if officerCount >= 4 {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("a guild can have at most 4 officers"))))
+			log.Printf("guild promote: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		if err := h.queries.SetMembershipRole(r.Context(), db.SetMembershipRoleParams{
-			Role:      string(_guild.RoleOfficer),
-			KingdomID: targetKingdomID,
-			GuildID:   g.ID,
-		}); err != nil {
-			log.Printf("guild promote: set role: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
+		h.sendNotifications(r.Context(), kingdom.ID, []int{targetKingdomID},
 			"Promoted to Officer",
-			"You have been promoted to Officer in "+g.Name+".",
+			"You have been promoted to Officer in "+guildName+".",
 			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
-		h.publishUpdates(r, []int{kingdom.ID})
+		h.publishUpdates(r.Context(), []int{kingdom.ID})
 	}
 }
 
@@ -299,60 +267,31 @@ func (h *handler) handleDemote() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
-		sse := datastar.NewSSE(w, r)
 
-		targetKingdomID, err := strconv.Atoi(r.PathValue("id"))
+		targetKingdomID, err := validateKingdomID(r.PathValue("id"))
 		if err != nil {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("invalid kingdom id"))))
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
 			return
 		}
 
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, err := h.demoteFromOfficer(r.Context(), kingdom.ID, slug, targetKingdomID)
 		if err != nil {
-			log.Printf("guild demote: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.CanManage() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
-			return
-		}
-
-		demoteTarget, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
-			KingdomID: targetKingdomID,
-			GuildID:   g.ID,
-		})
-		if err != nil {
-			log.Printf("guild demote: check target role: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.CanRemoveTarget(_guild.MemberRole(demoteTarget.Role)) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("officers cannot demote other officers"))))
+			if isDemoteUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
+				return
+			}
+			log.Printf("guild demote: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		if err := h.queries.SetMembershipRole(r.Context(), db.SetMembershipRoleParams{
-			Role:      string(_guild.RoleMember),
-			KingdomID: targetKingdomID,
-			GuildID:   g.ID,
-		}); err != nil {
-			log.Printf("guild demote: set role: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		h.sendNotifications(r, kingdom.ID, []int{targetKingdomID},
+		h.sendNotifications(r.Context(), kingdom.ID, []int{targetKingdomID},
 			"Demoted to Member",
-			"You have been demoted to Member in "+g.Name+".",
+			"You have been demoted to Member in "+guildName+".",
 			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
-		h.publishUpdates(r, []int{kingdom.ID})
+		h.publishUpdates(r.Context(), []int{kingdom.ID})
 	}
 }
 
@@ -366,53 +305,28 @@ func (h *handler) handleTransferLeadership() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
+
+		if errs := validateTransferInput(input, kingdom.ID); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errs...)))
+			return
+		}
+
 		sse := datastar.NewSSE(w, r)
 
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, err := h.transferLeadership(r.Context(), kingdom.ID, slug, input.TargetKingdomID)
 		if err != nil {
-			log.Printf("guild transfer: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can transfer leadership"))))
-			return
-		}
-
-		if input.TargetKingdomID == 0 || input.TargetKingdomID == kingdom.ID {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("please select a valid member to transfer leadership to"))))
-			return
-		}
-
-		targetMembership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
-			KingdomID: input.TargetKingdomID,
-			GuildID:   g.ID,
-		})
-		if err != nil {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("target is not a member of this guild"))))
-			return
-		}
-		if role := _guild.MemberRole(targetMembership.Role); role != _guild.RoleMember && role != _guild.RoleOfficer {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("leadership can only be transferred to a full member or officer"))))
-			return
-		}
-
-		if err := h.queries.TransferLeadership(r.Context(), db.TransferLeadershipParams{
-			NewLeaderKingdomID: input.TargetKingdomID,
-			GuildID:            g.ID,
-		}); err != nil {
+			if isTransferLeadershipUserError(err) {
+				sse.PatchElementGostar(guildAlert(AlertError(err)))
+				return
+			}
 			log.Printf("guild transfer leadership: %v", err)
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		h.sendNotifications(r, kingdom.ID, []int{input.TargetKingdomID},
+		h.sendNotifications(r.Context(), kingdom.ID, []int{input.TargetKingdomID},
 			"Guild Leadership Transferred",
-			"You are now the leader of "+g.Name+".",
+			"You are now the leader of "+guildName+".",
 			slugURL(routes.GuildViewPath, slug), "Visit Guild",
 		)
 
@@ -428,44 +342,20 @@ func (h *handler) handleDisband() http.HandlerFunc {
 		slug := r.PathValue("slug")
 		sse := datastar.NewSSE(w, r)
 
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
+		guildName, memberIDs, err := h.disbandGuild(r.Context(), kingdom.ID, slug)
 		if err != nil {
-			log.Printf("guild disband: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can disband the guild"))))
-			return
-		}
-
-		// Collect members to notify before disbanding (they'll be gone after).
-		members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID)
-		if err != nil {
-			log.Printf("guild disband: list members: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		memberIDs := make([]int, 0, len(members))
-		for _, m := range members {
-			if m.KingdomID != kingdom.ID && _guild.MemberRole(m.Role).IsActiveMember() {
-				memberIDs = append(memberIDs, m.KingdomID)
+			if isDisbandUserError(err) {
+				sse.PatchElementGostar(guildAlert(AlertError(err)))
+				return
 			}
-		}
-
-		if err := h.queries.DisbandGuild(r.Context(), g.ID); err != nil {
 			log.Printf("guild disband: %v", err)
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		h.sendNotifications(r, kingdom.ID, memberIDs,
+		h.sendNotifications(r.Context(), kingdom.ID, memberIDs,
 			"Guild Disbanded",
-			g.Name+" has been disbanded.",
+			guildName+" has been disbanded.",
 			"", "",
 		)
 
@@ -485,41 +375,308 @@ func (h *handler) handleEditDescription() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
+
+		if errs := validateEditDescription(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errs...)))
+			return
+		}
+
 		sse := datastar.NewSSE(w, r)
 
-		description := strings.TrimSpace(input.GuildDescription)
-		if len(description) > 500 {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("description cannot exceed 500 characters"))))
-			return
-		}
-
-		g, viewerRole, err := h.getGuildAndViewerRole(r, slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
-			return
-		}
-		if err != nil {
-			log.Printf("guild edit description: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !viewerRole.IsLeader() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("only the guild leader can edit the description"))))
-			return
-		}
-
-		if err := h.queries.UpdateGuildDescription(r.Context(), db.UpdateGuildDescriptionParams{
-			Description: description,
-			ID:          g.ID,
-		}); err != nil {
+		if err := h.updateGuildDescription(r.Context(), kingdom.ID, slug, input); err != nil {
+			if isEditDescriptionUserError(err) {
+				sse.PatchElementGostar(guildAlert(AlertError(err)))
+				return
+			}
 			log.Printf("guild edit description: %v", err)
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		h.publishUpdates(r, []int{kingdom.ID})
+		h.publishUpdates(r.Context(), []int{kingdom.ID})
 	}
 }
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// removeMember removes the target kingdom's membership from the guild after
+// verifying the actor has the right to remove a member of that role. Returns
+// the guild name so the caller can format the notification message.
+func (h *handler) removeMember(ctx context.Context, actorKingdomID int, slug string, targetKingdomID int) (string, error) {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", ErrGuildNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.CanManage() {
+		return "", ErrNotAuthorized
+	}
+
+	target, err := h.queries.GetMembershipByKingdomAndGuild(ctx, db.GetMembershipByKingdomAndGuildParams{
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("check target role: %w", err)
+	}
+	if !viewerRole.CanRemoveTarget(_guild.MemberRole(target.Role)) {
+		return "", ErrCannotRemoveTarget
+	}
+
+	if err := h.queries.RemoveMembership(ctx, db.RemoveMembershipParams{
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	}); err != nil {
+		return "", fmt.Errorf("remove membership: %w", err)
+	}
+	return g.Name, nil
+}
+
+// leaveGuild removes the actor's own membership. Leaders must transfer first.
+// Returns the guild name and the list of manager IDs so the caller can fan out
+// notifications.
+func (h *handler) leaveGuild(ctx context.Context, kingdomID int, slug string) (string, []int, error) {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, kingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", nil, ErrGuildNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("get guild: %w", err)
+	}
+	if viewerRole == _guild.RoleLeader {
+		return "", nil, ErrLeaderMustTransferFirst
+	}
+	if viewerRole != _guild.RoleMember && viewerRole != _guild.RoleOfficer {
+		return "", nil, ErrCannotLeave
+	}
+
+	members, err := h.queries.ListGuildMembersWithNames(ctx, g.ID)
+	if err != nil {
+		return "", nil, fmt.Errorf("list members: %w", err)
+	}
+	managerIDs := make([]int, 0)
+	for _, m := range members {
+		if m.KingdomID != kingdomID && _guild.MemberRole(m.Role).CanManage() {
+			managerIDs = append(managerIDs, m.KingdomID)
+		}
+	}
+
+	if err := h.queries.RemoveMembership(ctx, db.RemoveMembershipParams{
+		KingdomID: kingdomID,
+		GuildID:   g.ID,
+	}); err != nil {
+		return "", nil, fmt.Errorf("remove membership: %w", err)
+	}
+	return g.Name, managerIDs, nil
+}
+
+// promoteToOfficer promotes a member to officer. Leader-only, with a 4-officer
+// cap enforced by counting current officers in the membership list.
+func (h *handler) promoteToOfficer(ctx context.Context, actorKingdomID int, slug string, targetKingdomID int) (string, error) {
+	g, members, viewerRole, err := h.loadGuildAndMembership(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", ErrGuildNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("load guild: %w", err)
+	}
+	if !viewerRole.IsLeader() {
+		return "", ErrOnlyLeaderCanPromote
+	}
+
+	officerCount := 0
+	for _, m := range members {
+		if _guild.MemberRole(m.Role) == _guild.RoleOfficer {
+			officerCount++
+		}
+	}
+	if officerCount >= 4 {
+		return "", ErrOfficerCapReached
+	}
+
+	if err := h.queries.SetMembershipRole(ctx, db.SetMembershipRoleParams{
+		Role:      string(_guild.RoleOfficer),
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	}); err != nil {
+		return "", fmt.Errorf("set role: %w", err)
+	}
+	return g.Name, nil
+}
+
+// demoteFromOfficer demotes a member to the regular member role. Officers can
+// demote regular members; only the leader can demote other officers (enforced
+// by CanRemoveTarget).
+func (h *handler) demoteFromOfficer(ctx context.Context, actorKingdomID int, slug string, targetKingdomID int) (string, error) {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", ErrGuildNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.CanManage() {
+		return "", ErrNotAuthorized
+	}
+
+	target, err := h.queries.GetMembershipByKingdomAndGuild(ctx, db.GetMembershipByKingdomAndGuildParams{
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("check target role: %w", err)
+	}
+	if !viewerRole.CanRemoveTarget(_guild.MemberRole(target.Role)) {
+		return "", ErrCannotDemoteOfficer
+	}
+
+	if err := h.queries.SetMembershipRole(ctx, db.SetMembershipRoleParams{
+		Role:      string(_guild.RoleMember),
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	}); err != nil {
+		return "", fmt.Errorf("set role: %w", err)
+	}
+	return g.Name, nil
+}
+
+// transferLeadership hands leadership of the guild to a target member or
+// officer. Leader-only.
+func (h *handler) transferLeadership(ctx context.Context, actorKingdomID int, slug string, targetKingdomID int) (string, error) {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", ErrGuildNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.IsLeader() {
+		return "", ErrOnlyLeaderCanTransfer
+	}
+
+	target, err := h.queries.GetMembershipByKingdomAndGuild(ctx, db.GetMembershipByKingdomAndGuildParams{
+		KingdomID: targetKingdomID,
+		GuildID:   g.ID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrTargetNotMember
+		}
+		return "", fmt.Errorf("get target membership: %w", err)
+	}
+	if role := _guild.MemberRole(target.Role); role != _guild.RoleMember && role != _guild.RoleOfficer {
+		return "", ErrTargetCannotBeLeader
+	}
+
+	if err := h.queries.TransferLeadership(ctx, db.TransferLeadershipParams{
+		NewLeaderKingdomID: targetKingdomID,
+		GuildID:            g.ID,
+	}); err != nil {
+		return "", fmt.Errorf("transfer leadership: %w", err)
+	}
+	return g.Name, nil
+}
+
+// disbandGuild dissolves the guild after collecting the IDs of active members
+// (other than the leader) so the caller can notify them.
+func (h *handler) disbandGuild(ctx context.Context, actorKingdomID int, slug string) (string, []int, error) {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return "", nil, ErrGuildNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.IsLeader() {
+		return "", nil, ErrOnlyLeaderCanDisband
+	}
+
+	members, err := h.queries.ListGuildMembersWithNames(ctx, g.ID)
+	if err != nil {
+		return "", nil, fmt.Errorf("list members: %w", err)
+	}
+	memberIDs := make([]int, 0, len(members))
+	for _, m := range members {
+		if m.KingdomID != actorKingdomID && _guild.MemberRole(m.Role).IsActiveMember() {
+			memberIDs = append(memberIDs, m.KingdomID)
+		}
+	}
+
+	if err := h.queries.DisbandGuild(ctx, g.ID); err != nil {
+		return "", nil, fmt.Errorf("disband: %w", err)
+	}
+	return g.Name, memberIDs, nil
+}
+
+// updateGuildDescription saves a new description for the guild. Leader-only.
+func (h *handler) updateGuildDescription(ctx context.Context, actorKingdomID int, slug string, input *editDescriptionSignals) error {
+	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
+	if errors.Is(err, ErrGuildNotFound) {
+		return ErrGuildNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("get guild: %w", err)
+	}
+	if !viewerRole.IsLeader() {
+		return ErrOnlyLeaderCanEditDescription
+	}
+
+	description := strings.TrimSpace(input.GuildDescription)
+	if err := h.queries.UpdateGuildDescription(ctx, db.UpdateGuildDescriptionParams{
+		Description: description,
+		ID:          g.ID,
+	}); err != nil {
+		return fmt.Errorf("update description: %w", err)
+	}
+	return nil
+}
+
+// ── User-error predicates ─────────────────────────────────────────────────────
+
+func isRemoveUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrNotAuthorized) ||
+		errors.Is(err, ErrCannotRemoveTarget)
+}
+
+func isLeaveUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrLeaderMustTransferFirst) ||
+		errors.Is(err, ErrCannotLeave)
+}
+
+func isPromoteUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrOnlyLeaderCanPromote) ||
+		errors.Is(err, ErrOfficerCapReached)
+}
+
+func isDemoteUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrNotAuthorized) ||
+		errors.Is(err, ErrCannotDemoteOfficer)
+}
+
+func isTransferLeadershipUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrOnlyLeaderCanTransfer) ||
+		errors.Is(err, ErrTargetNotMember) ||
+		errors.Is(err, ErrTargetCannotBeLeader)
+}
+
+func isDisbandUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrOnlyLeaderCanDisband)
+}
+
+func isEditDescriptionUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrOnlyLeaderCanEditDescription)
+}
+
+// ── Page components ───────────────────────────────────────────────────────────
 
 func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, viewerRole _guild.MemberRole, pending []db.ListPendingRequestsRow, invitations []db.ListGuildInvitationsRow) Node {
 	slug := g.Slug

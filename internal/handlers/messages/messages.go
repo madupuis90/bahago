@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -38,6 +39,26 @@ type guildMsgInput struct {
 	Body    string `json:"msg_body"`
 	Target  string `json:"guild_msg_target"`
 }
+
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	// Validator sentinels.
+	ErrRecipientRequired = errors.New("recipient is required")
+	ErrSubjectRequired   = errors.New("subject is required")
+	ErrBodyRequired      = errors.New("message body is required")
+	ErrBodyTooLong       = errors.New("message body must be 5000 characters or fewer")
+	ErrInvalidRecipientGroup = errors.New("invalid recipient group")
+
+	// Orchestrator sentinels.
+	ErrTooManyRecipients      = errors.New("cannot send to more than 20 recipients at once")
+	ErrSelfSend               = errors.New("cannot send a message to yourself")
+	ErrUnknownRecipients      = errors.New("unknown kingdom(s)")
+	ErrNotInGuild             = errors.New("not authorized to send guild messages")
+	ErrNotAuthorizedAll       = errors.New("not authorized to message all members")
+	ErrNotAuthorizedOfficers  = errors.New("not authorized to message officers")
+	ErrNoGuildRecipients      = errors.New("no recipients found in your guild")
+)
 
 // ── Guild message context ─────────────────────────────────────────────────────
 
@@ -110,7 +131,7 @@ func (h *handler) handleMessagesPage() http.HandlerFunc {
 			return
 		}
 
-		gc, err := h.loadGuildCtx(r, kingdom.ID)
+		gc, err := h.loadGuildCtx(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("messages page: load guild ctx: %v", err)
 		}
@@ -192,7 +213,7 @@ func (h *handler) handleView() http.HandlerFunc {
 			return
 		}
 
-		gc, err := h.loadGuildCtx(r, kingdom.ID)
+		gc, err := h.loadGuildCtx(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("messages view: load guild ctx: %v", err)
 		}
@@ -212,7 +233,7 @@ func (h *handler) handleComposePage() http.HandlerFunc {
 			return
 		}
 
-		gc, err := h.loadGuildCtx(r, kingdom.ID)
+		gc, err := h.loadGuildCtx(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("messages compose: load guild ctx: %v", err)
 		}
@@ -230,101 +251,23 @@ func (h *handler) handleSend() http.HandlerFunc {
 		input := &composeInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("messages send: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
-		if strings.TrimSpace(input.To) == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("recipient is required")))
-			return
-		}
-		if strings.TrimSpace(input.Subject) == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("subject is required")))
-			return
-		}
-		if strings.TrimSpace(input.Body) == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("message body is required")))
-			return
-		}
-		if len(input.Body) > 5000 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("message body must be 5000 characters or fewer")))
+		if errs := validateComposeInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errs...)))
 			return
 		}
 
-		names := splitRecipients(input.To)
-		if len(names) == 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("recipient is required")))
-			return
-		}
-
-		// Deduplicate names case-insensitively, preserving first-occurrence order.
-		seen := make(map[string]struct{}, len(names))
-		dedupe := names[:0]
-		for _, name := range names {
-			key := strings.ToLower(name)
-			if _, ok := seen[key]; !ok {
-				seen[key] = struct{}{}
-				dedupe = append(dedupe, name)
-			}
-		}
-		names = dedupe
-
-		if len(names) > 20 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("cannot send to more than 20 recipients at once")))
-			return
-		}
-
-		// Resolve all recipient kingdoms in a single query.
-		// The name column is CITEXT so matching is case-insensitive.
-		kingdoms, err := h.queries.GetKingdomsByNames(r.Context(), names)
-		if err != nil {
-			log.Printf("messages send: get kingdoms by names: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
-			return
-		}
-
-		// If fewer kingdoms came back than names requested, find and report the missing ones.
-		if len(kingdoms) != len(names) {
-			found := make(map[string]struct{}, len(kingdoms))
-			for _, k := range kingdoms {
-				found[strings.ToLower(k.Name)] = struct{}{}
-			}
-			var unknown []string
-			for _, name := range names {
-				if _, ok := found[strings.ToLower(name)]; !ok {
-					unknown = append(unknown, name)
-				}
-			}
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(fmt.Errorf("unknown kingdom(s): %s", strings.Join(unknown, ", "))))
-			return
-		}
-
-		// All names resolved. Build the ID list and check for self-send.
-		toIDs := make([]int, len(kingdoms))
-		for i, k := range kingdoms {
-			if k.ID == kingdom.ID {
-				datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("cannot send a message to yourself")))
+		if err := h.sendMessages(r.Context(), kingdom.ID, input); err != nil {
+			if isSendUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(err)))
 				return
 			}
-			toIDs[i] = k.ID
-		}
-
-		params := db.BulkCreateMessagesParams{
-			FromKingdomID: kingdom.ID,
-			ToKingdomIds:  toIDs,
-			Subject:       strings.TrimSpace(input.Subject),
-			Body:          strings.TrimSpace(input.Body),
-		}
-		if err := h.queries.BulkCreateMessages(r.Context(), params); err != nil {
-			log.Printf("messages send: bulk create messages: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
+			log.Printf("messages send: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("internal error"))))
 			return
-		}
-
-		// Notify each recipient's live SSE connections so their sidebar badge
-		// updates immediately rather than waiting for the next game tick.
-		for _, k := range kingdoms {
-			h.hub.Publish(k)
 		}
 
 		if err := datastar.NewSSE(w, r).Redirect(routes.KingdomMessagesPath); err != nil {
@@ -340,7 +283,7 @@ func (h *handler) handleDelete() http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.Atoi(idStr)
 		if err != nil || id <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("invalid message id")))
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("invalid message id"))))
 			return
 		}
 
@@ -350,7 +293,7 @@ func (h *handler) handleDelete() http.HandlerFunc {
 		}
 		if err := h.queries.DeleteMessage(r.Context(), params); err != nil {
 			log.Printf("messages delete: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -403,7 +346,7 @@ func (h *handler) handleGuildMessageCompose() http.HandlerFunc {
 			return
 		}
 
-		gc, err := h.loadGuildCtx(r, kingdom.ID)
+		gc, err := h.loadGuildCtx(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("messages guild compose: load guild ctx: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -427,97 +370,215 @@ func (h *handler) handleGuildMessageSend() http.HandlerFunc {
 		input := &guildMsgInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("messages guild send: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
-		if strings.TrimSpace(input.Subject) == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("subject is required")))
-			return
-		}
-		if strings.TrimSpace(input.Body) == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("message body is required")))
-			return
-		}
-		if len(input.Body) > 5000 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("message body must be 5000 characters or fewer")))
-			return
-		}
-		if input.Target != "all" && input.Target != "officers" {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("invalid recipient group")))
+		if errs := validateGuildMessageInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errs...)))
 			return
 		}
 
-		gc, err := h.loadGuildCtx(r, kingdom.ID)
-		if err != nil {
-			log.Printf("messages guild send: load guild ctx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
-			return
-		}
-		if !gc.canSendAny() {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("not authorized to send guild messages")))
-			return
-		}
-
-		// Server-side permission check for the requested target.
-		switch input.Target {
-		case "all":
-			if !gc.Perms.CanSendToAll(gc.Role) {
-				datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("not authorized to message all members")))
+		if err := h.sendGuildMessage(r.Context(), kingdom.ID, input); err != nil {
+			if isGuildSendUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(err)))
 				return
 			}
-		case "officers":
-			if !gc.Perms.CanSendToOfficers(gc.Role) {
-				datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("not authorized to message officers")))
-				return
-			}
-		}
-
-		var toIDs []int
-		switch input.Target {
-		case "all":
-			toIDs, err = h.queries.ListGuildMembersExcludingSelf(r.Context(), db.ListGuildMembersExcludingSelfParams{
-				GuildID:          gc.GuildID,
-				ExcludeKingdomID: kingdom.ID,
-			})
-		case "officers":
-			toIDs, err = h.queries.ListGuildOfficersExcludingSelf(r.Context(), db.ListGuildOfficersExcludingSelfParams{
-				GuildID:          gc.GuildID,
-				ExcludeKingdomID: kingdom.ID,
-			})
-		}
-		if err != nil {
-			log.Printf("messages guild send: list recipients: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
+			log.Printf("messages guild send: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(messagesAlert(AlertError(errors.New("internal error"))))
 			return
-		}
-		if len(toIDs) == 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("no recipients found in your guild")))
-			return
-		}
-
-		params := db.BulkCreateMessagesParams{
-			FromKingdomID:  kingdom.ID,
-			ToKingdomIds:   toIDs,
-			Subject:        strings.TrimSpace(input.Subject),
-			Body:           strings.TrimSpace(input.Body),
-			IsGuildMessage: true,
-		}
-		if err := h.queries.BulkCreateMessages(r.Context(), params); err != nil {
-			log.Printf("messages guild send: bulk create: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(messagesError(errors.New("internal error")))
-			return
-		}
-
-		// Notify each recipient's live SSE connections.
-		for _, id := range toIDs {
-			h.hub.Publish(db.Kingdom{ID: id})
 		}
 
 		if err := datastar.NewSSE(w, r).Redirect(routes.KingdomMessagesPath); err != nil {
 			log.Printf("messages guild send: redirect: %v", err)
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+func validateComposeInput(in *composeInput) []error {
+	var errs []error
+	if strings.TrimSpace(in.To) == "" {
+		errs = append(errs, ErrRecipientRequired)
+	}
+	if strings.TrimSpace(in.Subject) == "" {
+		errs = append(errs, ErrSubjectRequired)
+	}
+	if strings.TrimSpace(in.Body) == "" {
+		errs = append(errs, ErrBodyRequired)
+	} else if len(in.Body) > 5000 {
+		errs = append(errs, ErrBodyTooLong)
+	}
+	return errs
+}
+
+func validateGuildMessageInput(in *guildMsgInput) []error {
+	var errs []error
+	if strings.TrimSpace(in.Subject) == "" {
+		errs = append(errs, ErrSubjectRequired)
+	}
+	if strings.TrimSpace(in.Body) == "" {
+		errs = append(errs, ErrBodyRequired)
+	} else if len(in.Body) > 5000 {
+		errs = append(errs, ErrBodyTooLong)
+	}
+	if in.Target != "all" && in.Target != "officers" {
+		errs = append(errs, ErrInvalidRecipientGroup)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// sendMessages parses recipient names, deduplicates, resolves them to kingdoms
+// via a single bulk lookup, and inserts the messages. Returns sentinel errors
+// for user-visible cases. Unknown recipients are surfaced via a wrapped error
+// that includes the missing names in its message but matches ErrUnknownRecipients
+// under errors.Is.
+func (h *handler) sendMessages(ctx context.Context, fromKingdomID int, input *composeInput) error {
+	names := splitRecipients(input.To)
+	if len(names) == 0 {
+		return ErrRecipientRequired
+	}
+
+	// Deduplicate names case-insensitively, preserving first-occurrence order.
+	seen := make(map[string]struct{}, len(names))
+	dedupe := names[:0]
+	for _, name := range names {
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; !ok {
+			seen[key] = struct{}{}
+			dedupe = append(dedupe, name)
+		}
+	}
+	names = dedupe
+
+	if len(names) > 20 {
+		return ErrTooManyRecipients
+	}
+
+	// Resolve all recipient kingdoms in a single query.
+	// The name column is CITEXT so matching is case-insensitive.
+	kingdoms, err := h.queries.GetKingdomsByNames(ctx, names)
+	if err != nil {
+		return fmt.Errorf("get kingdoms by names: %w", err)
+	}
+
+	// If fewer kingdoms came back than names requested, find and report the missing ones.
+	if len(kingdoms) != len(names) {
+		found := make(map[string]struct{}, len(kingdoms))
+		for _, k := range kingdoms {
+			found[strings.ToLower(k.Name)] = struct{}{}
+		}
+		var unknown []string
+		for _, name := range names {
+			if _, ok := found[strings.ToLower(name)]; !ok {
+				unknown = append(unknown, name)
+			}
+		}
+		// Wrap the sentinel so errors.Is matches AND err.Error() includes the names.
+		return fmt.Errorf("%w: %s", ErrUnknownRecipients, strings.Join(unknown, ", "))
+	}
+
+	toIDs := make([]int, len(kingdoms))
+	for i, k := range kingdoms {
+		if k.ID == fromKingdomID {
+			return ErrSelfSend
+		}
+		toIDs[i] = k.ID
+	}
+
+	if err := h.queries.BulkCreateMessages(ctx, db.BulkCreateMessagesParams{
+		FromKingdomID: fromKingdomID,
+		ToKingdomIds:  toIDs,
+		Subject:       strings.TrimSpace(input.Subject),
+		Body:          strings.TrimSpace(input.Body),
+	}); err != nil {
+		return fmt.Errorf("bulk create messages: %w", err)
+	}
+
+	// Notify each recipient's live SSE connections so their sidebar badge
+	// updates immediately rather than waiting for the next game tick.
+	for _, k := range kingdoms {
+		h.hub.Publish(k)
+	}
+	return nil
+}
+
+// sendGuildMessage loads the sender's guild context, enforces the per-target
+// permission, lists the recipient set, and inserts the messages. Returns
+// sentinel errors for user-visible cases. The handler-level validator catches
+// invalid targets before this is called, so input.Target is always "all" or
+// "officers" here.
+func (h *handler) sendGuildMessage(ctx context.Context, fromKingdomID int, input *guildMsgInput) error {
+	gc, err := h.loadGuildCtx(ctx, fromKingdomID)
+	if err != nil {
+		return fmt.Errorf("load guild ctx: %w", err)
+	}
+	if !gc.canSendAny() {
+		return ErrNotInGuild
+	}
+
+	switch input.Target {
+	case "all":
+		if !gc.Perms.CanSendToAll(gc.Role) {
+			return ErrNotAuthorizedAll
+		}
+	case "officers":
+		if !gc.Perms.CanSendToOfficers(gc.Role) {
+			return ErrNotAuthorizedOfficers
+		}
+	}
+
+	var toIDs []int
+	switch input.Target {
+	case "all":
+		toIDs, err = h.queries.ListGuildMembersExcludingSelf(ctx, db.ListGuildMembersExcludingSelfParams{
+			GuildID:          gc.GuildID,
+			ExcludeKingdomID: fromKingdomID,
+		})
+	case "officers":
+		toIDs, err = h.queries.ListGuildOfficersExcludingSelf(ctx, db.ListGuildOfficersExcludingSelfParams{
+			GuildID:          gc.GuildID,
+			ExcludeKingdomID: fromKingdomID,
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("list recipients: %w", err)
+	}
+	if len(toIDs) == 0 {
+		return ErrNoGuildRecipients
+	}
+
+	if err := h.queries.BulkCreateMessages(ctx, db.BulkCreateMessagesParams{
+		FromKingdomID:  fromKingdomID,
+		ToKingdomIds:   toIDs,
+		Subject:        strings.TrimSpace(input.Subject),
+		Body:           strings.TrimSpace(input.Body),
+		IsGuildMessage: true,
+	}); err != nil {
+		return fmt.Errorf("bulk create: %w", err)
+	}
+
+	for _, id := range toIDs {
+		h.hub.Publish(db.Kingdom{ID: id})
+	}
+	return nil
+}
+
+func isSendUserError(err error) bool {
+	return errors.Is(err, ErrRecipientRequired) ||
+		errors.Is(err, ErrTooManyRecipients) ||
+		errors.Is(err, ErrSelfSend) ||
+		errors.Is(err, ErrUnknownRecipients)
+}
+
+func isGuildSendUserError(err error) bool {
+	return errors.Is(err, ErrNotInGuild) ||
+		errors.Is(err, ErrNotAuthorizedAll) ||
+		errors.Is(err, ErrNotAuthorizedOfficers) ||
+		errors.Is(err, ErrNoGuildRecipients)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -539,8 +600,8 @@ func splitRecipients(raw string) []string {
 
 // loadGuildCtx fetches the kingdom's active guild membership and guild settings.
 // Returns nil, nil when the kingdom is not an active guild member.
-func (h *handler) loadGuildCtx(r *http.Request, kingdomID int) (*guildMsgCtx, error) {
-	membership, err := h.queries.GetKingdomGuildMembership(r.Context(), kingdomID)
+func (h *handler) loadGuildCtx(ctx context.Context, kingdomID int) (*guildMsgCtx, error) {
+	membership, err := h.queries.GetKingdomGuildMembership(ctx, kingdomID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -553,7 +614,7 @@ func (h *handler) loadGuildCtx(r *http.Request, kingdomID int) (*guildMsgCtx, er
 		return nil, nil // applicant or supporter phase — not eligible
 	}
 
-	guild, err := h.queries.GetGuildByID(r.Context(), membership.GuildID)
+	guild, err := h.queries.GetGuildByID(ctx, membership.GuildID)
 	if err != nil {
 		return nil, fmt.Errorf("get guild: %w", err)
 	}
@@ -667,7 +728,7 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 	}
 	replyURL := fmt.Sprintf("%s?to=%s&subject=%s", routes.KingdomMessagesComposePath, url.QueryEscape(m.FromKingdomName), url.QueryEscape(replySubject))
 	return Div(
-		messagesError(nil),
+		messagesAlert(nil),
 		Div(Class("messages-detail panel"),
 			Div(Class("message-detail-header"),
 				P(Class("message-detail-subject"), Span(Class("label"), Text("Subject")), Text(m.Subject)),
@@ -696,7 +757,7 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 
 func composePanel(to, subject string) Node {
 	return Div(
-		messagesError(nil),
+		messagesAlert(nil),
 		Div(Class("compose-form panel"),
 			ds.Signals(map[string]any{
 				"msg_to":      to,
@@ -745,7 +806,7 @@ func guildMessagePanel(targets []guildMsgTarget) Node {
 		defaultTarget = targets[0].Value
 	}
 	return Div(
-		messagesError(nil),
+		messagesAlert(nil),
 		Div(Class("compose-form panel"),
 			ds.Signals(map[string]any{
 				"guild_msg_target": defaultTarget,
@@ -788,14 +849,4 @@ func guildMessagePanel(targets []guildMsgTarget) Node {
 	)
 }
 
-func messagesError(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(
-		ID("messages-alert"),
-		Classes{"alert--error": err != nil},
-		Text(msg),
-	)
-}
+func messagesAlert(inner Node) Node { return AlertContainer("messages-alert", inner) }

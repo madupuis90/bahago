@@ -1,6 +1,7 @@
 package prayers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -42,6 +43,17 @@ type castInput struct {
 	// ignores this value and always targets the casting kingdom itself.
 	TargetKingdomName string `json:"target_kingdom"`
 }
+
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	ErrUnknownPrayerType     = errors.New("unknown prayer type")
+	ErrInvalidPrayerDuration = errors.New("duration must be between 1 and 48 ticks")
+	ErrMaxPrayersReached     = fmt.Errorf("you may only have %d active prayer at a time", maxPrayers)
+	ErrPrayerAlreadyActive   = errors.New("this prayer is already active on this kingdom")
+	ErrInvalidPrayerID       = errors.New("invalid prayer ID")
+	ErrPrayerNotFound        = errors.New("prayer not found")
+)
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -118,66 +130,22 @@ func (h *handler) handleCast() http.HandlerFunc {
 		input := &castInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
 			log.Printf("cast prayer: read signals: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("invalid request")))
+			datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
 
-		prayerType := input.PrayerType
-		def, ok := game.PrayerDefs[prayerType]
-		if !ok {
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("unknown prayer type")))
+		if errs := validateCastInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errs...)))
 			return
 		}
 
-		if input.PrayerTicks < 1 || input.PrayerTicks > 48 {
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("duration must be between 1 and 48 ticks")))
-			return
-		}
-
-		// SERIALIZABLE transaction: the prayer count read and the insert share the same
-		// transaction so PostgreSQL SSI detects concurrent double-casts of different prayer
-		// types that would otherwise both pass the maxPrayers check independently.
-		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
-		if err != nil {
-			log.Printf("cast prayer: begin tx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
-			return
-		}
-		defer tx.Rollback(r.Context()) //nolint:errcheck
-
-		txq := db.New(tx)
-
-		existing, err := txq.ListKingdomPrayers(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("cast prayer: list prayers: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
-			return
-		}
-		if len(existing) >= maxPrayers {
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(fmt.Errorf("you may only have %d active prayer at a time", maxPrayers)))
-			return
-		}
-
-		_, err = txq.CreatePrayer(r.Context(), db.CreatePrayerParams{
-			KingdomID:  kingdom.ID,
-			PrayerType: prayerType,
-			// TODO: resolve input.TargetKingdomName to an ID when cross-kingdom targeting is enabled.
-			TargetKingdomID: kingdom.ID,
-			TicksTotal:      input.PrayerTicks,
-		})
-		if err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(fmt.Errorf("%s is already active on this kingdom", def.Name)))
+		if err := h.castPrayer(r.Context(), kingdom.ID, input); err != nil {
+			if isCastUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(err)))
 				return
 			}
-			log.Printf("cast prayer: create: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
-			return
-		}
-
-		if err := tx.Commit(r.Context()); err != nil {
-			log.Printf("cast prayer: commit: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
+			log.Printf("cast prayer: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
@@ -189,23 +157,113 @@ func (h *handler) handleCancel() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		prayerID, err := strconv.Atoi(r.PathValue("id"))
+		prayerID, err := validatePrayerID(r.PathValue("id"))
 		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("invalid prayer ID")))
+			datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(err)))
 			return
 		}
 
-		if err := h.queries.DeletePrayer(r.Context(), db.DeletePrayerParams{
-			ID:        prayerID,
-			KingdomID: kingdom.ID,
-		}); err != nil {
-			log.Printf("cancel prayer: delete: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
+		if err := h.cancelPrayer(r.Context(), kingdom.ID, prayerID); err != nil {
+			if isCancelUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(err)))
+				return
+			}
+			log.Printf("cancel prayer: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		h.renderPrayersPage(w, r, kingdom.ID, "cancel prayer")
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateCastInput runs every field-level rule that does not need DB access.
+func validateCastInput(input *castInput) []error {
+	var errs []error
+	if _, ok := game.PrayerDefs[input.PrayerType]; !ok {
+		errs = append(errs, ErrUnknownPrayerType)
+	}
+	if input.PrayerTicks < 1 || input.PrayerTicks > 48 {
+		errs = append(errs, ErrInvalidPrayerDuration)
+	}
+	return errs
+}
+
+// validatePrayerID parses and bounds-checks the path id.
+func validatePrayerID(idStr string) (int, error) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		return 0, ErrInvalidPrayerID
+	}
+	return id, nil
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// castPrayer opens a SERIALIZABLE transaction, checks the active-prayer cap,
+// and inserts the new prayer. The serializable isolation ensures concurrent
+// double-casts of different prayer types cannot both pass the cap check.
+// Returns ErrMaxPrayersReached when the kingdom already has maxPrayers active,
+// ErrPrayerAlreadyActive when the unique (kingdom_id, prayer_type) constraint
+// fires. Other errors are wrapped for logging.
+func (h *handler) castPrayer(ctx context.Context, kingdomID int, input *castInput) error {
+	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	txq := db.New(tx)
+
+	existing, err := txq.ListKingdomPrayers(ctx, kingdomID)
+	if err != nil {
+		return fmt.Errorf("list prayers: %w", err)
+	}
+	if len(existing) >= maxPrayers {
+		return ErrMaxPrayersReached
+	}
+
+	if _, err := txq.CreatePrayer(ctx, db.CreatePrayerParams{
+		KingdomID:  kingdomID,
+		PrayerType: input.PrayerType,
+		// TODO: resolve input.TargetKingdomName to an ID when cross-kingdom targeting is enabled.
+		TargetKingdomID: kingdomID,
+		TicksTotal:      input.PrayerTicks,
+	}); err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return fmt.Errorf("%w: %s", ErrPrayerAlreadyActive, game.PrayerDefs[input.PrayerType].Name)
+		}
+		return fmt.Errorf("create prayer: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+// cancelPrayer deletes a prayer owned by kingdomID.
+func (h *handler) cancelPrayer(ctx context.Context, kingdomID, prayerID int) error {
+	if err := h.queries.DeletePrayer(ctx, db.DeletePrayerParams{
+		ID:        prayerID,
+		KingdomID: kingdomID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrPrayerNotFound
+		}
+		return fmt.Errorf("delete prayer: %w", err)
+	}
+	return nil
+}
+
+func isCancelUserError(err error) bool {
+	return errors.Is(err, ErrPrayerNotFound)
+}
+
+func isCastUserError(err error) bool {
+	return errors.Is(err, ErrMaxPrayersReached) || errors.Is(err, ErrPrayerAlreadyActive)
 }
 
 // renderPrayersPage reloads the kingdom and its prayers from the DB and patches
@@ -215,13 +273,13 @@ func (h *handler) renderPrayersPage(w http.ResponseWriter, r *http.Request, king
 	prayers, err := h.queries.ListKingdomPrayers(r.Context(), kingdomID)
 	if err != nil {
 		log.Printf("%s: list prayers: %v", logPrefix, err)
-		datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
+		datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errors.New("internal error"))))
 		return
 	}
 	k, err := h.queries.GetKingdomByID(r.Context(), kingdomID)
 	if err != nil {
 		log.Printf("%s: reload kingdom: %v", logPrefix, err)
-		datastar.NewSSE(w, r).PatchElementGostar(prayerErrorComponent(errors.New("internal error")))
+		datastar.NewSSE(w, r).PatchElementGostar(prayerAlert(AlertError(errors.New("internal error"))))
 		return
 	}
 	sse := datastar.NewSSE(w, r)
@@ -241,7 +299,7 @@ func prayersContent(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
 			"prayer_ticks":   8,
 			"target_kingdom": kingdom.Name,
 		}, ds.ModifierIfMissing),
-		prayerErrorComponent(nil),
+		prayerAlert(nil),
 		activePrayersSection(prayers),
 		availablePrayersSection(),
 	})
@@ -338,13 +396,7 @@ func availablePrayerCard(def game.PrayerDef) Node {
 	)
 }
 
-func prayerErrorComponent(err error) Node {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Div(ID("prayer-error"), Class("prayer-error"), Text(msg))
-}
+func prayerAlert(inner Node) Node { return AlertContainer("prayer-alert", inner) }
 
 func resourceBonusText(def game.PrayerDef) string {
 	b := def.ResourceBonusPct

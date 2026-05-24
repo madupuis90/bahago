@@ -1,0 +1,703 @@
+/* ============================================================
+   Refined Ledger — static HTML/CSS port
+   Originally: Cormorant Garamond + IM Fell English on parchment.
+   No JS required. Sliders/buttons are static visual mocks.
+   ============================================================ */
+
+/* ---------- Tokens ---------- */
+:root {
+  --parchment:        #f7eed5;
+  --parchment-deep:   #ebdfb6;
+  --ink:              #2a2418;
+  --ink-soft:         #5a4d36;
+  --accent:           #2f5a3d;
+  --accent-dark:      #1d3a26;
+  --rubric:           #7a3018;
+  --edge:             #b8a26a;
+  --shadow:           rgba(75, 55, 25, .18);
+
+  /* Layered parchment background. */
+  --parchment-bg:
+    radial-gradient(ellipse at 30% 20%, rgba(255,250,236,.9), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(220,200,160,.35), transparent 60%),
+    linear-gradient(180deg, #f7eed5, #efe3c0);
+
+  /* Inline SVG noise grain. */
+  --noise:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+}
+
+/* ---------- Page chrome (only for the demo doc) ---------- */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #2a2418;
+  color: #d8c79a;
+  font-family: 'IM Fell English', 'Garamond', serif;
+}
+
+.doc {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.doc h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: .04em;
+  color: #d8c79a;
+  margin: 48px 0 14px;
+}
+
+.doc h2:first-of-type { margin-top: 0; }
+
+.frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.frame {
+  background: #000;
+  border: 1px solid #4a3e22;
+  box-shadow: 0 24px 48px rgba(0,0,0,.4);
+}
+
+.frame--desktop { width: 1180px; height: 780px; }
+.frame--mobile  { width: 390px;  height: 780px; }
+
+/* ============================================================
+   Refined Ledger — actual UI
+   ============================================================ */
+
+.rl {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'IM Fell English', 'Garamond', serif;
+  color: var(--ink);
+  background: var(--parchment-bg);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.rl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--noise);
+  mix-blend-mode: multiply;
+  opacity: .4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rl > * { position: relative; z-index: 1; }
+
+/* ---------- Type primitives ---------- */
+.rl h1 {
+  font-family: 'Cormorant Garamond', 'Garamond', serif;
+  font-weight: 500;
+  color: var(--rubric);
+  margin: 0;
+  letter-spacing: 0;
+}
+.rl .rubric { color: var(--rubric); font-family: 'IM Fell English', serif; }
+.rl .marg {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+.rl .uppr {
+  font-family: 'IM Fell English SC', 'IM Fell English', serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+.rl .uppr.rubric { color: var(--rubric); }
+.rl .rule { height: 1px; background: var(--edge); }
+.rl .rule-dbl {
+  height: 3px;
+  background: linear-gradient(180deg,
+    var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
+}
+.rl .panel {
+  background: rgba(255,250,236,.55);
+  border: 1px solid var(--edge);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.rl .oldnum {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+}
+
+/* ---------- Resource icons (non-shield, ink lines) ---------- */
+.rl-resicon {
+  display: block;
+  color: var(--rubric);
+  flex-shrink: 0;
+}
+
+/* ---------- Light scribal shield ---------- */
+.shield {
+  display: block;
+  color: var(--ink-soft); /* line color via currentColor */
+}
+.shield--active { color: var(--rubric); }
+.shield--dim    { opacity: .55; }
+
+.shield .s-outline {
+  fill: rgba(255, 250, 236, .45);
+  stroke: currentColor;
+  stroke-width: .9;
+  stroke-linejoin: round;
+}
+.shield--active .s-outline { fill: rgba(122, 48, 24, .10); }
+
+.shield .s-inline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: .35;
+  stroke-linejoin: round;
+  opacity: .5;
+}
+.shield .s-charge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.1;
+  stroke-linecap: square;
+  stroke-linejoin: round;
+}
+.shield .s-charge--thin { stroke-width: .9; }
+.shield .s-charge--round { stroke-linecap: round; }
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+
+.rl-topbar {
+  flex-shrink: 0;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(255,250,236,.45), rgba(235,223,182,.18));
+  border-bottom: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(255,250,236,.6), 0 2px 0 var(--edge);
+  position: relative;
+  z-index: 2;
+}
+.rl--mobile .rl-topbar { padding: 11px 14px 12px; }
+
+.rl-topbar__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 14px;
+}
+
+.rl-realm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rl-realm__title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1;
+}
+.rl--mobile .rl-realm__title { font-size: 15px; }
+.rl-realm__sub { margin-top: 3px; font-size: 11.5px; }
+
+.rl-tick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rl-tick__chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--edge);
+  background: rgba(255,250,236,.4);
+}
+.rl-tick__chip .uppr { font-size: 8.5px; color: var(--rubric); }
+.rl-tick__value {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-size: 13px;
+  font-weight: 500;
+}
+.rl-tick__depart { font-size: 11.5px; cursor: pointer; }
+
+/* Resource cartouches */
+.rl-resources {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.rl--mobile .rl-resources {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.rl-res {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255,250,236,.55);
+  border: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset;
+}
+.rl--mobile .rl-res { gap: 6px; padding: 5px 8px; }
+.rl-res__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  min-width: 0;
+}
+.rl-res__label {
+  font-family: 'IM Fell English SC', 'IM Fell English', serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 9px;
+  color: var(--rubric);
+}
+.rl--mobile .rl-res__label { font-size: 8px; }
+.rl-res__value {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.rl--mobile .rl-res__value { font-size: 14px; }
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+
+.rl-nav {
+  flex-shrink: 0;
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--edge);
+  box-shadow:
+    0 -1px 0 rgba(255,250,236,.6) inset,
+    0 -2px 0 var(--edge);
+  background: linear-gradient(0deg, rgba(255,250,236,.45), rgba(235,223,182,.15));
+  position: relative;
+  z-index: 2;
+}
+.rl-nav__row {
+  display: flex;
+  gap: 8px;
+}
+
+.rl-stone {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  background: rgba(255,250,236,.35);
+  border: 1px solid var(--edge);
+  cursor: pointer;
+  transition: all .15s;
+}
+.rl-stone__label {
+  font-family: 'IM Fell English', serif;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.rl-stone--active {
+  background: rgba(122, 48, 24, .06);
+  border-color: var(--rubric);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.rl-stone--active .rl-stone__label {
+  color: var(--rubric);
+  font-weight: 600;
+}
+
+/* Mobile two-row nav */
+.rl--mobile .rl-nav { padding: 8px 8px 10px; }
+.rl--mobile .rl-nav__row { gap: 5px; }
+.rl--mobile .rl-nav__row + .rl-nav__row { margin-top: 5px; }
+.rl--mobile .rl-stone { padding: 7px 4px; }
+.rl--mobile .rl-stone__label { font-size: 10px; }
+.rl-stone--pad { visibility: hidden; }
+
+/* ============================================================
+   OVERVIEW
+   ============================================================ */
+
+.rl-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 36px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rl--mobile .rl-body { padding: 14px 16px 12px; gap: 14px; }
+
+.rl-folio { margin-bottom: 0; }
+.rl-folio__tag {
+  font-size: 10px;
+  letter-spacing: .2em;
+  margin-bottom: 6px;
+}
+.rl-folio h1 { font-size: 36px; line-height: 1.05; }
+.rl--mobile .rl-folio h1 { font-size: 26px; }
+.rl-folio h1 .italic { color: var(--ink); font-style: italic; font-weight: 400; }
+.rl-folio h1 sup { font-size: .55em; }
+.rl-folio .rule-dbl { margin-top: 10px; }
+
+/* Two-column overview body */
+.rl-overview {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 28px;
+  flex: 1;
+  min-height: 0;
+}
+.rl--mobile .rl-overview {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.rl-overview__col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rl-overview__col .uppr.rubric { margin-bottom: 0; }
+
+/* Chronicle */
+.rl-chronicle {
+  position: relative;
+  padding-left: 8px;
+}
+.rl--mobile .rl-chronicle { padding-left: 0; }
+.rl-chronicle::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--edge);
+  opacity: .6;
+}
+.rl--mobile .rl-chronicle::before { display: none; }
+
+.rl-entry {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dotted var(--edge);
+}
+.rl--mobile .rl-entry { gap: 8px; }
+.rl-entry:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.rl-entry__main { flex: 1; min-width: 0; }
+.rl-entry__time {
+  font-family: 'IM Fell English SC', 'IM Fell English', serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--rubric);
+  font-size: 9px;
+  margin-bottom: 3px;
+}
+.rl-entry__head {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.rl--mobile .rl-entry__head { font-size: 15px; }
+.rl-entry__body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.rl--mobile .rl-entry__body { font-size: 12px; }
+.rl-entry__marg {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+  border-left: 1px solid var(--edge);
+  padding-left: 10px;
+  font-size: 11px;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.rl--mobile .rl-entry__marg { display: none; }
+
+/* Demesne / Host panels */
+.rl-stat,
+.rl-unit {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dotted var(--edge);
+}
+.rl-stat:last-child,
+.rl-unit:last-child { border-bottom: none; }
+
+.rl-stat__label { font-size: 12px; color: var(--ink-soft); flex: 1; }
+.rl-stat__value {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ink);
+}
+.rl-stat__delta {
+  font-size: 10px;
+  min-width: 56px;
+  text-align: right;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.rl-unit { gap: 8px; padding: 6px 0; }
+.rl-unit__name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 14px;
+}
+.rl-unit__leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--edge);
+  transform: translateY(-4px);
+}
+.rl-unit__count {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-weight: 500;
+  font-size: 16px;
+}
+.rl-unit__pwr {
+  font-size: 10px;
+  min-width: 28px;
+  text-align: right;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* ============================================================
+   ALLOCATION
+   ============================================================ */
+
+.rl-alloc {
+  padding: 4px 18px 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rl-alloc__head,
+.rl-alloc__row,
+.rl-alloc__idle {
+  display: grid;
+  grid-template-columns: 36px 1.4fr 2.4fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  align-items: center;
+}
+.rl-alloc__head {
+  padding: 10px 0 6px;
+  border-bottom: 1px solid var(--edge);
+}
+.rl-alloc__head .uppr { font-size: 9px; color: var(--rubric); }
+
+.rl-alloc__row {
+  border-bottom: 1px dotted var(--edge);
+}
+.rl-alloc__row:last-of-type { border-bottom: none; }
+
+.rl-alloc__shield {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rl-alloc__role {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 15px;
+}
+.rl-alloc__assign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rl-alloc__pct {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-size: 15px;
+  font-weight: 500;
+}
+.rl-alloc__num {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.rl-alloc__num--pos { color: var(--accent-dark); }
+.rl-alloc__num--neg { color: var(--rubric); }
+.rl-alloc__num--bold { font-weight: 600; }
+.rl-alloc__res {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+}
+
+/* Ledger button */
+.rl-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--edge);
+  background: rgba(255,250,236,.6);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Slider — pure CSS, no JS */
+.rl-slider {
+  position: relative;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.rl-slider__track {
+  flex: 1;
+  height: 2px;
+  background: var(--edge);
+  position: relative;
+}
+.rl-slider__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+}
+.rl-slider__ticks {
+  position: absolute;
+  inset: -3px 0;
+  pointer-events: none;
+}
+.rl-slider__ticks span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--edge);
+  opacity: .6;
+}
+.rl-slider__handle {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  background: var(--accent);
+  border: 1px solid var(--accent-dark);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* Allocation primary CTA */
+.rl-alloc__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.rl--mobile .rl-alloc__footer { justify-content: stretch; }
+.rl-cta {
+  background: var(--accent);
+  color: #f7eed5;
+  border: 1px solid var(--accent-dark);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 22px;
+  cursor: pointer;
+  letter-spacing: .05em;
+}
+.rl--mobile .rl-cta { width: 100%; }
+.rl-alloc__hint { font-size: 11.5px; }
+.rl--mobile .rl-alloc__hint { display: none; }
+
+/* ---------- Allocation mobile cards ---------- */
+.rl-alloc-card {
+  padding: 12px;
+}
+.rl-alloc-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.rl-alloc-card__role {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 16px;
+}
+.rl-alloc-card__pct {
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-size: 20px;
+  font-weight: 500;
+}
+.rl-alloc-card__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rl-alloc-card__nums {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Cormorant Garamond', serif;
+  font-variant-numeric: oldstyle-nums;
+  font-size: 12px;
+}
+.rl-alloc-card__nums .uppr { font-size: 8px; }
+.rl-alloc-card__nums b { font-weight: 600; }
+.rl-alloc-card__nums .pos b { color: var(--accent-dark); }
+.rl-alloc-card__nums .neg b { color: var(--rubric); }
+.rl-alloc-card__nums .zero b { color: var(--ink-soft); }
+.rl-alloc-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}

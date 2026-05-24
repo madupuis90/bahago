@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -48,47 +48,67 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := &ForgotPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errors.New("invalid request"))))
+			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
 		}
 
-		var errs []error
-		validateEmail(&errs, data.Email)
-		if len(errs) > 0 {
+		if errs := validateForgotPasswordInput(data); len(errs) > 0 {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(errs...)))
 			return
 		}
 
-		// Always respond with the same generic message regardless of outcome to prevent enumeration.
-		user, err := h.queries.GetUserByEmail(r.Context(), data.Email)
-		if err != nil {
-			genericMessage(w, r)
-			return
-		}
-
-		if err := h.queries.DeletePasswordResetTokensByUserID(r.Context(), user.ID); err != nil {
-			log.Printf("forgot-password: delete old tokens: %v", err)
-		}
-
-		token := generateToken()
-		pwReset := db.CreatePasswordResetTokenParams{
-			Token:     token,
-			UserID:    user.ID,
-			ExpiresAt: time.Now().Add(1 * time.Hour),
-		}
-		if err := h.queries.CreatePasswordResetToken(r.Context(), pwReset); err != nil {
-			log.Printf("forgot-password: create token: %v", err)
-			genericMessage(w, r)
-			return
-		}
-
-		resetURL := h.appURL + routes.ResetPasswordPath + "?" + tokenParam + "=" + token
-		fmt.Println(resetURL) // TODO: remove - only use for testing until I get a domain so e-mail are not flagged
-		if err := h.sender.Send(r.Context(), data.Email, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
-			log.Printf("forgot-password: send email: %v", err)
+		// Always respond generically to prevent user-enumeration via the
+		// response. Orchestrator errors are logged but do not change the UI.
+		if err := h.initiatePasswordReset(r.Context(), data.Email); err != nil {
+			log.Printf("forgot-password: %v", err)
 		}
 		genericMessage(w, r)
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+func validateForgotPasswordInput(in *ForgotPasswordForm) []error {
+	var errs []error
+	if err := validateEmail(in.Email); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// initiatePasswordReset deletes any existing reset tokens for the user,
+// creates a fresh one, and sends the reset email. Returns nil silently when
+// the email is not registered (no user-enumeration leak). Returns wrapped
+// errors for true infra failures so they can be logged by the caller.
+func (h *handler) initiatePasswordReset(ctx context.Context, email string) error {
+	user, err := h.queries.GetUserByEmail(ctx, email)
+	if err != nil {
+		// Unknown email — silently absorb to prevent enumeration.
+		return nil
+	}
+
+	if err := h.queries.DeletePasswordResetTokensByUserID(ctx, user.ID); err != nil {
+		// Non-fatal — log and continue creating a fresh token.
+		log.Printf("forgot-password: delete old tokens: %v", err)
+	}
+
+	token := generateToken()
+	if err := h.queries.CreatePasswordResetToken(ctx, db.CreatePasswordResetTokenParams{
+		Token:     token,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+	}); err != nil {
+		return fmt.Errorf("create token: %w", err)
+	}
+
+	resetURL := h.appURL + routes.ResetPasswordPath + "?" + tokenParam + "=" + token
+	fmt.Println(resetURL) // TODO: remove once domain is set up
+	if err := h.sender.Send(ctx, email, "Reset your password", resetPasswordEmail(resetURL)); err != nil {
+		return fmt.Errorf("send email: %w", err)
+	}
+	return nil
 }
 
 func genericMessage(w http.ResponseWriter, r *http.Request) {

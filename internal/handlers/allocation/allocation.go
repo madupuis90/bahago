@@ -1,6 +1,7 @@
 package allocation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -32,6 +33,13 @@ type allocationSignals struct {
 	DevotionPct  int `json:"devotion_pct"`
 	KnowledgePct int `json:"knowledge_pct"`
 }
+
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	ErrPercentageOutOfRange = errors.New("allocation values must be between 0 and 100")
+	ErrAllocationExceeds100 = errors.New("allocation cannot exceed 100%")
+)
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -132,37 +140,14 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			return
 		}
 
-		values := []int{
-			input.WoodPct, input.StonePct, input.FoodPct,
-			input.ManaPct, input.DevotionPct, input.KnowledgePct,
-		}
-		for _, v := range values {
-			if v < 0 || v > 100 {
-				datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("allocation values must be between 0 and 100"))))
-				return
-			}
-		}
-
-		total := input.WoodPct + input.StonePct + input.FoodPct +
-			input.ManaPct + input.DevotionPct + input.KnowledgePct
-		if total > 100 {
-			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("allocation cannot exceed 100%"))))
+		if errs := validateAllocationInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errs...)))
 			return
 		}
 
-		params := db.UpdateKingdomAllocationsParams{
-			UserID:       user.ID,
-			WoodPct:      input.WoodPct,
-			StonePct:     input.StonePct,
-			FoodPct:      input.FoodPct,
-			ManaPct:      input.ManaPct,
-			DevotionPct:  input.DevotionPct,
-			KnowledgePct: input.KnowledgePct,
-			IdlePct:      100 - total,
-		}
-		updatedKingdom, err := h.queries.UpdateKingdomAllocations(r.Context(), params)
+		updatedKingdom, err := h.updateAllocations(r.Context(), user.ID, input)
 		if err != nil {
-			log.Printf("save-allocation: update allocations: %v", err)
+			log.Printf("save-allocation: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("failed to save allocation"))))
 			return
 		}
@@ -192,6 +177,55 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			log.Printf("save-allocation: patch: %v", err)
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateAllocationInput runs the bounds and sum checks on the six resource
+// percentages. Accumulates errors so the handler can show all problems at once.
+// IdlePct is not validated — it is derived from 100 minus the others.
+func validateAllocationInput(input *allocationSignals) []error {
+	var errs []error
+	values := []int{
+		input.WoodPct, input.StonePct, input.FoodPct,
+		input.ManaPct, input.DevotionPct, input.KnowledgePct,
+	}
+	for _, v := range values {
+		if v < 0 || v > 100 {
+			errs = append(errs, ErrPercentageOutOfRange)
+			break // one violation is enough to communicate the rule
+		}
+	}
+	total := input.WoodPct + input.StonePct + input.FoodPct +
+		input.ManaPct + input.DevotionPct + input.KnowledgePct
+	if total > 100 {
+		errs = append(errs, ErrAllocationExceeds100)
+	}
+	return errs
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// updateAllocations writes the new allocation percentages, computing idle as
+// 100 minus the sum of the six resource slices. Returns the updated kingdom.
+func (h *handler) updateAllocations(ctx context.Context, userID int, input *allocationSignals) (db.Kingdom, error) {
+	total := input.WoodPct + input.StonePct + input.FoodPct +
+		input.ManaPct + input.DevotionPct + input.KnowledgePct
+
+	updated, err := h.queries.UpdateKingdomAllocations(ctx, db.UpdateKingdomAllocationsParams{
+		UserID:       userID,
+		WoodPct:      input.WoodPct,
+		StonePct:     input.StonePct,
+		FoodPct:      input.FoodPct,
+		ManaPct:      input.ManaPct,
+		DevotionPct:  input.DevotionPct,
+		KnowledgePct: input.KnowledgePct,
+		IdlePct:      100 - total,
+	})
+	if err != nil {
+		return db.Kingdom{}, fmt.Errorf("update allocations: %w", err)
+	}
+	return updated, nil
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────

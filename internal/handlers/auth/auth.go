@@ -125,19 +125,47 @@ func isValidToken(token string) bool {
 	return err == nil
 }
 
-// ── Validation helpers ──────────────────────────────────────────────
+// ── Sentinel errors ─────────────────────────────────────────────────
+//
+// These are shared across the auth handlers and form the contract between
+// per-handler validators/orchestrators and the handler that maps them to
+// alerts. Their error message *is* the user-facing alert text; the handler
+// does not translate.
 
-func validateEmail(errs *[]error, email string) {
+var (
+	// Validation sentinels (per-handler validators).
+	ErrInvalidEmail   = errors.New("invalid email format")
+	ErrPasswordTooShort = errors.New("password must be at least 8 characters")
+	ErrPasswordTooLong  = errors.New("password must be at most 72 characters")
+	ErrMissingToken     = errors.New("missing token")
+	ErrInvalidRequest   = errors.New("invalid request")
+
+	// Orchestrator sentinels.
+	ErrInvalidCredentials      = errors.New("invalid email or password")
+	ErrUnverifiedEmail         = errors.New("please verify your email before logging in")
+	ErrEmailTaken              = errors.New("email already in use")
+	ErrEmailSendFailed         = errors.New("failed to send verification email — please try again")
+	ErrInvalidOrExpiredToken   = errors.New("reset link is invalid or has expired")
+)
+
+// ── Shared field validators ─────────────────────────────────────────
+//
+// Single-field rule checks. Return error (at most one) so per-handler
+// validateXxxInput funcs can compose them into a []error.
+
+func validateEmail(email string) error {
 	if _, err := mail.ParseAddress(email); err != nil {
-		*errs = append(*errs, errors.New("invalid email format"))
+		return ErrInvalidEmail
 	}
+	return nil
 }
 
-func validatePassword(errs *[]error, password string) {
+func validatePassword(password string) error {
 	if len(password) < 8 {
-		*errs = append(*errs, errors.New("password must be at least 8 characters"))
+		return ErrPasswordTooShort
 	}
 	if len(password) > 72 {
-		*errs = append(*errs, errors.New("password must be at most 72 characters"))
+		return ErrPasswordTooLong
 	}
+	return nil
 }

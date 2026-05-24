@@ -34,6 +34,15 @@ type kingdomCreateForm struct {
 	Name string `json:"kingdom_name"`
 }
 
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	ErrNameRequired    = errors.New("kingdom name is required")
+	ErrNameLettersOnly = errors.New("kingdom name may only contain letters")
+	ErrNameTaken       = errors.New("that kingdom name is already taken")
+	ErrMapFull         = errors.New("the map is full, please try again later")
+)
+
 // ── Route registration ────────────────────────────────────────────────────────
 
 func RegisterRoutes(r router.Router, queries db.Querier) {
@@ -69,38 +78,19 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 			return
 		}
 
-		name := strings.TrimSpace(form.Name)
-		if name == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("kingdom name is required")})))
-			return
-		}
-		for _, ch := range name {
-			if !unicode.IsLetter(ch) {
-				datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("kingdom name may only contain letters")})))
-				return
-			}
-		}
-		name = cases.Title(language.English).String(name)
-
-		x, y, err := pickFreePosition(r.Context(), h.queries)
+		name, err := validateKingdomName(form.Name)
 		if err != nil {
-			log.Printf("create kingdom: pick position: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to find a position on the map")})))
+			datastar.NewSSE(w, r).PatchElementGostar(kingdomAlert(AlertError(err)))
 			return
 		}
 
-		if _, err := h.queries.CreateKingdom(r.Context(), db.CreateKingdomParams{
-			UserID: user.ID,
-			Name:   name,
-			X:      x,
-			Y:      y,
-		}); err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("that kingdom name is already taken")})))
+		if err := h.createKingdom(r.Context(), user.ID, name); err != nil {
+			if isCreateKingdomUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(kingdomAlert(AlertError(err)))
 				return
 			}
 			log.Printf("create kingdom: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(alertComponent(errorComponent([]error{errors.New("failed to create kingdom")})))
+			datastar.NewSSE(w, r).PatchElementGostar(kingdomAlert(AlertError(errors.New("failed to create kingdom"))))
 			return
 		}
 
@@ -109,6 +99,57 @@ func (h *handler) handleCreateKingdom() http.HandlerFunc {
 			log.Printf("create kingdom: redirect: %v", err)
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateKingdomName trims, checks the letters-only rule, and returns the
+// title-cased name ready for insertion. Single-value parse shape: there is at
+// most one rule that can fail (empty is "required", non-letters is its own
+// error), so the (T, error) shape is the right one.
+func validateKingdomName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", ErrNameRequired
+	}
+	for _, ch := range name {
+		if !unicode.IsLetter(ch) {
+			return "", ErrNameLettersOnly
+		}
+	}
+	return cases.Title(language.English).String(name), nil
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// createKingdom picks a free position and inserts the kingdom. Returns the
+// ErrNameTaken sentinel for a unique-violation on the name; wraps other errors
+// for logging.
+func (h *handler) createKingdom(ctx context.Context, userID int, name string) error {
+	x, y, err := pickFreePosition(ctx, h.queries)
+	if err != nil {
+		if errors.Is(err, ErrMapFull) {
+			return ErrMapFull
+		}
+		return fmt.Errorf("pick position: %w", err)
+	}
+
+	if _, err := h.queries.CreateKingdom(ctx, db.CreateKingdomParams{
+		UserID: userID,
+		Name:   name,
+		X:      x,
+		Y:      y,
+	}); err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return ErrNameTaken
+		}
+		return fmt.Errorf("create kingdom: %w", err)
+	}
+	return nil
+}
+
+func isCreateKingdomUserError(err error) bool {
+	return errors.Is(err, ErrNameTaken) || errors.Is(err, ErrMapFull)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -162,7 +203,7 @@ func pickFreePosition(ctx context.Context, queries db.Querier) (int, int, error)
 			return x, y, nil
 		}
 	}
-	return 0, 0, errors.New("world map is full")
+	return 0, 0, ErrMapFull
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
@@ -186,21 +227,8 @@ func setupContent() Node {
 			ds.On("click", datastar.PostSSE(routes.KingdomCreatePath)),
 			Text("Create Kingdom"),
 		),
-		alertComponent(nil),
+		kingdomAlert(nil),
 	)
 }
 
-func alertComponent(inner Node) Node {
-	return Div(ID("kingdom-alert"), inner)
-}
-
-func errorComponent(errs []error) Node {
-	if len(errs) == 0 {
-		return nil
-	}
-	return Div(Class("alert--error"),
-		Map(errs, func(e error) Node {
-			return P(Text(e.Error()))
-		}),
-	)
-}
+func kingdomAlert(inner Node) Node { return AlertContainer("kingdom-alert", inner) }

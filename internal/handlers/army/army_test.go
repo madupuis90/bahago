@@ -1,7 +1,8 @@
-package army_test
+package army
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,10 +15,11 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
-	"bahago/internal/handlers/army"
 	"bahago/internal/routes"
 	"bahago/internal/testhelper"
 )
+
+// ── Stub querier ──────────────────────────────────────────────────────────────
 
 // stubQuerier embeds a nil db.Querier. Any method not explicitly overridden
 // panics via a nil pointer dereference, making unexpected DB calls immediately
@@ -42,97 +44,283 @@ func (s *stubQuerier) CancelCampaign(ctx context.Context, arg db.CancelCampaignP
 	panic("stubQuerier: unexpected call to CancelCampaign")
 }
 
-// sendHandler extracts the POST send handler from RegisterRoutes.
+var attacker = &db.Kingdom{ID: 1, X: 0, Y: 0, Name: "Attackia"}
+
+// ── validateSendInput ─────────────────────────────────────────────────────────
+
+func TestValidateSendInput(t *testing.T) {
+	base := func() *sendInput {
+		return &sendInput{
+			UnitType:      "recruit",
+			SendCount:     10,
+			Action:        "attack",
+			TargetName:    "Other",
+			DurationTicks: 3,
+		}
+	}
+
+	tests := []struct {
+		name     string
+		mutate   func(*sendInput)
+		wantErrs []error
+	}{
+		{
+			name:     "valid_attack",
+			mutate:   func(_ *sendInput) {},
+			wantErrs: nil,
+		},
+		{
+			name:     "valid_defend_at_max_duration",
+			mutate:   func(in *sendInput) { in.Action = "defend"; in.DurationTicks = 24 },
+			wantErrs: nil,
+		},
+		{
+			name:     "unknown_unit_type",
+			mutate:   func(in *sendInput) { in.UnitType = "dragon" },
+			wantErrs: []error{ErrUnknownUnitType},
+		},
+		{
+			name:     "count_zero",
+			mutate:   func(in *sendInput) { in.SendCount = 0 },
+			wantErrs: []error{ErrInvalidCount},
+		},
+		{
+			name:     "count_negative",
+			mutate:   func(in *sendInput) { in.SendCount = -1 },
+			wantErrs: []error{ErrInvalidCount},
+		},
+		{
+			name:     "count_too_large",
+			mutate:   func(in *sendInput) { in.SendCount = game.MaxUnitInput + 1 },
+			wantErrs: []error{ErrCountTooLarge},
+		},
+		{
+			name:     "invalid_action",
+			mutate:   func(in *sendInput) { in.Action = "pillage" },
+			wantErrs: []error{ErrInvalidAction},
+		},
+		{
+			name:     "attack_duration_above_max",
+			mutate:   func(in *sendInput) { in.DurationTicks = 6 },
+			wantErrs: []error{ErrInvalidDuration},
+		},
+		{
+			name:     "attack_duration_at_max",
+			mutate:   func(in *sendInput) { in.DurationTicks = 5 },
+			wantErrs: nil,
+		},
+		{
+			name:     "defend_duration_above_max",
+			mutate:   func(in *sendInput) { in.Action = "defend"; in.DurationTicks = 25 },
+			wantErrs: []error{ErrInvalidDuration},
+		},
+		{
+			name:     "duration_below_minimum",
+			mutate:   func(in *sendInput) { in.DurationTicks = 0 },
+			wantErrs: []error{ErrInvalidDuration},
+		},
+		{
+			name:     "empty_target_name",
+			mutate:   func(in *sendInput) { in.TargetName = "" },
+			wantErrs: []error{ErrTargetRequired},
+		},
+		{
+			name:   "multiple_errors_accumulated",
+			mutate: func(in *sendInput) { in.SendCount = 0; in.TargetName = ""; in.UnitType = "dragon" },
+			// Validator surfaces every problem at once so the user sees them all.
+			wantErrs: []error{ErrUnknownUnitType, ErrInvalidCount, ErrTargetRequired},
+		},
+		{
+			name: "invalid_action_suppresses_duration_check",
+			// Duration would otherwise be flagged against the attack-max of 5, but
+			// the action is invalid — adding a duration error would be redundant.
+			mutate:   func(in *sendInput) { in.Action = "pillage"; in.DurationTicks = 99 },
+			wantErrs: []error{ErrInvalidAction},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			in := base()
+			tc.mutate(in)
+			got := validateSendInput(in)
+
+			if len(got) != len(tc.wantErrs) {
+				t.Fatalf("validateSendInput returned %d errs (%v), want %d (%v)", len(got), got, len(tc.wantErrs), tc.wantErrs)
+			}
+			for i, want := range tc.wantErrs {
+				if !errors.Is(got[i], want) {
+					t.Errorf("errs[%d] = %v, want %v", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
+// ── validateCancelID ──────────────────────────────────────────────────────────
+
+func TestValidateCancelID(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    int
+		wantErr error
+	}{
+		{"valid", "42", 42, nil},
+		{"zero", "0", 0, ErrInvalidCampaignID},
+		{"negative", "-3", 0, ErrInvalidCampaignID},
+		{"non_numeric", "abc", 0, ErrInvalidCampaignID},
+		{"empty", "", 0, ErrInvalidCampaignID},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := validateCancelID(tc.input)
+			if tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("err = %v, want %v", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+// ── sendCampaign (pre-tx paths only) ──────────────────────────────────────────
+//
+// sendCampaign reaches a real *pgxpool.Pool via BeginTx after the target lookup
+// and self-target check. The cases below cover what's reachable with a nil pool
+// — i.e. every branch up to (but not including) the transaction. Tx-level
+// branches (ErrNoRows from the CTE, serialization failure) live in the
+// internal/database/db integration tests.
+
+func TestSendCampaign_TargetNotFound(t *testing.T) {
+	q := &stubQuerier{
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return db.Kingdom{}, pgx.ErrNoRows
+		},
+	}
+	h := &handler{queries: q}
+	err := h.sendCampaign(context.Background(), attacker, &sendInput{TargetName: "Atlantis"})
+	if !errors.Is(err, ErrTargetNotFound) {
+		t.Fatalf("err = %v, want ErrTargetNotFound", err)
+	}
+}
+
+func TestSendCampaign_TargetLookupOtherError(t *testing.T) {
+	boom := errors.New("connection refused")
+	q := &stubQuerier{
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return db.Kingdom{}, boom
+		},
+	}
+	h := &handler{queries: q}
+	err := h.sendCampaign(context.Background(), attacker, &sendInput{TargetName: "Atlantis"})
+	if !errors.Is(err, boom) {
+		t.Fatalf("err = %v, want wrapped %v", err, boom)
+	}
+	if isSendUserError(err) {
+		t.Errorf("unexpected user-error classification for wrapped infra error: %v", err)
+	}
+}
+
+func TestSendCampaign_SelfTarget(t *testing.T) {
+	q := &stubQuerier{
+		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
+			return db.Kingdom{ID: attacker.ID, Name: attacker.Name}, nil
+		},
+	}
+	h := &handler{queries: q}
+	err := h.sendCampaign(context.Background(), attacker, &sendInput{TargetName: attacker.Name})
+	if !errors.Is(err, ErrSelfTarget) {
+		t.Fatalf("err = %v, want ErrSelfTarget", err)
+	}
+}
+
+// ── cancelCampaign ────────────────────────────────────────────────────────────
+
+func TestCancelCampaign_Success(t *testing.T) {
+	var seen db.CancelCampaignParams
+	q := &stubQuerier{
+		onCancelCampaign: func(_ context.Context, arg db.CancelCampaignParams) (int, error) {
+			seen = arg
+			return 1, nil
+		},
+	}
+	h := &handler{queries: q}
+	if err := h.cancelCampaign(context.Background(), attacker.ID, 42); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if seen.ID != 42 || seen.KingdomID != attacker.ID {
+		t.Errorf("params = %+v, want ID=42 KingdomID=%d", seen, attacker.ID)
+	}
+}
+
+func TestCancelCampaign_NotFound(t *testing.T) {
+	q := &stubQuerier{
+		onCancelCampaign: func(_ context.Context, _ db.CancelCampaignParams) (int, error) {
+			return 0, pgx.ErrNoRows
+		},
+	}
+	h := &handler{queries: q}
+	err := h.cancelCampaign(context.Background(), attacker.ID, 42)
+	if !errors.Is(err, ErrCampaignNotFound) {
+		t.Fatalf("err = %v, want ErrCampaignNotFound", err)
+	}
+}
+
+func TestCancelCampaign_OtherError(t *testing.T) {
+	boom := fmt.Errorf("connection refused")
+	q := &stubQuerier{
+		onCancelCampaign: func(_ context.Context, _ db.CancelCampaignParams) (int, error) {
+			return 0, boom
+		},
+	}
+	h := &handler{queries: q}
+	err := h.cancelCampaign(context.Background(), attacker.ID, 42)
+	if !errors.Is(err, boom) {
+		t.Fatalf("err = %v, want wrapped %v", err, boom)
+	}
+	if isCancelUserError(err) {
+		t.Errorf("unexpected user-error classification for wrapped infra error: %v", err)
+	}
+}
+
+// ── handler shell smoke tests ─────────────────────────────────────────────────
+//
+// These exercise the HTTP/SSE wiring of RegisterRoutes' handlers and assert
+// the user-visible alert text. Fine-grained coverage of validator/orchestrator
+// branches lives in the unit tests above.
+
 func sendHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	army.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.KingdomArmySendPath]
 }
 
-// sendReq builds a POST request with the given JSON signals body and the
-// provided kingdom injected into context.
 func sendReq(body string, kingdom *db.Kingdom) *http.Request {
 	r := httptest.NewRequest("POST", routes.KingdomArmySendPath, strings.NewReader(body))
 	return r.WithContext(context.WithValue(r.Context(), contextkeys.Kingdom, kingdom))
 }
 
-var attacker = &db.Kingdom{ID: 1, X: 0, Y: 0, Name: "Attackia"}
-
-func TestHandleSend_UnknownUnitType(t *testing.T) {
+// TestHandleSend_ValidatorErrorRenders proves the validator integrates with the
+// handler — an unknown unit type surfaces as alert text.
+func TestHandleSend_ValidatorErrorRenders(t *testing.T) {
 	h := sendHandler(&stubQuerier{})
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"dragon","send_count":10,"action":"attack","target_name":"Other","duration_ticks":8}`, attacker))
+	h(w, sendReq(`{"unit_type":"dragon","send_count":10,"action":"attack","target_name":"Other","duration_ticks":3}`, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "unknown unit type")
 }
 
-func TestHandleSend_CountZero(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":0,"action":"attack","target_name":"Other","duration_ticks":8}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "count must be at least 1")
-}
-
-func TestHandleSend_CountNegative(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":-5,"action":"attack","target_name":"Other","duration_ticks":8}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "count must be at least 1")
-}
-
-func TestHandleSend_CountTooLarge(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	body := fmt.Sprintf(`{"unit_type":"recruit","send_count":%d,"action":"attack","target_name":"Other","duration_ticks":8}`, game.MaxUnitInput+1)
-	w := httptest.NewRecorder()
-	h(w, sendReq(body, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "count is too large")
-}
-
-func TestHandleSend_InvalidAction(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"pillage","target_name":"Other","duration_ticks":8}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid action")
-}
-
-func TestHandleSend_DurationNotDivisibleBy4(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Other","duration_ticks":5}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid duration")
-}
-
-func TestHandleSend_AttackDurationTooLarge(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	// Attack max is 20; 24 exceeds it.
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Other","duration_ticks":24}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid duration")
-}
-
-func TestHandleSend_DefendDurationTooLarge(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	// Defend max is 96; 100 exceeds it.
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"defend","target_name":"Other","duration_ticks":100}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid duration")
-}
-
-func TestHandleSend_DefendDurationBelowMinimum(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	// Min duration is 4; 0 is below it.
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"defend","target_name":"Other","duration_ticks":0}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid duration")
-}
-
-func TestHandleSend_EmptyTargetName(t *testing.T) {
-	h := sendHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"","duration_ticks":8}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "target kingdom name is required")
-}
-
-func TestHandleSend_TargetNotFound(t *testing.T) {
+// TestHandleSend_TargetNotFoundRenders proves an orchestrator user-error
+// (pgx.ErrNoRows from GetKingdomByName) surfaces as alert text via
+// isSendUserError.
+func TestHandleSend_TargetNotFoundRenders(t *testing.T) {
 	stub := &stubQuerier{
 		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
 			return db.Kingdom{}, pgx.ErrNoRows
@@ -140,43 +328,45 @@ func TestHandleSend_TargetNotFound(t *testing.T) {
 	}
 	h := sendHandler(stub)
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Atlantis","duration_ticks":8}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "not found")
+	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Atlantis","duration_ticks":3}`, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "target kingdom not found")
 }
 
-func TestHandleSend_CannotTargetOwnKingdom(t *testing.T) {
+// TestHandleSend_CannotTargetOwnKingdomRenders proves ErrSelfTarget reaches
+// the alert.
+func TestHandleSend_CannotTargetOwnKingdomRenders(t *testing.T) {
 	stub := &stubQuerier{
-		// Return a kingdom with the same ID as attacker.
 		onGetKingdomByName: func(_ context.Context, _ string) (db.Kingdom, error) {
 			return db.Kingdom{ID: attacker.ID, Name: attacker.Name}, nil
 		},
 	}
 	h := sendHandler(stub)
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Attackia","duration_ticks":8}`, attacker))
+	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Attackia","duration_ticks":3}`, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "cannot target your own kingdom")
 }
 
-// ── handleCancel tests ────────────────────────────────────────────────────────
-
-// cancelHandler extracts the POST cancel handler from RegisterRoutes.
 func cancelHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	army.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.KingdomArmyCancelPath]
 }
 
-// cancelReq builds a POST request with the campaign id as a path variable and
-// the provided kingdom injected into context.
 func cancelReq(id int, kingdom *db.Kingdom) *http.Request {
 	url := strings.ReplaceAll(routes.KingdomArmyCancelPath, "{id}", strconv.Itoa(id))
 	r := httptest.NewRequest("POST", url, nil)
-	// Simulate the ServeMux path variable that the real router would set.
 	r.SetPathValue("id", strconv.Itoa(id))
 	return r.WithContext(context.WithValue(r.Context(), contextkeys.Kingdom, kingdom))
 }
 
-func TestHandleCancel_CampaignNotFound(t *testing.T) {
+func TestHandleCancel_InvalidInputRenders(t *testing.T) {
+	h := cancelHandler(&stubQuerier{})
+	w := httptest.NewRecorder()
+	h(w, cancelReq(0, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "invalid campaign id")
+}
+
+func TestHandleCancel_CampaignNotFoundRenders(t *testing.T) {
 	stub := &stubQuerier{
 		onCancelCampaign: func(_ context.Context, _ db.CancelCampaignParams) (int, error) {
 			return 0, pgx.ErrNoRows
@@ -186,12 +376,4 @@ func TestHandleCancel_CampaignNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	h(w, cancelReq(99, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "campaign not found or already returning")
-}
-
-func TestHandleCancel_InvalidInput(t *testing.T) {
-	h := cancelHandler(&stubQuerier{})
-	w := httptest.NewRecorder()
-	// id=0 is treated as invalid.
-	h(w, cancelReq(0, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "invalid campaign id")
 }

@@ -12,4 +12,8 @@ Do not duplicate content already captured in other artifacts (PRDs, plans, ADRs,
 
 Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
 
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+If the user passed arguments:
+- Slugify the argument (lowercase, spaces → hyphens, strip special chars) and use it as the filename: `.handoff/<slug>.md`
+- Also treat the argument as a description of what the next session will focus on and tailor the doc accordingly.
+
+If no argument is passed, generate a short descriptive filename from the conversation topic (e.g. `.handoff/guild-refactor.md`).

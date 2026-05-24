@@ -11,6 +11,20 @@
 - Provide context and reasoning behind suggestions
 - Use the Read tool to read files directly — do not use shell commands like `cat` or `echo`
 
+## Session Management
+
+Long conversations multiply token cost: each turn re-reads the full accumulated context. Break large tasks into sessions using `/handoff` and `/pickup`.
+
+**Proactively suggest `/handoff` when:**
+- A logical sub-task is complete (e.g., one feature file fully refactored and tested) and more work remains.
+- The conversation has grown long (many tool calls, many files read) and the next sub-task is a fresh scope.
+- After finishing a skill that does heavy exploration (`/code-review`, `/grill-with-docs`, etc.).
+
+When suggesting, name the next focus so the user can approve it:
+> "That completes the guild settings handler. Should I create a handoff (`/handoff guild-manage`) before we start on the next file?"
+
+Do not suggest handoff in the middle of a task (mid-function, mid-migration, mid-test). Always finish the current atomic unit first.
+
 ## Project Overview
 This is a Go web application using pgx/v5 for PostgreSQL 18, sqlc for type-safe queries, goose for migrations, gomponents for HTML templating, and datastar for interactivity.
 
@@ -108,6 +122,68 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 - Use `http.Error()` only for non-SSE error responses (before `NewSSE` is called)
 - Do not re-check middleware guarantees inside handlers — if a route is behind `RequireAuth`, trust that a user is in context
 
+### Handler Extraction Pattern
+When a handler grows beyond `read input → one query → render`, extract its parts into same-package helpers. **There is no service layer** — helpers live next to the handler in the feature package. Apply this only when there's real complexity to extract; don't impose it on thin handlers.
+
+The shape is `read signals → validate → orchestrate → render`:
+
+**1. Sentinel errors** — exported `ErrXxx` declared next to the helpers. The error message *is* the user-facing alert text; the handler does not translate. Sentinels are the contract between validator/orchestrator and handler — that's why they're exported even when no other package imports them.
+
+```go
+var (
+    ErrTargetNotFound    = errors.New("target kingdom not found")
+    ErrSelfTarget        = errors.New("cannot target your own kingdom")
+    ErrInsufficientUnits = errors.New("not enough units")
+)
+```
+
+**2. Validators** — pure functions. Two shapes by use:
+
+| Shape | Use when |
+|---|---|
+| `validateXxxInput(in *T) []error` | Multi-rule form input. Accumulates so the user sees every problem at once via `AlertError(errs...)`. |
+| `validateXxx(in string) (T, error)` | Single value to parse or single invariant to check. |
+
+Skip downstream rules whose "max" depends on an upstream field being valid (e.g. don't flag a duration error when the action itself is invalid).
+
+**3. Orchestrators** — own the DB work, derived calculations, transaction lifecycle, and translation of `pgx.ErrNoRows` / serialization failures into sentinel errors. Return sentinels for user-visible cases; wrap infra errors with `fmt.Errorf("…: %w", err)`. Method on `*handler` when both `queries` and `pool` are needed; free function taking `db.Querier` otherwise.
+
+**4. The handler** stays thin:
+
+```go
+func (h *handler) handleSend() http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+        input := &sendInput{}
+        if err := datastar.ReadSignals(r, input); err != nil { /* … */ }
+
+        if errs := validateSendInput(input); len(errs) > 0 {
+            datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errs...)))
+            return
+        }
+
+        if err := h.sendCampaign(r.Context(), kingdom, input); err != nil {
+            if isSendUserError(err) {
+                datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
+                return
+            }
+            log.Printf("army send: %v", err)
+            datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+            return
+        }
+
+        // … render success
+    }
+}
+```
+
+A small `isXxxUserError(err) bool` predicate distinguishes user-visible sentinels from infra errors. Don't build a generic error→message map.
+
+**5. Testing** — tests stay in `package <feature>` (per `testing.instructions.md`) so unexported helpers are reachable. Validators get pure table-driven tests with no stubs. Orchestrators get direct calls using the package's `stubQuerier`, no `httptest`. Handler-shell smoke tests assert the SSE response surfaces the alert text for one validator path and one orchestrator path.
+
+See `internal/handlers/army/` for the reference implementation.
+
 ## Configuration
 - Non-sensitive config (port, DSN for local dev) lives in `docker-compose.yml`
 - Sensitive or environment-specific values (API keys, tokens) go in `.env` — see `.env.example` for all required keys
@@ -117,9 +193,12 @@ func (h *handler) handleKingdomPage() http.HandlerFunc {
 ### Task Runner
 - Use Taskfile.yaml for ALL development tasks (required in dev container)
 - `task dev` — development with live reload
+- `task check` — fast compile check (`go build ./...`); run after every code change before anything else
+- `task lint` — static analysis (`go vet ./...`)
+- `task test` — run all tests
 - `task gen` — regenerate sqlc code after query changes
 - `task db:up` / `task db:down` — migrations
-- Never run tools directly (goose, sqlc, air) — always use task commands
+- Never run tools directly (goose, sqlc, air, go build, go vet, go test) — always use task commands
 
 ## Security
 - Never log sensitive data (passwords, tokens, personal info)

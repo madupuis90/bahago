@@ -1,6 +1,7 @@
 package army
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -35,6 +36,27 @@ type sendInput struct {
 	TargetName    string `json:"target_name"`
 	DurationTicks int    `json:"duration_ticks"`
 }
+
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+//
+// These are the contract between the validator/orchestrator and the handler.
+// Validator errors are user-facing as-is. Orchestrator errors flagged by
+// isSendUserError / isCancelUserError are surfaced as alert text; others are
+// logged and reported as a generic internal error.
+
+var (
+	ErrUnknownUnitType   = errors.New("unknown unit type")
+	ErrInvalidCount      = errors.New("count must be at least 1")
+	ErrCountTooLarge     = errors.New("count is too large")
+	ErrInvalidAction     = errors.New("invalid action")
+	ErrInvalidDuration   = errors.New("invalid duration")
+	ErrTargetRequired    = errors.New("target kingdom name is required")
+	ErrTargetNotFound    = errors.New("target kingdom not found")
+	ErrSelfTarget        = errors.New("cannot target your own kingdom")
+	ErrInsufficientUnits = errors.New("not enough units")
+	ErrInvalidCampaignID = errors.New("invalid campaign id")
+	ErrCampaignNotFound  = errors.New("campaign not found or already returning")
+)
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -113,90 +135,22 @@ func (h *handler) handleSend() http.HandlerFunc {
 
 		input := &sendInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
-
 			log.Printf("army send: read signals: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid request"))))
 			return
 		}
-		if _, ok := game.UnitDefs[input.UnitType]; !ok {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("unknown unit type"))))
+
+		if errs := validateSendInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errs...)))
 			return
 		}
 
-		if input.SendCount <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("count must be at least 1"))))
-			return
-		}
-		if input.SendCount > game.MaxUnitInput {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("count is too large"))))
-			return
-		}
-
-		if input.Action != "attack" && input.Action != "defend" {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid action"))))
-			return
-		}
-
-		maxDuration := 5
-		if input.Action == "defend" {
-			maxDuration = 24
-		}
-		if input.DurationTicks < 1 || input.DurationTicks > maxDuration {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid duration"))))
-			return
-		}
-
-		if input.TargetName == "" {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("target kingdom name is required"))))
-			return
-		}
-
-		target, err := h.queries.GetKingdomByName(r.Context(), input.TargetName)
-		if err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(fmt.Errorf("kingdom %q not found", input.TargetName))))
-			return
-		}
-
-		if target.ID == kingdom.ID {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("cannot target your own kingdom"))))
-			return
-		}
-
-		travelTicks := game.TravelTicks(kingdom.X, kingdom.Y, target.X, target.Y)
-
-		params := db.CreateCampaignIfAvailableParams{
-			KingdomID:       kingdom.ID,
-			TargetKingdomID: target.ID,
-			UnitType:        input.UnitType,
-			SendCount:       input.SendCount,
-			Action:          input.Action,
-			TicksRemaining:  travelTicks,
-			ActionTicks:     input.DurationTicks,
-			TravelTicks:     travelTicks,
-		}
-		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
-		if err != nil {
-			log.Printf("army send: begin tx: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		defer tx.Rollback(r.Context()) //nolint:errcheck
-		_, err = db.New(tx).CreateCampaignIfAvailable(r.Context(), params)
-		if errors.Is(err, pgx.ErrNoRows) {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("not enough units"))))
-			return
-		}
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("not enough units"))))
-			return
-		}
-		if err != nil {
-			log.Printf("army send: create campaign: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if err := tx.Commit(r.Context()); err != nil {
-			log.Printf("army send: commit: %v", err)
+		if err := h.sendCampaign(r.Context(), kingdom, input); err != nil {
+			if isSendUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
+				return
+			}
+			log.Printf("army send: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
 		}
@@ -209,8 +163,7 @@ func (h *handler) handleSend() http.HandlerFunc {
 		}
 		sse := datastar.NewSSE(w, r)
 		sse.MarshalAndPatchSignals(map[string]any{"unit_type": firstAvailableUnit(data), "send_count": 1})
-		page := armyContent(kingdom, data, "", "attack")
-		sse.PatchElementGostar(MainContent(page))
+		sse.PatchElementGostar(MainContent(armyContent(kingdom, data, "", "attack")))
 	}
 }
 
@@ -218,22 +171,17 @@ func (h *handler) handleCancel() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		idStr := r.PathValue("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil || id <= 0 {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("invalid campaign id"))))
+		id, err := validateCancelID(r.PathValue("id"))
+		if err != nil {
+			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
 			return
 		}
 
-		_, err = h.queries.CancelCampaign(r.Context(), db.CancelCampaignParams{
-			ID:        id,
-			KingdomID: kingdom.ID,
-		})
-		if errors.Is(err, pgx.ErrNoRows) {
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("campaign not found or already returning"))))
-			return
-		}
-		if err != nil {
+		if err := h.cancelCampaign(r.Context(), kingdom.ID, id); err != nil {
+			if isCancelUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
+				return
+			}
 			log.Printf("army cancel: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
 			return
@@ -243,6 +191,125 @@ func (h *handler) handleCancel() http.HandlerFunc {
 			log.Printf("army cancel: redirect: %v", err)
 		}
 	}
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateSendInput runs every field-level rule that does not need DB access.
+// Returns all violations so the handler can render the full list in one alert.
+func validateSendInput(input *sendInput) []error {
+	var errs []error
+	if _, ok := game.UnitDefs[input.UnitType]; !ok {
+		errs = append(errs, ErrUnknownUnitType)
+	}
+	if input.SendCount <= 0 {
+		errs = append(errs, ErrInvalidCount)
+	} else if input.SendCount > game.MaxUnitInput {
+		errs = append(errs, ErrCountTooLarge)
+	}
+
+	actionValid := input.Action == "attack" || input.Action == "defend"
+	if !actionValid {
+		errs = append(errs, ErrInvalidAction)
+	}
+
+	maxDuration := 5
+	if input.Action == "defend" {
+		maxDuration = 24
+	}
+	// Only assess duration once the action is known to be valid — otherwise
+	// the "max" is meaningless and would produce a redundant duration error.
+	if actionValid && (input.DurationTicks < 1 || input.DurationTicks > maxDuration) {
+		errs = append(errs, ErrInvalidDuration)
+	}
+
+	if input.TargetName == "" {
+		errs = append(errs, ErrTargetRequired)
+	}
+	return errs
+}
+
+// validateCancelID parses and bounds-checks the path id.
+func validateCancelID(idStr string) (int, error) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		return 0, ErrInvalidCampaignID
+	}
+	return id, nil
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+
+// sendCampaign performs the DB-backed half of a send: target lookup, self-target
+// guard, travel calc, and a serializable insert that atomically deducts units.
+// Returns sentinel errors for user-facing cases; wraps other errors for logging.
+func (h *handler) sendCampaign(ctx context.Context, kingdom *db.Kingdom, input *sendInput) error {
+	target, err := h.queries.GetKingdomByName(ctx, input.TargetName)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("%w: %q", ErrTargetNotFound, input.TargetName)
+		}
+		return fmt.Errorf("get kingdom by name: %w", err)
+	}
+
+	if target.ID == kingdom.ID {
+		return ErrSelfTarget
+	}
+
+	travelTicks := game.TravelTicks(kingdom.X, kingdom.Y, target.X, target.Y)
+
+	params := db.CreateCampaignIfAvailableParams{
+		KingdomID:       kingdom.ID,
+		TargetKingdomID: target.ID,
+		UnitType:        input.UnitType,
+		SendCount:       input.SendCount,
+		Action:          input.Action,
+		TicksRemaining:  travelTicks,
+		ActionTicks:     input.DurationTicks,
+		TravelTicks:     travelTicks,
+	}
+
+	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	if _, err := db.New(tx).CreateCampaignIfAvailable(ctx, params); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInsufficientUnits
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.SerializationFailure {
+			return ErrInsufficientUnits
+		}
+		return fmt.Errorf("create campaign: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+// cancelCampaign issues the cancel query for a campaign owned by kingdomID.
+func (h *handler) cancelCampaign(ctx context.Context, kingdomID, id int) error {
+	if _, err := h.queries.CancelCampaign(ctx, db.CancelCampaignParams{ID: id, KingdomID: kingdomID}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrCampaignNotFound
+		}
+		return fmt.Errorf("cancel campaign: %w", err)
+	}
+	return nil
+}
+
+func isSendUserError(err error) bool {
+	return errors.Is(err, ErrTargetNotFound) ||
+		errors.Is(err, ErrSelfTarget) ||
+		errors.Is(err, ErrInsufficientUnits)
+}
+
+func isCancelUserError(err error) bool {
+	return errors.Is(err, ErrCampaignNotFound)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

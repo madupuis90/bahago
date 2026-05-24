@@ -1,17 +1,19 @@
-package guild_test
+package guild
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
-	"bahago/internal/handlers/guild"
 	"bahago/internal/routes"
 	"bahago/internal/testhelper"
 )
@@ -131,37 +133,37 @@ func membershipFor(kingdomID, guildID int, role string) db.GuildMembership {
 
 func leaveHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildLeavePath]
 }
 
 func removeHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildRemoveMemberPath]
 }
 
 func demoteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildDemotePath]
 }
 
 func promoteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildPromotePath]
 }
 
 func approveHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildApproveMemberPath]
 }
 
 func createHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildCreatePath]
 }
 
@@ -383,6 +385,106 @@ func TestHandleCreate_DescriptionTooLong(t *testing.T) {
 	testhelper.AssertContains(t, w.Body.String(), "cannot exceed 500")
 }
 
+// ── validateCreateGuildInput ──────────────────────────────────────────────────
+
+func TestValidateCreateGuildInput(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *createGuildSignals
+		wantErrs []error
+	}{
+		{"valid_min", &createGuildSignals{GuildName: "Round", GuildDescription: ""}, nil},
+		{"valid_with_desc", &createGuildSignals{GuildName: "Round Table", GuildDescription: "Knights welcome"}, nil},
+		{"name_too_short", &createGuildSignals{GuildName: "Bob"}, []error{ErrGuildNameLength}},
+		{"name_too_long", &createGuildSignals{GuildName: strings.Repeat("x", 61)}, []error{ErrGuildNameLength}},
+		{"description_too_long", &createGuildSignals{GuildName: "Round Table", GuildDescription: strings.Repeat("x", 501)}, []error{ErrDescriptionTooLong}},
+		{
+			name:     "both_invalid",
+			input:    &createGuildSignals{GuildName: "Bob", GuildDescription: strings.Repeat("x", 501)},
+			wantErrs: []error{ErrGuildNameLength, ErrDescriptionTooLong},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := validateCreateGuildInput(tc.input)
+			if len(got) != len(tc.wantErrs) {
+				t.Fatalf("got %d errs (%v), want %d (%v)", len(got), got, len(tc.wantErrs), tc.wantErrs)
+			}
+			for i, want := range tc.wantErrs {
+				if !errors.Is(got[i], want) {
+					t.Errorf("errs[%d] = %v, want %v", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
+// ── createGuild ───────────────────────────────────────────────────────────────
+
+type createGuildStub struct {
+	db.Querier
+	onCreateGuild func(ctx context.Context, arg db.CreateGuildParams) (db.CreateGuildRow, error)
+}
+
+func (s *createGuildStub) CreateGuild(ctx context.Context, arg db.CreateGuildParams) (db.CreateGuildRow, error) {
+	return s.onCreateGuild(ctx, arg)
+}
+
+func TestCreateGuild_SlugInvalidWhenNameAllSymbols(t *testing.T) {
+	h := &handler{queries: &createGuildStub{}}
+	_, err := h.createGuild(context.Background(), 1, &createGuildSignals{GuildName: "'''", GuildDescription: ""})
+	if !errors.Is(err, ErrGuildNameInvalid) {
+		t.Fatalf("err = %v, want ErrGuildNameInvalid", err)
+	}
+}
+
+func TestCreateGuild_NameTakenOnNameConstraint(t *testing.T) {
+	q := &createGuildStub{
+		onCreateGuild: func(_ context.Context, _ db.CreateGuildParams) (db.CreateGuildRow, error) {
+			return db.CreateGuildRow{}, &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "guilds_name_unique"}
+		},
+	}
+	h := &handler{queries: q}
+	_, err := h.createGuild(context.Background(), 1, &createGuildSignals{GuildName: "Round Table"})
+	if !errors.Is(err, ErrGuildNameTaken) {
+		t.Fatalf("err = %v, want ErrGuildNameTaken", err)
+	}
+}
+
+func TestCreateGuild_AlreadyInGuildOnOtherConstraint(t *testing.T) {
+	q := &createGuildStub{
+		onCreateGuild: func(_ context.Context, _ db.CreateGuildParams) (db.CreateGuildRow, error) {
+			return db.CreateGuildRow{}, &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "guild_memberships_one_active_per_kingdom"}
+		},
+	}
+	h := &handler{queries: q}
+	_, err := h.createGuild(context.Background(), 1, &createGuildSignals{GuildName: "Round Table"})
+	if !errors.Is(err, ErrAlreadyInGuild) {
+		t.Fatalf("err = %v, want ErrAlreadyInGuild", err)
+	}
+}
+
+func TestCreateGuild_Success(t *testing.T) {
+	var seen db.CreateGuildParams
+	q := &createGuildStub{
+		onCreateGuild: func(_ context.Context, arg db.CreateGuildParams) (db.CreateGuildRow, error) {
+			seen = arg
+			return db.CreateGuildRow{ID: 1, Slug: arg.Slug}, nil
+		},
+	}
+	h := &handler{queries: q}
+	slug, err := h.createGuild(context.Background(), 42, &createGuildSignals{GuildName: "Round Table", GuildDescription: "All welcome"})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if slug != "round-table" {
+		t.Errorf("slug = %q, want %q", slug, "round-table")
+	}
+	if seen.Name != "Round Table" || seen.FounderKingdomID != 42 {
+		t.Errorf("params = %+v, want Name=Round Table FounderKingdomID=42", seen)
+	}
+}
+
 // ── Stub extensions for invitation handlers ───────────────────────────────────
 
 type inviteStubQuerier struct {
@@ -457,25 +559,25 @@ func (s *inviteStubQuerier) ListPendingRequests(ctx context.Context, guildID int
 
 func sendInviteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildInvitePath]
 }
 
 func revokeInviteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildInvitationRevokePath]
 }
 
 func acceptInviteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildInvitationAcceptPath]
 }
 
 func declineInviteHandler(q db.Querier) http.HandlerFunc {
 	cr := testhelper.NewCaptureRouter()
-	guild.RegisterRoutes(cr, q, nil, nil)
+	RegisterRoutes(cr, q, nil, nil)
 	return cr.Handlers["POST "+routes.GuildInvitationDeclinePath]
 }
 
@@ -566,7 +668,7 @@ func TestHandleSendInvitation_TargetAlreadyInvited(t *testing.T) {
 	w := httptest.NewRecorder()
 	h(w, signalsReq("POST", routes.GuildInvitePath,
 		`{"invite_kingdom_name":"Avalon"}`, leaderKingdom))
-	testhelper.AssertContains(t, w.Body.String(), "already been invited")
+	testhelper.AssertContains(t, w.Body.String(), "already invited")
 }
 
 func TestHandleSendInvitation_TargetAlreadyMember(t *testing.T) {

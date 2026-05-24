@@ -1,6 +1,7 @@
 package guild
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -27,9 +28,9 @@ import (
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Slug generation ───────────────────────────────────────────────────────────
@@ -111,24 +112,41 @@ type createGuildSignals struct {
 	GuildDescription string `json:"guild_description"`
 }
 
+// ── Sentinel errors ───────────────────────────────────────────────────────────
+
+var (
+	// Validation sentinels.
+	ErrGuildNameLength    = errors.New("guild name must be between 5 and 60 characters")
+	ErrDescriptionTooLong = errors.New("description cannot exceed 500 characters")
+	ErrGuildNameInvalid   = errors.New("guild name must contain at least one letter or number")
+
+	// Orchestrator sentinels.
+	ErrGuildNotFound   = errors.New("guild not found")
+	ErrGuildNameTaken  = errors.New("a guild with this name already exists")
+	ErrAlreadyInGuild  = errors.New("you are already committed to a guild")
+	ErrGuildNotPending = errors.New("this guild is no longer accepting support")
+	ErrNotAuthorized   = errors.New("not authorized")
+	ErrInvalidID       = errors.New("invalid id")
+)
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func (h *handler) handleList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-		guilds, err := h.queries.ListActiveGuilds(r.Context())
+		activeGuilds, err := h.queries.ListActiveGuilds(r.Context())
 		if err != nil {
 			log.Printf("guild list: active query: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		pending, err := h.queries.ListPendingGuilds(r.Context())
+		pendingGuilds, err := h.queries.ListPendingGuilds(r.Context())
 		if err != nil {
 			log.Printf("guild list: pending query: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		KingdomLayout(r, "Guilds", r.URL.Path, kingdom, guildListContent(guilds, pending)).Render(w)
+		KingdomLayout(r, "Guilds", r.URL.Path, kingdom, guildListContent(activeGuilds, pendingGuilds)).Render(w)
 	}
 }
 
@@ -221,55 +239,79 @@ func (h *handler) handleCreate() http.HandlerFunc {
 			return
 		}
 
-		sse := datastar.NewSSE(w, r)
-
-		var errs []error
-		name := strings.TrimSpace(input.GuildName)
-		if len(name) < 5 || len(name) > 60 {
-			errs = append(errs, errors.New("guild name must be between 5 and 60 characters"))
-		}
-		description := strings.TrimSpace(input.GuildDescription)
-		if len(description) > 500 {
-			errs = append(errs, errors.New("description cannot exceed 500 characters"))
-		}
-		if len(errs) > 0 {
-			sse.PatchElementGostar(guildAlert(AlertError(errs...)))
+		if errs := validateCreateGuildInput(input); len(errs) > 0 {
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errs...)))
 			return
 		}
 
-		slug := generateSlug(name)
-		if slug == "" {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild name must contain at least one letter or number"))))
-			return
-		}
-
-		guild, err := h.queries.CreateGuild(r.Context(), db.CreateGuildParams{
-			Name:             name,
-			Slug:             slug,
-			Description:      description,
-			FounderKingdomID: kingdom.ID,
-		})
+		slug, err := h.createGuild(r.Context(), kingdom.ID, input)
 		if err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				var msg string
-				switch pgErr.ConstraintName {
-				case "guilds_name_unique", "guilds_slug_unique":
-					msg = "a guild with this name already exists"
-				default:
-					msg = "you are already committed to a guild"
-				}
-				sse.PatchElementGostar(guildAlert(AlertError(errors.New(msg))))
+			if isCreateGuildUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(err)))
 				return
 			}
-			log.Printf("guild create: insert: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
+			log.Printf("guild create: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
-		if err := sse.Redirect(slugURL(routes.GuildViewPath, guild.Slug)); err != nil {
+		sse := datastar.NewSSE(w, r)
+		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
 			log.Printf("guild create: redirect: %v", err)
 		}
 	}
+}
+
+// validateCreateGuildInput runs the field-level rules. Slug emptiness check
+// lives in the orchestrator because it depends on generateSlug.
+func validateCreateGuildInput(in *createGuildSignals) []error {
+	var errs []error
+	name := strings.TrimSpace(in.GuildName)
+	if len(name) < 5 || len(name) > 60 {
+		errs = append(errs, ErrGuildNameLength)
+	}
+	if len(strings.TrimSpace(in.GuildDescription)) > 500 {
+		errs = append(errs, ErrDescriptionTooLong)
+	}
+	return errs
+}
+
+// createGuild generates the slug, inserts the guild row, and translates a
+// unique-violation into one of two sentinels depending on which constraint
+// fired (name/slug vs. founder-already-in-a-guild). Returns the slug for the
+// caller's redirect.
+func (h *handler) createGuild(ctx context.Context, founderKingdomID int, input *createGuildSignals) (string, error) {
+	name := strings.TrimSpace(input.GuildName)
+	description := strings.TrimSpace(input.GuildDescription)
+
+	slug := generateSlug(name)
+	if slug == "" {
+		return "", ErrGuildNameInvalid
+	}
+
+	if _, err := h.queries.CreateGuild(ctx, db.CreateGuildParams{
+		Name:             name,
+		Slug:             slug,
+		Description:      description,
+		FounderKingdomID: founderKingdomID,
+	}); err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			switch pgErr.ConstraintName {
+			case "guilds_name_unique", "guilds_slug_unique":
+				return "", ErrGuildNameTaken
+			default:
+				return "", ErrAlreadyInGuild
+			}
+		}
+		return "", fmt.Errorf("create guild: %w", err)
+	}
+	return slug, nil
+}
+
+func isCreateGuildUserError(err error) bool {
+	return errors.Is(err, ErrGuildNameInvalid) ||
+		errors.Is(err, ErrGuildNameTaken) ||
+		errors.Is(err, ErrAlreadyInGuild)
 }
 
 func (h *handler) handleView() http.HandlerFunc {
@@ -277,7 +319,7 @@ func (h *handler) handleView() http.HandlerFunc {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 		slug := r.PathValue("slug")
 
-		guild, members, viewerRole, err := h.loadGuildAndMembership(r, slug, kingdom.ID)
+		guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, kingdom.ID)
 		if errors.Is(err, errGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
@@ -318,7 +360,7 @@ func (h *handler) handleViewRefresh() http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			case k := <-ch:
-				guild, members, viewerRole, err := h.loadGuildAndMembership(r, slug, k.ID)
+				guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, k.ID)
 				if errors.Is(err, errGuildNotFound) {
 					if err := sse.Redirect(routes.GuildPath); err != nil {
 						log.Printf("guild view refresh: redirect: %v", err)
@@ -353,90 +395,96 @@ func (h *handler) handleSupport() http.HandlerFunc {
 		slug := r.PathValue("slug")
 		sse := datastar.NewSSE(w, r)
 
-		tx, err := h.pool.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+		guildID, err := h.supportGuild(r.Context(), kingdom.ID, slug)
 		if err != nil {
-			log.Printf("guild support: begin tx: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		defer tx.Rollback(r.Context()) //nolint:errcheck
-
-		txq := db.New(tx)
-
-		g, err := txq.GetGuildBySlug(r.Context(), slug)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(guildAlert(AlertError(errors.New("guild not found"))))
+			if isSupportUserError(err) {
+				sse.PatchElementGostar(guildAlert(AlertError(err)))
 				return
 			}
-			log.Printf("guild support: get guild: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		if !_guild.GuildStatus(g.Status).IsPending() {
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("this guild is no longer accepting support"))))
-			return
-		}
-
-		if err := txq.CreateGuildMembership(r.Context(), db.CreateGuildMembershipParams{
-			GuildID:   g.ID,
-			KingdomID: kingdom.ID,
-			Role:      string(_guild.RoleSupporter),
-		}); err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
-				sse.PatchElementGostar(guildAlert(AlertError(errors.New("you are already committed to a guild"))))
-				return
-			}
-			log.Printf("guild support: create membership: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		if err := txq.CancelOtherPendingRequests(r.Context(), db.CancelOtherPendingRequestsParams{
-			KingdomID: kingdom.ID,
-			GuildID:   g.ID,
-		}); err != nil {
-			log.Printf("guild support: cancel pending requests: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		count, err := txq.CountGuildSupporters(r.Context(), g.ID)
-		if err != nil {
-			log.Printf("guild support: count supporters: %v", err)
-			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		if count >= 5 {
-			if err := txq.ActivateGuild(r.Context(), g.ID); err != nil {
-				log.Printf("guild support: activate guild: %v", err)
-				sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
-				return
-			}
-		}
-
-		if err := tx.Commit(r.Context()); err != nil {
-			log.Printf("guild support: commit: %v", err)
+			log.Printf("guild support: %v", err)
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
 			return
 		}
 
 		// Push a live refresh to all supporters so their guild view reflects the new state.
-		if supporters, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID); err == nil {
+		if supporters, err := h.queries.ListGuildMembersWithNames(r.Context(), guildID); err == nil {
 			supporterIDs := make([]int, 0, len(supporters))
 			for _, m := range supporters {
 				if m.KingdomID != kingdom.ID {
 					supporterIDs = append(supporterIDs, m.KingdomID)
 				}
 			}
-			h.publishUpdates(r, supporterIDs)
+			h.publishUpdates(r.Context(), supporterIDs)
 		}
 
 		if err := sse.Redirect(slugURL(routes.GuildViewPath, slug)); err != nil {
 			log.Printf("guild support: redirect: %v", err)
 		}
 	}
+}
+
+// supportGuild adds the kingdom as a supporter of the pending guild inside a
+// SERIALIZABLE transaction so the supporter-count read and the activation
+// decision share the same snapshot. Returns the guild ID on success.
+func (h *handler) supportGuild(ctx context.Context, kingdomID int, slug string) (int, error) {
+	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return 0, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	txq := db.New(tx)
+
+	g, err := txq.GetGuildBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, ErrGuildNotFound
+		}
+		return 0, fmt.Errorf("get guild: %w", err)
+	}
+	if !_guild.GuildStatus(g.Status).IsPending() {
+		return 0, ErrGuildNotPending
+	}
+
+	if err := txq.CreateGuildMembership(ctx, db.CreateGuildMembershipParams{
+		GuildID:   g.ID,
+		KingdomID: kingdomID,
+		Role:      string(_guild.RoleSupporter),
+	}); err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return 0, ErrAlreadyInGuild
+		}
+		return 0, fmt.Errorf("create membership: %w", err)
+	}
+
+	if err := txq.CancelOtherPendingRequests(ctx, db.CancelOtherPendingRequestsParams{
+		KingdomID: kingdomID,
+		GuildID:   g.ID,
+	}); err != nil {
+		return 0, fmt.Errorf("cancel pending requests: %w", err)
+	}
+
+	count, err := txq.CountGuildSupporters(ctx, g.ID)
+	if err != nil {
+		return 0, fmt.Errorf("count supporters: %w", err)
+	}
+
+	if count >= 5 {
+		if err := txq.ActivateGuild(ctx, g.ID); err != nil {
+			return 0, fmt.Errorf("activate guild: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("commit: %w", err)
+	}
+	return g.ID, nil
+}
+
+func isSupportUserError(err error) bool {
+	return errors.Is(err, ErrGuildNotFound) ||
+		errors.Is(err, ErrGuildNotPending) ||
+		errors.Is(err, ErrAlreadyInGuild)
 }
 
 func (h *handler) handleWithdrawSupport() http.HandlerFunc {
@@ -471,7 +519,7 @@ func (h *handler) handleWithdrawSupport() http.HandlerFunc {
 				toNotify = append(toNotify, m.KingdomID)
 			}
 		}
-		h.publishUpdates(r, toNotify)
+		h.publishUpdates(r.Context(), toNotify)
 	}
 }
 
@@ -496,7 +544,12 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 			KingdomID: kingdom.ID,
 			GuildID:   g.ID,
 		})
-		if err != nil || _guild.MemberRole(membership.Role) != _guild.RoleApplicant {
+		if err != nil {
+			log.Printf("guild cancel proposal: get membership: %v", err)
+			sse.PatchElementGostar(guildAlert(AlertError(errors.New("internal error"))))
+			return
+		}
+		if _guild.MemberRole(membership.Role) != _guild.RoleApplicant {
 			sse.PatchElementGostar(guildAlert(AlertError(errors.New("not authorized"))))
 			return
 		}
@@ -513,23 +566,26 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 	}
 }
 
-var errGuildNotFound = errors.New("guild not found")
+// errGuildNotFound is an unexported alias kept for backwards-compatibility with
+// existing handlers (handleView, handleViewRefresh) that switch on it directly.
+// Prefer ErrGuildNotFound externally.
+var errGuildNotFound = ErrGuildNotFound
 
-func (h *handler) loadGuildAndMembership(r *http.Request, slug string, kingdomID int) (db.Guild, []db.ListGuildMembersWithNamesRow, _guild.MemberRole, error) {
-	g, err := h.queries.GetGuildBySlug(r.Context(), slug)
+func (h *handler) loadGuildAndMembership(ctx context.Context, slug string, kingdomID int) (db.Guild, []db.ListGuildMembersWithNamesRow, _guild.MemberRole, error) {
+	g, err := h.queries.GetGuildBySlug(ctx, slug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Guild{}, nil, _guild.RoleNone, errGuildNotFound
+			return db.Guild{}, nil, _guild.RoleNone, ErrGuildNotFound
 		}
 		return db.Guild{}, nil, _guild.RoleNone, fmt.Errorf("get guild: %w", err)
 	}
 
-	members, err := h.queries.ListGuildMembersWithNames(r.Context(), g.ID)
+	members, err := h.queries.ListGuildMembersWithNames(ctx, g.ID)
 	if err != nil {
 		return db.Guild{}, nil, _guild.RoleNone, fmt.Errorf("list members: %w", err)
 	}
 
-	membership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
+	membership, err := h.queries.GetMembershipByKingdomAndGuild(ctx, db.GetMembershipByKingdomAndGuildParams{
 		KingdomID: kingdomID,
 		GuildID:   g.ID,
 	})
@@ -541,7 +597,7 @@ func (h *handler) loadGuildAndMembership(r *http.Request, slug string, kingdomID
 	// Promote to _guild.RoleInOtherGuild when the kingdom has no role in this guild but
 	// is committed elsewhere — view functions use this instead of a separate bool.
 	if viewerRole == _guild.RoleNone {
-		if km, err := h.queries.GetKingdomGuildMembership(r.Context(), kingdomID); err == nil && km.GuildID != g.ID {
+		if km, err := h.queries.GetKingdomGuildMembership(ctx, kingdomID); err == nil && km.GuildID != g.ID {
 			viewerRole = _guild.RoleInOtherGuild
 		}
 	}
@@ -549,31 +605,34 @@ func (h *handler) loadGuildAndMembership(r *http.Request, slug string, kingdomID
 	return g, members, viewerRole, nil
 }
 
-func (h *handler) getGuildAndViewerRole(r *http.Request, slug string, kingdomID int) (db.Guild, _guild.MemberRole, error) {
-	g, err := h.queries.GetGuildBySlug(r.Context(), slug)
+func (h *handler) getGuildAndViewerRole(ctx context.Context, slug string, kingdomID int) (db.Guild, _guild.MemberRole, error) {
+	g, err := h.queries.GetGuildBySlug(ctx, slug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Guild{}, _guild.RoleNone, errGuildNotFound
+			return db.Guild{}, _guild.RoleNone, ErrGuildNotFound
 		}
 		return db.Guild{}, _guild.RoleNone, fmt.Errorf("get guild: %w", err)
 	}
-	membership, err := h.queries.GetMembershipByKingdomAndGuild(r.Context(), db.GetMembershipByKingdomAndGuildParams{
+	membership, err := h.queries.GetMembershipByKingdomAndGuild(ctx, db.GetMembershipByKingdomAndGuildParams{
 		KingdomID: kingdomID,
 		GuildID:   g.ID,
 	})
 	if err != nil {
-		return g, _guild.RoleNone, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return g, _guild.RoleNone, nil
+		}
+		return db.Guild{}, _guild.RoleNone, fmt.Errorf("get membership: %w", err)
 	}
 	return g, _guild.MemberRole(membership.Role), nil
 }
 
 // publishUpdates fetches the kingdoms for the given IDs and publishes each to the hub,
 // triggering live page refreshes for those kingdoms. Errors are logged but not propagated.
-func (h *handler) publishUpdates(r *http.Request, kingdomIDs []int) {
+func (h *handler) publishUpdates(ctx context.Context, kingdomIDs []int) {
 	if len(kingdomIDs) == 0 {
 		return
 	}
-	kingdoms, err := h.queries.GetKingdomsByIDs(r.Context(), kingdomIDs)
+	kingdoms, err := h.queries.GetKingdomsByIDs(ctx, kingdomIDs)
 	if err != nil {
 		log.Printf("guild publish: fetch kingdoms: %v", err)
 		return
@@ -586,11 +645,11 @@ func (h *handler) publishUpdates(r *http.Request, kingdomIDs []int) {
 // sendNotifications sends an in-game message from one kingdom to one or more recipients
 // and immediately publishes each recipient's kingdom to the hub for instant delivery.
 // Errors are logged but not propagated — notification failure is non-fatal.
-func (h *handler) sendNotifications(r *http.Request, fromKingdomID int, toKingdomIDs []int, subject, body, actionURL, actionText string) {
+func (h *handler) sendNotifications(ctx context.Context, fromKingdomID int, toKingdomIDs []int, subject, body, actionURL, actionText string) {
 	if len(toKingdomIDs) == 0 {
 		return
 	}
-	if err := h.queries.BulkCreateMessages(r.Context(), db.BulkCreateMessagesParams{
+	if err := h.queries.BulkCreateMessages(ctx, db.BulkCreateMessagesParams{
 		FromKingdomID: fromKingdomID,
 		ToKingdomIds:  toKingdomIDs,
 		Subject:       subject,
@@ -601,7 +660,7 @@ func (h *handler) sendNotifications(r *http.Request, fromKingdomID int, toKingdo
 		log.Printf("guild notification: send message: %v", err)
 		return
 	}
-	h.publishUpdates(r, toKingdomIDs)
+	h.publishUpdates(ctx, toKingdomIDs)
 }
 
 // ── Page components ───────────────────────────────────────────────────────────
@@ -804,15 +863,15 @@ func guildActionButtons(g db.Guild, viewerRole _guild.MemberRole, invitationID i
 	)
 }
 
-func guildListContent(guilds []db.ListActiveGuildsRow, pending []db.ListPendingGuildsRow) Node {
+func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.ListPendingGuildsRow) Node {
 	return Div(
 		H1(Class("page-title"), Text("Guilds")),
 		Div(Class("guilds-list panel"),
 			P(Class("panel-title"), Text("Active Guilds")),
-			Iff(len(guilds) == 0, func() Node {
+			Iff(len(activeGuilds) == 0, func() Node {
 				return P(Text("No active guilds yet."))
 			}),
-			Iff(len(guilds) > 0, func() Node {
+			Iff(len(activeGuilds) > 0, func() Node {
 				return Table(Class("table"),
 					THead(
 						Tr(
@@ -822,7 +881,7 @@ func guildListContent(guilds []db.ListActiveGuildsRow, pending []db.ListPendingG
 						),
 					),
 					TBody(
-						Map(guilds, func(g db.ListActiveGuildsRow) Node {
+						Map(activeGuilds, func(g db.ListActiveGuildsRow) Node {
 							leaderName := "—"
 							if g.LeaderName.Valid {
 								leaderName = g.LeaderName.String
@@ -837,7 +896,7 @@ func guildListContent(guilds []db.ListActiveGuildsRow, pending []db.ListPendingG
 				)
 			}),
 		),
-		Iff(len(pending) > 0, func() Node {
+		Iff(len(pendingGuilds) > 0, func() Node {
 			return Div(Class("guilds-applications panel"),
 				P(Class("panel-title"), Text("Guild Applications")),
 				Table(Class("table"),
@@ -850,7 +909,7 @@ func guildListContent(guilds []db.ListActiveGuildsRow, pending []db.ListPendingG
 						),
 					),
 					TBody(
-						Map(pending, func(g db.ListPendingGuildsRow) Node {
+						Map(pendingGuilds, func(g db.ListPendingGuildsRow) Node {
 							founderName := "—"
 							if g.FounderName.Valid {
 								founderName = g.FounderName.String

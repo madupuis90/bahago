@@ -5,6 +5,11 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
+  "containerEnv": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "postCreateCommand": "mkdir -p ~/.claude && echo '{\"theme\":\"dark\",\"autoCompactEnabled\":true,\"autoCompactWindow\":100000,\"autoMemoryDirectory\":\"/workspaces/bahago/.claude/memory\"}' > ~/.claude/settings.json",
   "features": {
     "ghcr.io/devcontainers-extra/features/go-task:1": {},
     "ghcr.io/devcontainers/features/node:1": {},

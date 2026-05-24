@@ -31,6 +31,11 @@ tasks:
     cmds:
       - go test {{.CLI_ARGS}} ./...
 
+  check:
+    desc: Compile all packages without producing a binary (fast correctness check)
+    cmds:
+      - go build ./...
+
   lint:
     desc: Run go vet to check for potential issues
     cmds:

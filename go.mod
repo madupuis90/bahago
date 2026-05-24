@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.8.0
+	github.com/pressly/goose/v3 v3.26.0
 	github.com/resend/resend-go/v2 v2.28.0
 	github.com/starfederation/datastar-go v1.1.0
 	golang.org/x/crypto v0.41.0
@@ -67,7 +68,6 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86 // indirect
 	github.com/pingcap/log v1.1.0 // indirect
 	github.com/pingcap/tidb/pkg/parser v0.0.0-20250324122243-d51e00e5bbf0 // indirect
-	github.com/pressly/goose/v3 v3.26.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
