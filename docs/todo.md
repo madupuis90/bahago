@@ -3,6 +3,7 @@ Raw thoughts. No commitment, no structure. May never happen.
 
 - Find a name
 - Spawn near a player
+- daily message: the realm holds firm
 - [skills] Design skills
 - [events] Add a Journal of events — could have...
 - [timers] safe timers

@@ -17,9 +17,9 @@ import (
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Route registration ────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ func (h *handler) handleKingdomRefresh() http.HandlerFunc {
 	}
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+// ── Combat log grouping ───────────────────────────────────────────────────────
 
 type combatParticipant struct {
 	Name             string
@@ -112,35 +112,52 @@ func groupCombatLog(rows []db.GetRecentCombatLogsRow) []combatLogDisplay {
 	return entries
 }
 
+// ── Components ────────────────────────────────────────────────────────────────
+
 func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) Node {
 	return Div(
 		Div(ds.Init(GetSSENoSignals(routes.KingdomRefreshPath))),
-		Div(Class("panel kingdom-overview"),
-			H1(Class("kingdom-name"), Text(kingdom.Name)),
-			kingdomStat("Population", fmt.Sprintf("%d", kingdom.Population)),
+		PageHeader("", "The realm holds firm."),
+		Div(Class("overview-grid"),
+			Section(Class("overview-col"),
+				P(Classes{"caps-label": true, "text-highlight": true}, Text("Combat Log")),
+				Div(Class("combat-log"),
+					If(len(combatLog) == 0,
+						P(Class("combat-log-empty text-muted"), Text("No recent events.")),
+					),
+					Group(Map(combatLog, combatLogEntry)),
+				),
+			),
+			Aside(Class("overview-col"),
+				P(Classes{"caps-label": true, "text-highlight": true}, Text("Overview")),
+				Div(Class("panel stats-panel"),
+					statRow("Population", FormatThousands(kingdom.Population), ""),
+				),
+			),
 		),
-		recentCombatSection(combatLog),
 	)
 }
 
-func kingdomStat(label, value string) Node {
-	return Div(Class("kingdom-stat"),
-		Span(Class("kingdom-stat-label"), Text(label)),
-		Span(Class("kingdom-stat-value"), Text(value)),
-	)
-}
-
-func recentCombatSection(entries []combatLogDisplay) Node {
-	return Div(Class("panel kingdom-combat-log"),
-		P(Class("panel-title"), Text("Recent Combat")),
-		If(len(entries) == 0,
-			P(Class("kingdom-combat-log-empty"), Text("No recent combat.")),
-		),
-		Map(entries, combatLogEntry),
+func statRow(label, value, delta string) Node {
+	return Div(Class("stat-row"),
+		Span(Class("stat-row-label"), Text(label)),
+		Span(Class("stat-row-value"), Text(value)),
+		If(delta != "", Span(Class("stat-row-delta"), Text(delta))),
 	)
 }
 
 func combatLogEntry(e combatLogDisplay) Node {
+	attackerNames := participantNames(e.Attackers)
+	defenderNames := participantNames(e.Defenders)
+	attackersWon := e.Winner == "attacker"
+
+	var head string
+	if attackersWon {
+		head = fmt.Sprintf("%s prevailed against %s", attackerNames, defenderNames)
+	} else {
+		head = fmt.Sprintf("%s repelled %s", defenderNames, attackerNames)
+	}
+
 	var attackerUnits, defenderUnits []game.CombatUnitRecord
 	if err := json.Unmarshal(e.AttackerUnits, &attackerUnits); err != nil {
 		log.Printf("kingdom: unmarshal attacker units: %v", err)
@@ -149,88 +166,76 @@ func combatLogEntry(e combatLogDisplay) Node {
 		log.Printf("kingdom: unmarshal defender units: %v", err)
 	}
 
-	attackerNames := make([]string, len(e.Attackers))
-	for i, p := range e.Attackers {
-		attackerNames[i] = p.Name
-	}
-	defenderNames := make([]string, len(e.Defenders))
-	for i, p := range e.Defenders {
-		defenderNames[i] = p.Name
-	}
+	body := combatBodyText(attackerUnits, defenderUnits)
 
-	var gainers []combatParticipant
+	marg := ""
 	for _, p := range e.Attackers {
 		if p.PopulationGained > 0 {
-			gainers = append(gainers, p)
+			marg = fmt.Sprintf("+%d population captured", p.PopulationGained)
+			break
+		}
+	}
+	if marg == "" {
+		if attackersWon {
+			marg = "attackers won"
+		} else {
+			marg = "defenders held"
 		}
 	}
 
-	attackersWon := e.Winner == "attacker"
-
-	return Div(Class("kingdom-combat-log-entry"),
-		Div(Class("kingdom-combat-log-date"),
-			Text(fmt.Sprintf("Tick %d — %s", e.TickID, e.OccurredAt.Format("Jan 2, 15:04"))),
+	return El("article", Class("combat-log-entry"),
+		Div(Class("combat-log-entry-main"),
+			Div(Class("combat-log-entry-time"), Text(fmt.Sprintf("tick %d", e.TickID))),
+			Div(Class("combat-log-entry-head"), Text(head)),
+			P(Class("combat-log-entry-body"), Text(body)),
 		),
-		Div(Class("kingdom-combat-log-sides"),
-			combatSideTitle("Attackers", attackersWon),
-			combatSideTitle("Defenders", !attackersWon),
-			combatSideBlock("Kingdoms:", strings.Join(attackerNames, ", ")),
-			combatSideBlock("Kingdoms:", strings.Join(defenderNames, ", ")),
-			combatUnitsBlock("Armies:", attackerUnits, false),
-			combatUnitsBlock("Armies:", defenderUnits, false),
-			combatUnitsBlock("Casualties", attackerUnits, true),
-			combatUnitsBlock("Casualties", defenderUnits, true),
-		),
-		Iff(len(gainers) > 0, func() Node {
-			return Div(Class("kingdom-combat-log-footer"),
-				Group(Map(gainers, func(g combatParticipant) Node {
-					return P(Text(fmt.Sprintf("%s stole %d population", g.Name, g.PopulationGained)))
-				})),
-			)
-		}),
+		Div(Class("combat-log-entry-note"), Text(marg)),
 	)
 }
 
-func combatSideTitle(title string, winner bool) Node {
-	return P(Classes{
-		"kingdom-combat-log-side-title":         true,
-		"kingdom-combat-log-side-title--winner": winner,
-	}, Text(title))
+func participantNames(ps []combatParticipant) string {
+	names := make([]string, len(ps))
+	for i, p := range ps {
+		names[i] = p.Name
+	}
+	if len(names) == 0 {
+		return "an unknown host"
+	}
+	return strings.Join(names, ", ")
 }
 
-func combatSideBlock(label, value string) Node {
-	return Div(Class("kingdom-combat-log-side-block"),
-		P(Class("kingdom-combat-log-section-label"), Text(label)),
-		P(Text(value)),
-	)
+func combatBodyText(attackers, defenders []game.CombatUnitRecord) string {
+	att, attCas := summarizeUnits(attackers)
+	def, defCas := summarizeUnits(defenders)
+
+	if att == "" && def == "" {
+		return "The field was empty; the day passed without combat."
+	}
+	parts := []string{}
+	if att != "" {
+		parts = append(parts, fmt.Sprintf("Attackers brought %s", att))
+	} else {
+		parts = append(parts, "Attackers brought no host")
+	}
+	if def != "" {
+		parts = append(parts, fmt.Sprintf("defenders mustered %s", def))
+	} else {
+		parts = append(parts, "defenders mustered none")
+	}
+	sentence := strings.Join(parts, "; ") + "."
+	if attCas > 0 || defCas > 0 {
+		sentence += fmt.Sprintf(" Casualties: %d on the attack, %d in defence.", attCas, defCas)
+	}
+	return sentence
 }
 
-func combatUnitsBlock(label string, units []game.CombatUnitRecord, showCasualties bool) Node {
-	return Div(Class("kingdom-combat-log-side-block"),
-		P(Class("kingdom-combat-log-section-label"), Text(label)),
-		Group(Map(units, func(u game.CombatUnitRecord) Node {
-			def := game.UnitDefs[u.UnitType]
-			if showCasualties {
-				return If(u.Casualties > 0,
-					P(Text(fmt.Sprintf("%s: %d", def.Name, u.Casualties))),
-				)
-			}
-			return P(Text(fmt.Sprintf("%s: %d", def.Name, u.Count)))
-		})),
-		If(showCasualties && noCasualties(units),
-			P(Class("kingdom-combat-log-empty-note"), Text("No casualties")),
-		),
-		If(!showCasualties && len(units) == 0,
-			P(Class("kingdom-combat-log-empty-note"), Text("No resistance")),
-		),
-	)
-}
-
-func noCasualties(units []game.CombatUnitRecord) bool {
+func summarizeUnits(units []game.CombatUnitRecord) (string, int) {
+	parts := []string{}
+	casualties := 0
 	for _, u := range units {
-		if u.Casualties > 0 {
-			return false
-		}
+		def := game.UnitDefs[u.UnitType]
+		parts = append(parts, fmt.Sprintf("%d %s", u.Count, def.Name))
+		casualties += u.Casualties
 	}
-	return true
+	return strings.Join(parts, ", "), casualties
 }

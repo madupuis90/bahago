@@ -11,6 +11,7 @@ import (
 	"bahago/internal/handlers/chat"
 	"bahago/internal/handlers/guild"
 	"bahago/internal/handlers/home"
+	"bahago/internal/handlers/iconpreview"
 	"bahago/internal/handlers/kingdom"
 	"bahago/internal/handlers/kingdomsetup"
 	"bahago/internal/handlers/layoutrefresh"
@@ -28,6 +29,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const tickInterval = 120 * time.Second
 
 type Server struct {
 	mux     *http.ServeMux
@@ -62,6 +65,7 @@ func (s *Server) registerRoutes() {
 	}
 
 	// public pages
+	iconpreview.RegisterRoutes(globalRouter)
 	home.RegisterRoutes(globalRouter)
 	auth.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
 	chat.RegisterRoutes(globalRouter) // Experiment
@@ -103,5 +107,5 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // StartGameTicker begins the game tick loop. It blocks until ctx is cancelled.
 // Call as a goroutine from main.
 func (s *Server) StartGameTicker(ctx context.Context) {
-	game.StartTicker(ctx, s.pool, s.tickHub.Publish, 3600*time.Second)
+	game.StartTicker(ctx, s.pool, s.tickHub.Publish, tickInterval)
 }

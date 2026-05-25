@@ -1,5 +1,5 @@
 /* =============================================================================
-   1. Reset
+   Reset
    ============================================================================= */
 
 *,
@@ -11,7 +11,7 @@
 }
 
 /* =============================================================================
-   2. Tokens
+   Tokens
    ============================================================================= */
 
 :root {
@@ -46,10 +46,33 @@
   --map-wall-size: 3rem;
   --map-axis-label-size: 2rem;
   --map-minimap-cell-size: 1rem;
+
+  /* Typography */
+  --font-heading: 'Cormorant Garamond', 'Garamond', serif;
+  --font-body: 'IM Fell English', 'Garamond', serif;
+  --font-caps: 'IM Fell English SC', 'IM Fell English', serif;
+  --font-ui: system-ui, -apple-system, sans-serif;
+
+  /* Kingdom chrome — ink, surface, accent colors */
+  --parchment: #f7eed5;
+  --parchment-deep: #ebdfb6;
+  --ink: #2a2418;
+  --ink-soft: #5a4d36;
+  --accent: #2f5a3d;
+  --accent-dark: #1d3a26;
+  --highlight: #7a3018;
+  --edge: #b8a26a;
+  --parchment-shadow: rgba(75, 55, 25, .18);
+  --parchment-bg:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 250, 236, .9), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(220, 200, 160, .35), transparent 60%),
+    linear-gradient(180deg, #f7eed5, #efe3c0);
+  --parchment-noise:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
 }
 
 /* =============================================================================
-   3. Base
+   Base
    ============================================================================= */
 
 html {
@@ -66,8 +89,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 1rem;
-  gap: 1rem;
+  padding: 0;
+  gap: 0;
 }
 
 a {
@@ -115,7 +138,7 @@ h1 {
 }
 
 /* =============================================================================
-   4. Layout
+   Home shell (top-nav, content-area, side-nav)
    ============================================================================= */
 
 .top-nav {
@@ -178,7 +201,7 @@ h1 {
 }
 
 /* =============================================================================
-   5. Shared components
+   Shared components (panel, btn, form, alert)
    ============================================================================= */
 
 .page-title {
@@ -287,6 +310,50 @@ h1 {
       background: #7a1818;
     }
   }
+
+  /* Primary action button — used for the main CTA on kingdom pages. */
+  &.btn--primary {
+    background: var(--accent);
+    background-image: none;
+    color: var(--parchment);
+    border: 1px solid var(--accent-dark);
+    border-radius: 0;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.5rem 1.5rem;
+    letter-spacing: .05em;
+    box-shadow: none;
+
+    &:hover {
+      background: var(--accent-dark);
+      color: var(--parchment);
+      box-shadow: var(--shadow-btn-hover);
+    }
+  }
+
+  /* Small button — used for ± stepper controls. */
+  &.btn--sm {
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.25rem;
+    border-radius: 0;
+    border: 1px solid var(--edge);
+    background: rgba(255, 250, 236, .6);
+    background-image: none;
+    color: var(--ink);
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: none;
+
+    &:hover {
+      background: rgba(255, 250, 236, .9);
+      color: var(--ink);
+      box-shadow: none;
+    }
+  }
 }
 
 .btn-text {
@@ -345,24 +412,29 @@ h1 {
   margin-bottom: 0.75rem;
 }
 
+.alert--success,
+.alert--error {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-variant-numeric: lining-nums;
+  font-size: 0.9rem;
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.8rem;
+}
+
 .alert--success {
   background: #d4edda;
   border: 1px solid #28a745;
-  border-radius: 0.4rem;
-  padding: 0.6rem 0.8rem;
   color: #155724;
 }
 
 .alert--error {
   background: #f8d7da;
   border: 1px solid #dc3545;
-  border-radius: 0.4rem;
-  padding: 0.6rem 0.8rem;
   color: #721c24;
 }
 
 /* =============================================================================
-   6. Auth
+   Auth
    ============================================================================= */
 
 .auth-card {
@@ -374,172 +446,779 @@ h1 {
 }
 
 /* =============================================================================
-   7. Kingdom
+   Kingdom chrome (topbar, bottom-nav, typography helpers)
    ============================================================================= */
 
-.kingdom-overview {
-  display: inline-flex;
+.kingdom-page {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--parchment-bg);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--parchment-noise);
+    mix-blend-mode: multiply;
+    opacity: .4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &>* {
+    position: relative;
+    z-index: 1;
+  }
+
+  & main {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px 36px 16px;
+    background: transparent;
+  }
+}
+
+/* Typography helpers */
+.caps-label {
+  font-family: var(--font-caps);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+
+  &.text-highlight {
+    color: var(--highlight);
+  }
+}
+
+.text-highlight {
+  color: var(--highlight);
+  font-family: var(--font-body);
+}
+
+.text-muted {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.rule-dbl {
+  height: 3px;
+  background: linear-gradient(180deg,
+      var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
+}
+
+/* Shield + resource icons (use the SVG sprite) */
+.shield {
+  display: block;
+  color: var(--ink-soft);
+  /* line color via currentColor */
+
+  &.shield--active {
+    color: var(--highlight);
+  }
+
+  &.shield--dim {
+    opacity: .55;
+  }
+}
+
+/* ── Topbar ──────────────────────────────────────────────────────────────── */
+
+.topbar {
+  flex-shrink: 0;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(255, 250, 236, .45), rgba(235, 223, 182, .18));
+  border-bottom: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(255, 250, 236, .6), 0 2px 0 var(--edge);
+  position: relative;
+  z-index: 2;
+}
+
+.topbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 14px;
+}
+
+.kingdom-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kingdom-name {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.kingdom-sub {
+  margin-top: 4px;
+  font-size: 18px;
+  font-variant-numeric: lining-nums;
+}
+
+.tick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tick-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 250, 236, .4);
+  color: var(--highlight);
+
+  & .caps-label {
+    font-size: 8.5px;
+    color: var(--highlight);
+  }
+}
+
+.hourglass {
+  display: block;
+  color: var(--highlight);
+}
+
+.tick-value {
+  font-family: var(--font-heading);
+  font-variant-numeric: oldstyle-nums;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── Resource cartouches ─────────────────────────────────────────────────── */
+
+.resources {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 250, 236, .55);
+  border: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset;
+}
+
+.resource-text {
+  display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1.25rem 1.5rem;
-  margin-top: 0.5rem;
+  line-height: 1;
+  min-width: 0;
+}
+
+.resource-label {
+  font-family: var(--font-caps);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 9px;
+  color: var(--highlight);
+}
+
+.resource-value {
+  font-family: var(--font-heading);
+  font-variant-numeric: lining-nums;
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+/* ── Bottom nav ──────────────────────────────────────────────────────────── */
+
+.bottom-nav {
+  flex-shrink: 0;
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--edge);
+  box-shadow:
+    0 -1px 0 rgba(255, 250, 236, .6) inset,
+    0 -2px 0 var(--edge);
+  background: linear-gradient(0deg, rgba(255, 250, 236, .45), rgba(235, 223, 182, .15));
+  position: relative;
+  z-index: 2;
+}
+
+.bottom-nav-row {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-stone {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  background: rgba(255, 250, 236, .35);
+  border: 1px solid var(--edge);
+  cursor: pointer;
+  transition: background .15s;
+  text-decoration: none;
+  position: relative;
+
+  &:hover {
+    background: rgba(255, 250, 236, .55);
+    text-decoration: none;
+  }
+
+  &.nav-stone--active {
+    background: rgba(122, 48, 24, .06);
+    border-color: var(--highlight);
+    box-shadow: inset 0 0 0 1px var(--edge);
+
+    & .nav-stone-label {
+      color: var(--highlight);
+      font-weight: 600;
+    }
+  }
+}
+
+.nav-stone-label {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.nav-stone-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  background: var(--highlight);
+  color: var(--parchment);
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Mobile: 6-up resource grid → 3-up; one row of stones → two rows */
+@media (max-width: 600px) {
+  .kingdom-page main {
+    padding: 14px 16px 12px;
+  }
+
+  .topbar {
+    padding: 11px 14px 12px;
+  }
 
   .kingdom-name {
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
+    font-size: 15px;
+  }
+
+  .resources {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .resource {
+    gap: 6px;
+    padding: 5px 8px;
+  }
+
+  .resource-label {
+    font-size: 8px;
+  }
+
+  .resource-value {
+    font-size: 14px;
+  }
+
+  .bottom-nav {
+    padding: 8px 8px 10px;
+  }
+
+  .bottom-nav-row {
+    gap: 5px;
+
+    &+.bottom-nav-row {
+      margin-top: 5px;
+    }
+  }
+
+  .nav-stone {
+    padding: 7px 4px;
+  }
+
+  .nav-stone-label {
+    font-size: 10px;
   }
 }
 
-.kingdom-stat {
-  display: flex;
-  gap: 0.75rem;
-  align-items: baseline;
+/* =============================================================================
+   Kingdom overview (page header, combat log, stats panel)
+   ============================================================================= */
 
-  .kingdom-stat-label {
-    font-weight: 600;
-    min-width: 7rem;
+.page-header {
+  & h1 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    color: var(--highlight);
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.05;
+    letter-spacing: 0;
   }
 
-  .kingdom-stat-value {
-    font-variant-numeric: tabular-nums;
+  & h1 .italic {
+    color: var(--ink);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  & .page-header-tag {
+    font-size: 10px;
+    letter-spacing: .2em;
+    margin-bottom: 6px;
+  }
+
+  & .rule-dbl {
+    margin-top: 10px;
+  }
+
+  @media (max-width: 600px) {
+    & h1 {
+      font-size: 26px;
+    }
   }
 }
 
-.kingdom-combat-log {
-  padding: 1.25rem;
-  margin-top: 1rem;
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 28px;
+  margin-top: 18px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
-.kingdom-combat-log-empty {
-  font-style: italic;
-  opacity: 0.55;
-}
-
-.kingdom-combat-log-entry {
+.overview-col {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  gap: 14px;
+
+  & .caps-label.text-highlight {
+    margin-bottom: 0;
+  }
+}
+
+.combat-log {
+  position: relative;
+  padding-left: 8px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--edge);
+    opacity: .6;
+  }
+
+  @media (max-width: 600px) {
+    padding-left: 0;
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.combat-log-empty {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.combat-log-entry {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dotted var(--edge);
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 600px) {
+    gap: 8px;
+  }
+}
+
+.combat-log-entry-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.combat-log-entry-time {
+  font-family: var(--font-caps);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--highlight);
+  font-size: 9px;
+  margin-bottom: 3px;
+}
+
+.combat-log-entry-head {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--ink);
+  margin-bottom: 4px;
+
+  @media (max-width: 600px) {
+    font-size: 15px;
+  }
+}
+
+.combat-log-entry-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  text-wrap: pretty;
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+  }
+}
+
+.combat-log-entry-note {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+  border-left: 1px solid var(--edge);
+  padding-left: 10px;
+  font-size: 11px;
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--ink-soft);
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+.stats-panel {
+  padding: 14px;
+  margin-top: 8px;
+  background: rgba(255, 250, 236, .55);
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dotted var(--edge);
 
   &:last-child {
     border-bottom: none;
   }
 }
 
-.kingdom-combat-log-date {
-  text-align: center;
-  font-size: 0.8rem;
-  opacity: 0.55;
+.stat-row-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  flex: 1;
 }
 
-.kingdom-combat-log-sides {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 1.5rem;
-  row-gap: 0.5rem;
-  align-items: start;
+.stat-row-value {
+  font-family: var(--font-heading);
+  font-variant-numeric: oldstyle-nums;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ink);
 }
 
-.kingdom-combat-log-side-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  opacity: 0.55;
-  text-align: center;
-  padding-bottom: 0.35rem;
-  border-bottom: 2px solid transparent;
-
-  &.kingdom-combat-log-side-title--winner {
-    opacity: 1;
-    color: var(--color-positive);
-    border-bottom-color: var(--color-positive);
-  }
-}
-
-.kingdom-combat-log-side-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.85rem;
-}
-
-.kingdom-combat-log-section-label {
-  font-weight: 600;
-  font-size: 0.75rem;
-  opacity: 0.6;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.kingdom-combat-log-empty-note {
+.stat-row-delta {
+  font-size: 10px;
+  min-width: 56px;
+  text-align: right;
+  font-family: var(--font-body);
   font-style: italic;
-  opacity: 0.45;
-  font-size: 0.85rem;
-}
-
-.kingdom-combat-log-footer {
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-positive);
+  color: var(--ink-soft);
 }
 
 /* =============================================================================
-   8. Allocation
+   Allocation (grid table + slider)
    ============================================================================= */
 
-.allocation-card {
-  display: inline-block;
-  padding: 1.5rem;
-}
-
 .allocation-table {
-  border-collapse: collapse;
+  padding: 4px 18px 14px;
+  margin-top: 18px;
+  background: rgba(255, 250, 236, .55);
+}
 
-  th,
-  td {
-    text-align: center;
-    padding: 0.4rem 1.2rem;
-  }
+.allocation-head,
+.allocation-row {
+  display: grid;
+  grid-template-columns: 36px 1.4fr 2.4fr 0.7fr 0.7fr 0.7fr 0.7fr 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  align-items: center;
+}
 
-  th {
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.15);
-  }
+.allocation-head {
+  padding: 10px 0 6px;
+  border-bottom: 1px solid var(--edge);
 
-  .allocation-assignment {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+  & .caps-label {
+    font-size: 0.75rem;
+    color: var(--highlight);
   }
 }
 
-.allocation-btn {
-  width: 1.4rem;
-  height: 1.4rem;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--panel-bg);
-  color: var(--panel-text);
-  font-size: 1rem;
-  line-height: 1;
+.allocation-row {
+  border-bottom: 1px dotted var(--edge);
 
-  &:hover {
-    background: var(--panel-bg);
-    box-shadow: var(--shadow-btn-hover);
+  &:last-of-type {
+    border-bottom: none;
   }
 
-  &.allocation-btn--plus-five {
-    width: auto;
-    padding: 0 0.35rem;
-    border-radius: 0.7rem;
-    font-size: 0.75rem;
+  &.allocation-row--idle {
+    opacity: .85;
+  }
+}
+
+.allocation-shield {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.allocation-role {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 1.25rem;
+}
+
+.allocation-assign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/*
+ * Slider — native <input type=range> styled to match the "green diamond on
+ * an inked rule" look. No live coloured fill — the thumb alone marks the
+ * value. (A prior attempt used ds.Style("--val", ...) but Datastar's
+ * data-style plugin assigns via el.style[key], which doesn't support CSS
+ * custom properties and silently broke every other binding on the input.)
+ */
+.allocation-slider {
+  flex: 1;
+  height: 18px;
+  /*
+   * Ticks live on the input background, not the track, so they can be
+   * taller than the 2px rule. Two layers: a single edge line at the right
+   * (the 100% mark), then a 10% repeating mark at the left of each cell —
+   * together giving ticks at 0, 10, 20 … 100%. Centered vertically over
+   * an 8px band.
+   */
+  background:
+    linear-gradient(to right, transparent calc(100% - 1px), var(--edge) calc(100% - 1px)) left center / 100% 8px no-repeat,
+    linear-gradient(to right, var(--edge) 0 1px, transparent 1px 100%) left center / 10% 8px repeat-x;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+
+  &::-webkit-slider-runnable-track {
+    height: 2px;
+    background: var(--edge);
+  }
+
+  &::-moz-range-track {
+    height: 2px;
+    background: var(--edge);
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -5px;
+    background: var(--accent);
+    border: 1px solid var(--accent-dark);
+    border-radius: 0;
+    transform: rotate(45deg);
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    background: var(--accent);
+    border: 1px solid var(--accent-dark);
+    border-radius: 0;
+    transform: rotate(45deg);
+    cursor: pointer;
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    &::-webkit-slider-thumb {
+      box-shadow: 0 0 0 2px var(--accent-dark);
+    }
+
+    &::-moz-range-thumb {
+      box-shadow: 0 0 0 2px var(--accent-dark);
+    }
+  }
+}
+
+.allocation-pct {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.allocation-num {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+
+  &.allocation-num--pos {
+    color: var(--accent-dark);
+  }
+
+  &.allocation-num--neg {
+    color: var(--highlight);
+  }
+
+  &.allocation-num--bold {
+    font-weight: 600;
+  }
+}
+
+.allocation-res {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1rem;
+}
+
+.allocation-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.allocation-hint {
+  font-size: 1.1rem;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+/* Mobile: collapse allocation grid to stacked cards */
+@media (max-width: 600px) {
+  .allocation-head {
+    display: none;
+  }
+
+  .allocation-row {
+    grid-template-columns: 28px 1fr auto;
+    grid-template-areas:
+      "shield role pct"
+      "assign assign assign"
+      "yield  upkeep net";
+    row-gap: 6px;
+    padding: 12px 0;
+
+    &>.allocation-shield {
+      grid-area: shield;
+    }
+
+    &>.allocation-role {
+      grid-area: role;
+    }
+
+    &>.allocation-pct {
+      grid-area: pct;
+      text-align: right;
+    }
+
+    &>.allocation-assign {
+      grid-area: assign;
+    }
+
+    &>.allocation-num:nth-of-type(1) {
+      grid-area: yield;
+    }
+
+    &>.allocation-num:nth-of-type(2) {
+      grid-area: upkeep;
+    }
+
+    &>.allocation-num:nth-of-type(3) {
+      grid-area: net;
+      text-align: right;
+    }
+
+    &>.allocation-res {
+      display: none;
+    }
   }
 }
 
 /* =============================================================================
-   9. Buildings
+   Buildings
    ============================================================================= */
 
 .buildings-grid {
@@ -583,7 +1262,7 @@ h1 {
 }
 
 /* =============================================================================
-   10. Units
+   Units
    ============================================================================= */
 
 .units-section {
@@ -649,7 +1328,7 @@ h1 {
 }
 
 /* =============================================================================
-   11. World Map
+   World map
    ============================================================================= */
 
 .map-info {
@@ -1029,7 +1708,7 @@ h1 {
 }
 
 /* =============================================================================
-   11. Army
+   Army
    ============================================================================= */
 
 .army-section {
@@ -1093,7 +1772,7 @@ h1 {
 }
 
 /* =============================================================================
-   12. Home
+   Home (flip card)
    ============================================================================= */
 
 .flip-scene {
@@ -1151,19 +1830,7 @@ h1 {
 }
 
 /* =============================================================================
-   13. Utilities
-   ============================================================================= */
-
-.text-positive {
-  color: var(--color-positive);
-}
-
-.text-negative {
-  color: var(--color-negative);
-}
-
-/* =============================================================================
-   14. Messages
+   Messages
    ============================================================================= */
 
 .messages-panel {
@@ -1459,7 +2126,7 @@ h1 {
 }
 
 /* =============================================================================
-   15. Guild Settings
+   Guild
    ============================================================================= */
 
 .guild-settings {
@@ -1527,10 +2194,6 @@ h1 {
     padding: 1.5rem;
   }
 }
-
-/* =============================================================================
-   15. Guild
-   ============================================================================= */
 
 /* Generic table — guild list page */
 .table {
@@ -1818,4 +2481,16 @@ h1 {
   tr:last-child td {
     border-bottom: none;
   }
+}
+
+/* =============================================================================
+   Utilities
+   ============================================================================= */
+
+.text-positive {
+  color: var(--color-positive);
+}
+
+.text-negative {
+  color: var(--color-negative);
 }

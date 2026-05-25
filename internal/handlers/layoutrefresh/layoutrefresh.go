@@ -9,10 +9,20 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
+
+// patchChrome re-renders the kingdom topbar (so resource values reflect the
+// latest tick) and the bottom nav (so the messages badge reflects the latest
+// unread count) over the SSE connection.
+func patchChrome(sse *datastar.ServerSentEventGenerator, kingdom *db.Kingdom, currentPath string, unreadCount int) error {
+	if err := sse.PatchElementGostar(KingdomTopbar(kingdom)); err != nil {
+		return err
+	}
+	return sse.PatchElementGostar(KingdomBottomNav(currentPath, unreadCount))
+}
 
 // ── Route registration ────────────────────────────────────────────────────────
 
@@ -40,7 +50,7 @@ func (h *handler) handleLayoutRefresh() http.HandlerFunc {
 		}
 
 		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementGostar(KingdomSideNav(currentPath, kingdom, unreadCount)); err != nil {
+		if err := patchChrome(sse, kingdom, currentPath, unreadCount); err != nil {
 			log.Printf("layout refresh: initial patch: %v", err)
 			return
 		}
@@ -58,7 +68,7 @@ func (h *handler) handleLayoutRefresh() http.HandlerFunc {
 					log.Printf("layout refresh: count unread: %v", err)
 					unreadCount = 0
 				}
-				if err := sse.PatchElementGostar(KingdomSideNav(currentPath, &k, unreadCount)); err != nil {
+				if err := patchChrome(sse, &k, currentPath, unreadCount); err != nil {
 					log.Printf("layout refresh: patch: %v", err)
 					return
 				}

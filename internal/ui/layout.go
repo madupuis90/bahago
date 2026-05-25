@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
+	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 )
@@ -29,33 +31,26 @@ func GetSSENoSignals(urlFormat string, args ...any) string {
 func HomeLayout(r *http.Request, title string, content ...Node) Node {
 	user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
 	currentPath := r.URL.Path
-	return shell(
-		title,
-		nil,
+	return shell(title, nil,
 		homeTopNav(user, currentPath),
-		Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
-		content...,
+		Div(Class("content-area"),
+			Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
+			MainContent(content...),
+		),
+		Footer(),
 	)
 }
 
-// KingdomLayout renders a full page with the kingdom top-nav active and kingdom side-nav.
+// KingdomLayout renders a full page with the parchment topbar and bottom nav.
+// currentPath drives which bottom-nav stone is highlighted.
 func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *db.Kingdom, content ...Node) Node {
-	user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
-
-	var sideNav Node
-	if kingdom != nil {
-		sideNav = KingdomSideNav(currentPath, kingdom, 0)
-	} else {
-		sideNav = Nav(ID("kingdom-sidenav"), Class("side-nav panel"))
-	}
-
 	layoutStream := Div(ds.Init(GetSSENoSignals(routes.KingdomLayoutRefreshPath+"?path=%s", currentPath)))
-	return shell(
-		title,
-		layoutStream,
-		kingdomTopNav(user, currentPath),
-		sideNav,
-		content...,
+	return shell(title, layoutStream,
+		Div(Class("kingdom-page"),
+			KingdomTopbar(kingdom),
+			MainContent(content...),
+			KingdomBottomNav(currentPath, 0),
+		),
 	)
 }
 
@@ -65,26 +60,27 @@ func MainContent(content ...Node) Node {
 	return Main(ID("main-content"), Group(content))
 }
 
-// shell is the shared HTML document structure used by both layouts.
-func shell(title string, layoutStream Node, topNav, sideNav Node, content ...Node) Node {
+// shell is the shared HTML document structure. Body children are rendered in
+// order; layoutStream is appended at the very end (kept separate so SSE init
+// markers don't visually interleave with chrome).
+func shell(title string, layoutStream Node, body ...Node) Node {
+	bodyChildren := append([]Node{}, body...)
+	if layoutStream != nil {
+		bodyChildren = append(bodyChildren, layoutStream)
+	}
 	return Doctype(
 		HTML(
 			Lang("en"),
 			Head(
 				TitleEl(Text(title)),
 				Link(Rel("icon"), Href("data:,")),
+				Link(Rel("preconnect"), Href("https://fonts.googleapis.com")),
+				Link(Rel("preconnect"), Href("https://fonts.gstatic.com"), Attr("crossorigin", "")),
+				Link(Rel("stylesheet"), Href("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap")),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
 				Script(Type("module"), Src("/static/datastar.js")),
 			),
-			Body(
-				topNav,
-				Div(Class("content-area"),
-					sideNav,
-					MainContent(content...),
-				),
-				Footer(),
-				layoutStream,
-			),
+			Body(bodyChildren...),
 		),
 	)
 }
@@ -101,19 +97,101 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 	)
 }
 
-func kingdomTopNav(user *contextkeys.SessionUser, currentPath string) Node {
-	return Header(Class("top-nav panel"),
-		Div(Class("top-nav-left"),
-			A(Href(routes.HomePath), Text("Home")),
-			A(Href(routes.KingdomPath), Attr("aria-current", "page"), Text("Kingdom")),
+// ── Kingdom chrome (topbar + bottom nav) ──────────────────────────────────────
+
+// KingdomTopbar renders the parchment topbar: realm badge + tick chip + 6 resource cartouches.
+// Exported so SSE handlers can re-render it on tick.
+func KingdomTopbar(kingdom *db.Kingdom) Node {
+	if kingdom == nil {
+		return Header(ID("kingdom-topbar"), Class("topbar"))
+	}
+	return Header(ID("kingdom-topbar"), Class("topbar"),
+		Div(Class("topbar-row"),
+			Div(Class("kingdom-badge"),
+				Shield("crown", 36, false),
+				Div(
+					Div(Class("kingdom-name"), Text(kingdom.Name)),
+					Div(Class("kingdom-sub text-muted"), Text(formatPopulation(kingdom.Population))),
+				),
+			),
+			Div(Class("tick"),
+				Div(Class("tick-chip"),
+					Hourglass(9),
+					Span(Class("caps-label"), Text("next tick")),
+					Span(Class("tick-value"), Text("--:--")),
+				),
+			),
 		),
-		Div(Class("top-nav-right"),
-			LoginNav(user, currentPath),
+		Div(Class("resources"),
+			resourceCartouche("tree", "Wood", kingdom.Wood),
+			resourceCartouche("mountain", "Stone", kingdom.Stone),
+			resourceCartouche("wheat", "Food", kingdom.Food),
+			resourceCartouche("flame", "Mana", kingdom.Mana),
+			resourceCartouche("sun", "Devotion", kingdom.Devotion),
+			resourceCartouche("star", "Knowledge", kingdom.Knowledge),
 		),
 	)
 }
 
-// ── Nav components ────────────────────────────────────────────────────────────
+func resourceCartouche(shieldID, label string, value int) Node {
+	return Div(Class("resource"),
+		Shield(shieldID, 22, false),
+		Div(Class("resource-text"),
+			Span(Class("resource-label"), Text(label)),
+			Span(Class("resource-value"), Text(FormatThousands(value))),
+		),
+	)
+}
+
+// stoneRoute pairs a bottom-nav stone with its destination.
+type stoneRoute struct {
+	label  string
+	shield string
+	href   string
+}
+
+var kingdomStones = []stoneRoute{
+	{"Kingdom", "crown", routes.KingdomPath},
+	{"Allocate", "sliders", routes.KingdomAllocationPath},
+	{"Builds", "house", routes.KingdomBuildingsPath},
+	{"Units", "person", routes.KingdomUnitsPath},
+	{"Campaign", "swords", routes.KingdomArmyPath},
+	{"World", "globe", routes.KingdomMapPath},
+	{"Prayers", "cross", routes.KingdomPrayersPath},
+	{"Messages", "envelope", routes.KingdomMessagesPath},
+	{"Guild", "flag", routes.GuildPath},
+}
+
+// KingdomBottomNav renders the 9-stone bottom navigation. currentPath selects
+// the active stone. unreadCount drives the "Scrolls" badge (0 hides it).
+func KingdomBottomNav(currentPath string, unreadCount int) Node {
+	stones := make([]Node, 0, len(kingdomStones))
+	for _, s := range kingdomStones {
+		stones = append(stones, navStone(s, currentPath, unreadCount))
+	}
+	return Nav(ID("kingdom-bottom-nav"), Class("bottom-nav"),
+		Div(Class("bottom-nav-row"), Group(stones)),
+	)
+}
+
+func navStone(s stoneRoute, currentPath string, unreadCount int) Node {
+	active := currentPath == s.href
+	cls := "nav-stone"
+	if active {
+		cls = "nav-stone nav-stone--active"
+	}
+	var badge Node
+	if s.href == routes.KingdomMessagesPath && unreadCount > 0 {
+		badge = Span(Class("nav-stone-badge"), Text(strconv.Itoa(unreadCount)))
+	}
+	return A(Href(s.href), Class(cls),
+		Shield(s.shield, 32, active),
+		Span(Class("nav-stone-label"), Text(s.label)),
+		badge,
+	)
+}
+
+// ── Home nav helpers (unchanged) ──────────────────────────────────────────────
 
 func NavItem(href, name, currentPath string) Node {
 	return A(Href(href), If(currentPath == href, Attr("aria-current", "page")), Text(name))
@@ -160,41 +238,40 @@ func HomeSideNav(currentPath string) Node {
 	})
 }
 
-// KingdomSideNav renders the kingdom sidebar navigation wrapped in its Nav element.
-// unreadCount is the number of unread messages; 0 hides the badge.
-func KingdomSideNav(currentPath string, kingdom *db.Kingdom, unreadCount int) Node {
-	return Nav(ID("kingdom-sidenav"), Class("side-nav panel"),
-		NavGroup("Kingdom",
-			P(Span(Text(kingdom.Name))),
-			P(Span(Text("Population: ")), Span(Text(fmt.Sprintf("%d", kingdom.Population)))),
-		),
-		NavGroup("Resources",
-			P(Span(Text("Wood: ")), Span(Text(fmt.Sprintf("%d", kingdom.Wood)))),
-			P(Span(Text("Stone: ")), Span(Text(fmt.Sprintf("%d", kingdom.Stone)))),
-			P(Span(Text("Food: ")), Span(Text(fmt.Sprintf("%d", kingdom.Food)))),
-			P(Span(Text("Mana: ")), Span(Text(fmt.Sprintf("%d", kingdom.Mana)))),
-			P(Span(Text("Devotion: ")), Span(Text(fmt.Sprintf("%d", kingdom.Devotion)))),
-			P(Span(Text("Knowledge: ")), Span(Text(fmt.Sprintf("%d", kingdom.Knowledge)))),
-		),
-		NavGroup("Kingdom",
-			NavItem(routes.KingdomPath, "Overview", currentPath),
-			NavItem(routes.KingdomAllocationPath, "Allocation", currentPath),
-			NavItem(routes.KingdomBuildingsPath, "Buildings", currentPath),
-			NavItem(routes.KingdomUnitsPath, "Units", currentPath),
-			NavItem(routes.KingdomArmyPath, "Army", currentPath),
-			NavItem(routes.KingdomMapPath, "World Map", currentPath),
-			NavItem(routes.KingdomPrayersPath, "Prayers", currentPath),
-			messagesNavItem(currentPath, unreadCount),
-			NavItem(routes.GuildPath, "Guild", currentPath),
-		),
+// ── Parchment page helpers ────────────────────────────────────────────────────
+
+// PageHeader renders the page header: optional accent tag, italic H1, double rule.
+// An empty tag omits the accent line.
+func PageHeader(tag, body string) Node {
+	return Div(Class("page-header"),
+		If(tag != "", Div(Classes{"caps-label": true, "text-highlight": true, "page-header-tag": true}, Text(tag))),
+		H1(Span(Class("italic"), Text(body))),
+		Div(Class("rule-dbl")),
 	)
 }
 
-func messagesNavItem(currentPath string, unreadCount int) Node {
-	return Span(Class("nav-item-with-badge"),
-		NavItem(routes.KingdomMessagesPath, "Messages", currentPath),
-		Iff(unreadCount > 0, func() Node {
-			return Span(Class("nav-badge"), Text(fmt.Sprintf("%d", unreadCount)))
-		}),
-	)
+// ── Formatting helpers ────────────────────────────────────────────────────────
+
+func formatPopulation(n int) string {
+	return FormatThousands(n) + " population"
+}
+
+// FormatThousands renders an integer with comma separators (e.g. 1028 → "1,028").
+func FormatThousands(n int) string {
+	if n < 0 {
+		return "-" + FormatThousands(-n)
+	}
+	s := strconv.Itoa(n)
+	if len(s) <= 3 {
+		return s
+	}
+	first := len(s) % 3
+	if first == 0 {
+		first = 3
+	}
+	out := s[:first]
+	for i := first; i < len(s); i += 3 {
+		out += "," + s[i:i+3]
+	}
+	return out
 }

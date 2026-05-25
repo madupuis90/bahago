@@ -161,21 +161,38 @@ All styles are hand-written in `web/static/styles.css`. There are no CSS framewo
 
 ### CSS file structure
 
-`styles.css` is organized into numbered sections, ordered from most general to most specific. Always add new rules in the correct section:
+`styles.css` is organized into named sections, ordered from most general to most specific. Each section is introduced by a banner comment of the form:
 
-```
-1. Reset          — *, box-sizing
-2. Tokens         — :root custom properties
-3. Base           — html, body, a, input (element selectors only)
-4. Layout         — top-nav, content-area, side-nav, nav-group
-5. Shared         — .panel, .btn, .btn-text, .form-fields, .password-field, .alert-*
-6. Auth           — .auth-card and auth-specific styles
-7. Kingdom        — .kingdom-* styles
-8. Allocation     — .allocation-* styles
-9. Utilities      — .text-positive, .text-negative (single-purpose overrides)
+```css
+/* =============================================================================
+   Section name
+   ============================================================================= */
 ```
 
-New feature modules get their own numbered section between Allocation and Utilities. Shared components (used by 2+ features) belong in section 5.
+Always add new rules in the correct section. Current order:
+
+```
+Reset                — *, box-sizing
+Tokens               — :root custom properties
+Base                 — html, body, a, input (element selectors only)
+Home shell           — top-nav, content-area, side-nav, nav-group
+Shared components    — .panel, .btn, .btn-text, .form-fields, .password-field, .alert-*
+Auth                 — .auth-card and auth-specific styles
+Kingdom chrome       — .kingdom-page, parchment helpers (.uppr, .rubric, .marg, .italic, .rule-dbl, .shield, .sandglass), .topbar, .bottom-nav, .nav-stone — defined before any feature that uses them
+Kingdom overview     — .folio, .overview-grid, .chronicle, .demesne, .stat-row
+Allocation           — .allocation-* (grid table + slider)
+Buildings            — .buildings-* / .building-*
+Units                — .units-* / .unit-*
+World map            — .map-*
+Army                 — .army-*
+Home (flip card)     — .flip-* (home/about page widget)
+Messages             — .messages-* / .message-*
+Guild                — .guild-* / .guilds-*
+Prayers              — .prayer-* / .prayers-*
+Utilities            — .text-positive, .text-negative (single-purpose overrides) — last
+```
+
+New feature modules get their own named section, placed between the existing feature sections and `Utilities`. Shared components (used by 2+ features) belong in `Shared components`. Anything shared across all kingdom pages (chrome, parchment typography helpers, icons) belongs in `Kingdom chrome` so it is defined before the features that reference it.
 
 **When generating new UI**, omit styles unless explicitly asked — focus on structure and correctness. When styles are needed later, they go in `web/static/styles.css`. Do not suggest inline styles or CSS-in-Go approaches.
 
