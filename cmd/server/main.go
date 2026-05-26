@@ -42,7 +42,16 @@ func main() {
 	}
 
 	// --- database ---
-	pool, err := pgxpool.New(ctx, dbURL)
+	poolCfg, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatalf("could not parse database URL: %v", err)
+	}
+	poolCfg.ConnConfig.RuntimeParams["application_name"] = "bahago"
+	poolCfg.ConnConfig.RuntimeParams["statement_timeout"] = "5000"             // kill any query running longer than 5 s
+	poolCfg.ConnConfig.RuntimeParams["lock_timeout"] = "2000"                  // kill any query waiting on a lock longer than 2 s
+	poolCfg.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "10000" // reclaim connections left idle inside a transaction
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		log.Fatalf("could not connect to database: %v", err)
 	}

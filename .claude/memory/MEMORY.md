@@ -1,3 +1,3 @@
-- [Subagent restraint](feedback_subagent_restraint.md) — default to grep/find/Read; subagents are expensive and hidden
-- [Handoff over re-exploration](feedback_handoff_over_reexploration.md) — use /handoff across sessions to avoid paying for rediscovery
-- [Token cost awareness](user_token_cost_awareness.md) — user is quota-sensitive; surface expensive ops before doing them
+- [Subagent restraint](feedback_subagent_restraint.md) — decision rule: spawn for independent 3+ file tasks with precise prompts; do inline for small/already-in-context work
+- [Handoff over re-exploration](feedback_handoff_over_reexploration.md) — use /handoff between AND within sessions; precise handoffs prevent re-exploration; compaction forces re-reads
+- [Token cost awareness](user_token_cost_awareness.md) — user is quota-sensitive; "cheaper" means total cost, not always inline; focused subagents can be cheaper than compacting inline work

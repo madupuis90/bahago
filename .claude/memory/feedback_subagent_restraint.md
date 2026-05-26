@@ -1,24 +1,35 @@
 ---
 name: feedback-subagent-restraint
-description: "Default to direct tools (grep, find, Read) instead of spawning subagents. User was burned by 93% of token usage going to subagent-heavy sessions."
+description: "Use focused implementation subagents for independent, multi-file tasks; avoid exploratory or single-lookup spawns. Decision rule included."
 metadata: 
   node_type: memory
   type: feedback
   originSessionId: 1ce6f6d8-2d5b-4519-ae45-755da9e81a5b
 ---
 
-Default to direct tools over spawning subagents. The user did not realize subagents were being spawned and got billed heavily for it.
+Be deliberate about when to spawn subagents. They are not always expensive — a focused subagent with a precise prompt on a bounded task is often *cheaper* than doing it inline when the main context is already large. The original blanket ban caused worse outcomes during the legion refactor: sequential inline work ballooned context, forced multiple compactions, and re-read files 2–3 times total.
 
-**Why:** A `/usage` summary showed 93% of quota was consumed by subagent-heavy sessions. Each Agent spawn re-sends the full system prompt, tool catalog, and all CLAUDE.md/instructions files (~15-20k tokens of overhead before work begins), the subagent re-reads files I could already read directly, and its final report comes back as tokens in my context too — paying twice for the same work. A single Explore call to find one symbol can cost 20-50x more than `grep -rn`.
+**Why:** A subagent costs ~15-20k tokens of fixed overhead (system prompt, CLAUDE.md, instructions). But a main-context session that compacts once re-reads every file in it — paying 2x or 3x for the same content. For tasks touching 3+ large files, a focused subagent breaks even quickly and never compacts.
 
-**How to apply:**
-- For finding a known symbol, file, or string: use `grep`/`find` via Bash, or `Read` for a known path. Never spawn Explore for a single lookup.
-- Only spawn `Explore` when the search genuinely spans the codebase with ≥3 queries or multiple naming variations to try.
-- Skip `Plan` for mechanical refactors and small changes — only use it for genuine architectural decisions the user wants help thinking through.
-- **During large refactors: do NOT parallelize with multiple subagents.** Each agent cold-starts, re-reads the same files the main context already has, and multiplies the token cost. Do the refactor sequentially in the main context, file by file, using the file list built up from the initial grep/find. One read of a file in the main context is always cheaper than an agent re-reading it.
-- Never spawn agents "in parallel for thoroughness." Only when work is truly independent and would otherwise serialize.
-- Never spawn `general-purpose` for something that's two file reads away.
-- When unsure whether a task warrants a subagent, do it directly first; escalate only if the direct path balloons.
-- If a subagent really is the right call, tell the user before spawning so they can veto.
+**Decision rule — spawn a subagent when ALL of these hold:**
+1. The task is independent of other in-flight work (doesn't need output from a concurrent task)
+2. It touches 3+ files, or a single large file (>300 lines)
+3. The subagent can be given a precise prompt: exact file paths, what to change, interfaces/signatures already known — no exploration needed
 
-Related: [[feedback-handoff-over-reexploration]]
+**Do it inline when:**
+- Single small file edit (<300 lines, 1 file)
+- The files are already in context from earlier this session (re-reading in a subagent costs more than it saves)
+- The task requires back-and-forth reasoning with the user
+
+**General principle — separate exploration from implementation:**
+- Exploration (finding symbols, understanding structure) should happen in the main context or an Explore subagent early, before implementation starts
+- Implementation (editing files) should happen in focused subagents with precise prompts, keeping the main context clean
+- Never mix both in the same growing context window
+
+**Safeguards that still apply:**
+- Never spawn for a single symbol lookup or file read — use `grep`/`find`/`Read` directly
+- Never spawn `general-purpose` for something two file reads away
+- Always tell the user before spawning so they can veto
+- Never spawn agents "in parallel for thoroughness" when work is sequential
+
+Related: [[feedback-handoff-over-reexploration]], [[user-token-cost-awareness]]

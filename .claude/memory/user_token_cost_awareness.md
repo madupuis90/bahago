@@ -1,6 +1,6 @@
 ---
 name: user-token-cost-awareness
-description: User is cost-sensitive about token usage and wants visibility into expensive operations (especially subagent spawns) before they happen.
+description: User is cost-sensitive; surface expensive operations before doing them. "Cheaper" means lower total cost, not always "no subagents."
 metadata: 
   node_type: memory
   type: user
@@ -12,4 +12,5 @@ The user is on a quota-limited plan and is sensitive to token cost. They were su
 **How to apply:**
 - Be transparent about expensive operations before doing them — particularly subagent spawns, large file reads, or broad searches.
 - If a task could be done cheaply or expensively, mention the trade-off and let the user choose.
-- Default to the cheaper path.
+- "Default to the cheaper path" means lower *total* cost, not always "do everything inline." A focused subagent on a large bounded task is often cheaper than inline work that compacts and re-reads. See [[feedback-subagent-restraint]] for the decision rule.
+- The most expensive pattern is: inline sequential work on many large files → compaction → re-reads → repeat. Avoid this by using handoffs and focused subagents at the right moments.

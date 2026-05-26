@@ -8,7 +8,7 @@ description: "Use when performing a code review"
 
 1. Run `git log --oneline` to identify the commits belonging to the feature
 2. Run `git diff <first-commit>^..HEAD` to pull the full diff
-3. Read all changed files in full before forming any opinion
+3. Use the diff as the primary source. Read a full file only when the diff lacks context — for example, to understand an unchanged caller, a type definition, or surrounding logic. Do not read every changed file in full by default.
 4. Present a structured review: **what needs to change** (with specific file/line references), and **any open questions**
 5. Work through each issue with the user one at a time — do not batch-fix everything at once
 

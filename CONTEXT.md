@@ -40,6 +40,12 @@ _Avoid_: Recruiting, Hiring.
 **Attribute**: A conditional modifier on a Unit or Summon that affects combat behaviour or upkeep. Examples: Flying, Archer, Melee, Summon, Undead, Deathtouch, Enrage.
 _Avoid_: Trait, Ability, Stat.
 
+**Legion**: A persistent named container of Units and Summons belonging to a Kingdom. A Kingdom may have at most three Legions. Each Legion has a number (1–3) and an auto-generated name ("Legion 1", "Legion 2", "Legion 3"). Units are assigned to a Legion before being sent on a Campaign; the Legion's composition is snapshotted at departure and restored (minus casualties) on return. Units not assigned to any Legion are the Kingdom's **Reserve**.
+_Avoid_: Army, Squad, Group — use "Legion" for the named container and "Reserve" for unassigned units.
+
+**Reserve**: The pool of Units and Summons not currently assigned to any Legion. Computed as total kingdom units minus Legion assignments minus active campaign snapshots.
+_Avoid_: Unassigned Units, Free Units.
+
 **Campaign**: A military expedition sent by one Kingdom to another, with an action of either attack or defend. Passes through three statuses:
 - **en_route** — units are travelling to the target Kingdom.
 - **active** — units are performing their action (attacking or defending) each tick.

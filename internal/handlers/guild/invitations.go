@@ -238,7 +238,7 @@ func (h *handler) handleRevokeInvitation() http.HandlerFunc {
 
 // acceptInvitation promotes the invited membership to a full member. Returns
 // the guild ID and name so the caller can fan out a notification to managers.
-func (h *handler) acceptInvitation(ctx context.Context, kingdomID int, slug string, invitationID int) (int, string, error) {
+func (h *handler) acceptInvitation(ctx context.Context, kingdomID int, slug string, invitationID int) (guildID int, guildName string, err error) {
 	g, err := h.queries.GetGuildBySlug(ctx, slug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -284,7 +284,7 @@ func (h *handler) declineInvitation(ctx context.Context, kingdomID, invitationID
 // branched user-facing errors use the wrapped-sentinel idiom so each carries
 // the target name. Returns the target kingdom ID, guild ID, and guild name so
 // the caller can fan out notifications.
-func (h *handler) sendInvitation(ctx context.Context, actorKingdom *db.Kingdom, slug, targetName string) (int, int, string, error) {
+func (h *handler) sendInvitation(ctx context.Context, actorKingdom *db.Kingdom, slug, targetName string) (targetKingdomID, guildID int, guildName string, err error) {
 	name := strings.TrimSpace(targetName)
 
 	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdom.ID)
@@ -349,7 +349,7 @@ func (h *handler) sendInvitation(ctx context.Context, actorKingdom *db.Kingdom, 
 // revokeInvitation cancels a guild invitation. Returns the invited kingdom ID
 // and guild ID so the caller can refresh affected UIs. Returns ErrInvitationGone
 // when the invitation no longer exists (handler treats that as a silent refresh).
-func (h *handler) revokeInvitation(ctx context.Context, actorKingdomID int, slug string, invitationID int) (int, int, error) {
+func (h *handler) revokeInvitation(ctx context.Context, actorKingdomID int, slug string, invitationID int) (invitedKingdomID, guildID int, err error) {
 	g, viewerRole, err := h.getGuildAndViewerRole(ctx, slug, actorKingdomID)
 	if errors.Is(err, ErrGuildNotFound) {
 		return 0, 0, ErrGuildNotFound
@@ -361,7 +361,7 @@ func (h *handler) revokeInvitation(ctx context.Context, actorKingdomID int, slug
 		return 0, 0, ErrNotAuthorized
 	}
 
-	invitedKingdomID, err := h.queries.RevokeGuildInvitation(ctx, db.RevokeGuildInvitationParams{
+	invitedKingdomID, err = h.queries.RevokeGuildInvitation(ctx, db.RevokeGuildInvitationParams{
 		ID:      invitationID,
 		GuildID: g.ID,
 	})
