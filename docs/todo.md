@@ -17,7 +17,6 @@ Raw thoughts. No commitment, no structure. May never happen.
 # TODO
 Decided to do. One line is fine — enough to act on.
 
-- [army] legion for armie
 - [game] Fix startvation formula
 - [game] Fix resource forumala with a power formula and building
 

@@ -23,12 +23,16 @@ type Querier interface {
 	BulkActivateCampaigns(ctx context.Context, ids []int) error
 	BulkCreateMessages(ctx context.Context, arg BulkCreateMessagesParams) error
 	BulkDeductKingdomUnitsCasualties(ctx context.Context, arg BulkDeductKingdomUnitsCasualtiesParams) error
+	BulkDeleteCampaignUnitsZero(ctx context.Context, arg BulkDeleteCampaignUnitsZeroParams) error
 	BulkDeleteCampaigns(ctx context.Context, ids []int) error
+	BulkDeleteLegionUnitsZero(ctx context.Context, arg BulkDeleteLegionUnitsZeroParams) error
 	BulkGainKingdomPopulation(ctx context.Context, arg BulkGainKingdomPopulationParams) error
 	BulkInsertCombatLogParticipants(ctx context.Context, arg BulkInsertCombatLogParticipantsParams) error
+	BulkRestoreLegionUnits(ctx context.Context, ids []int) error
 	BulkReturnCampaigns(ctx context.Context, ids []int) error
 	BulkTickKingdoms(ctx context.Context, arg BulkTickKingdomsParams) error
-	BulkUpdateCampaignCounts(ctx context.Context, arg BulkUpdateCampaignCountsParams) error
+	BulkUpdateCampaignUnitCounts(ctx context.Context, arg BulkUpdateCampaignUnitCountsParams) error
+	BulkUpdateLegionUnitCounts(ctx context.Context, arg BulkUpdateLegionUnitCountsParams) error
 	// Atomically verifies ownership and non-returning status, then sets the campaign
 	// to returning. Returns no rows if the campaign does not exist, belongs to a
 	// different kingdom, or is already returning — all treated as a no-op by the caller.
@@ -36,19 +40,19 @@ type Querier interface {
 	CancelJoinRequest(ctx context.Context, arg CancelJoinRequestParams) error
 	CancelOtherPendingRequests(ctx context.Context, arg CancelOtherPendingRequestsParams) error
 	CancelProposal(ctx context.Context, id int) error
+	ClearLegionUnits(ctx context.Context, legionID int) error
 	ConsumeEmailVerification(ctx context.Context, token string) (int, error)
 	ConsumePasswordResetToken(ctx context.Context, token string) (int, error)
 	CountGuildSupporters(ctx context.Context, guildID int) (int, error)
+	CountLegionsForKingdom(ctx context.Context, kingdomID int) (int, error)
 	CountUnreadMessages(ctx context.Context, toKingdomID int) (int, error)
-	// Atomically checks that enough units are available (via kingdom_available_units
-	// view) and inserts the campaign in one statement. Returns no rows if the
-	// available count is insufficient, which the caller maps to "not enough units".
-	CreateCampaignIfAvailable(ctx context.Context, arg CreateCampaignIfAvailableParams) (KingdomCampaign, error)
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (KingdomCampaign, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) error
 	CreateGuild(ctx context.Context, arg CreateGuildParams) (CreateGuildRow, error)
 	CreateGuildInvitation(ctx context.Context, arg CreateGuildInvitationParams) error
 	CreateGuildMembership(ctx context.Context, arg CreateGuildMembershipParams) error
 	CreateKingdom(ctx context.Context, arg CreateKingdomParams) (Kingdom, error)
+	CreateLegion(ctx context.Context, arg CreateLegionParams) (KingdomLegion, error)
 	CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) error
 	CreatePrayer(ctx context.Context, arg CreatePrayerParams) (KingdomPrayer, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
@@ -58,6 +62,7 @@ type Querier interface {
 	DecrementAndListConstructionAtZero(ctx context.Context) ([]DecrementAndListConstructionAtZeroRow, error)
 	DecrementAndListPrayersAtZero(ctx context.Context) ([]DecrementAndListPrayersAtZeroRow, error)
 	DecrementAndListTrainingAtZero(ctx context.Context) ([]DecrementAndListTrainingAtZeroRow, error)
+	DecrementLegionUnit(ctx context.Context, arg DecrementLegionUnitParams) error
 	DeductBuildingCost(ctx context.Context, arg DeductBuildingCostParams) (int, error)
 	DeductKingdomUnitsCasualties(ctx context.Context, arg DeductKingdomUnitsCasualtiesParams) error
 	DeductUnitCost(ctx context.Context, arg DeductUnitCostParams) (int, error)
@@ -65,6 +70,7 @@ type Querier interface {
 	DeleteConstruction(ctx context.Context, kingdomID int) error
 	DeleteEmailVerificationByUserID(ctx context.Context, userID int) error
 	DeleteKingdomPrayers(ctx context.Context, ids []int) error
+	DeleteLegion(ctx context.Context, arg DeleteLegionParams) error
 	DeleteMessage(ctx context.Context, arg DeleteMessageParams) error
 	DeleteMessages(ctx context.Context, arg DeleteMessagesParams) error
 	DeletePasswordResetTokensByUserID(ctx context.Context, userID int) error
@@ -78,12 +84,14 @@ type Querier interface {
 	GetAllKingdomBuildings(ctx context.Context) ([]KingdomBuilding, error)
 	GetAllKingdomPrayers(ctx context.Context) ([]KingdomPrayer, error)
 	GetAllKingdomUnits(ctx context.Context) ([]KingdomUnit, error)
+	GetAtHomeLegionUnitsByKingdomIDs(ctx context.Context, ids []int) ([]GetAtHomeLegionUnitsByKingdomIDsRow, error)
 	// Returns available unit counts for a kingdom via the kingdom_available_units view.
 	// A unit is available if it is not committed to any campaign (any status).
 	GetAvailableKingdomUnits(ctx context.Context, kingdomID int) ([]GetAvailableKingdomUnitsRow, error)
 	// Bulk version of GetAvailableKingdomUnits for the combat tick.
 	GetAvailableKingdomUnitsByIDs(ctx context.Context, ids []int) ([]KingdomAvailableUnit, error)
-	GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]KingdomCampaign, error)
+	GetCampaignUnitsByCampaignIDs(ctx context.Context, ids []int) ([]KingdomCampaignUnit, error)
+	GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]GetCampaignsForKingdomRow, error)
 	GetGuildByID(ctx context.Context, id int) (Guild, error)
 	GetGuildBySlug(ctx context.Context, slug string) (Guild, error)
 	GetInboxMessageByID(ctx context.Context, arg GetInboxMessageByIDParams) (GetInboxMessageByIDRow, error)
@@ -100,6 +108,8 @@ type Querier interface {
 	GetKingdomsByNames(ctx context.Context, names []string) ([]Kingdom, error)
 	GetKingdomsInViewport(ctx context.Context, arg GetKingdomsInViewportParams) ([]GetKingdomsInViewportRow, error)
 	GetLatestTickID(ctx context.Context) (int, error)
+	GetLegion(ctx context.Context, arg GetLegionParams) (KingdomLegion, error)
+	GetLegionForUpdate(ctx context.Context, arg GetLegionForUpdateParams) (KingdomLegion, error)
 	GetMembershipByID(ctx context.Context, arg GetMembershipByIDParams) (GuildMembership, error)
 	GetMembershipByKingdomAndGuild(ctx context.Context, arg GetMembershipByKingdomAndGuildParams) (GuildMembership, error)
 	GetRecentCombatLogs(ctx context.Context, kingdomID int) ([]GetRecentCombatLogsRow, error)
@@ -110,6 +120,8 @@ type Querier interface {
 	InsertTick(ctx context.Context) (int, error)
 	ListActiveGuilds(ctx context.Context) ([]ListActiveGuildsRow, error)
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
+	ListAllLegionUnitsForKingdom(ctx context.Context, kingdomID int) ([]KingdomLegionUnit, error)
+	ListCampaignUnitsForKingdom(ctx context.Context, kingdomID int) ([]KingdomCampaignUnit, error)
 	ListGuildInvitations(ctx context.Context, guildID int) ([]ListGuildInvitationsRow, error)
 	ListGuildMembersExcludingSelf(ctx context.Context, arg ListGuildMembersExcludingSelfParams) ([]int, error)
 	ListGuildMembersWithNames(ctx context.Context, guildID int) ([]ListGuildMembersWithNamesRow, error)
@@ -117,6 +129,8 @@ type Querier interface {
 	ListInboxMessages(ctx context.Context, toKingdomID int) ([]ListInboxMessagesRow, error)
 	ListKingdomInvitations(ctx context.Context, kingdomID int) ([]ListKingdomInvitationsRow, error)
 	ListKingdomPrayers(ctx context.Context, kingdomID int) ([]KingdomPrayer, error)
+	ListLegionUnits(ctx context.Context, legionID int) ([]KingdomLegionUnit, error)
+	ListLegionsForKingdom(ctx context.Context, kingdomID int) ([]ListLegionsForKingdomRow, error)
 	ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKingdomsRow, error)
 	ListPendingGuilds(ctx context.Context) ([]ListPendingGuildsRow, error)
 	ListPendingRequests(ctx context.Context, guildID int) ([]ListPendingRequestsRow, error)
@@ -130,6 +144,7 @@ type Querier interface {
 	RequestJoinIfNotFull(ctx context.Context, arg RequestJoinIfNotFullParams) (GuildMembership, error)
 	RevokeGuildInvitation(ctx context.Context, arg RevokeGuildInvitationParams) (int, error)
 	SetMembershipRole(ctx context.Context, arg SetMembershipRoleParams) error
+	SnapshotLegionUnitsIntoCampaign(ctx context.Context, arg SnapshotLegionUnitsIntoCampaignParams) error
 	StartConstruction(ctx context.Context, arg StartConstructionParams) error
 	StartTraining(ctx context.Context, arg StartTrainingParams) error
 	StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error
@@ -140,6 +155,7 @@ type Querier interface {
 	UpdateLastLogin(ctx context.Context, id int) error
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error
 	UpsertKingdomUnits(ctx context.Context, arg UpsertKingdomUnitsParams) error
+	UpsertLegionUnit(ctx context.Context, arg UpsertLegionUnitParams) error
 	VerifyUser(ctx context.Context, id int) error
 	WithdrawSupport(ctx context.Context, arg WithdrawSupportParams) error
 }

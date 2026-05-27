@@ -11,9 +11,9 @@ import (
 	"bahago/internal/testhelper"
 )
 
-// seedCampaignFixture creates two kingdoms (attacker + target) with the attacker
-// having the specified number of recruits. Returns both kingdoms.
-func seedCampaignFixture(t *testing.T, q db.Querier, attackerUnits int) (attacker, target db.Kingdom) {
+// seedCampaignFixture creates two kingdoms (attacker + target) with a legion
+// for the attacker containing the specified number of recruits.
+func seedCampaignFixture(t *testing.T, q db.Querier, attackerUnits int) (attacker, target db.Kingdom, legion db.KingdomLegion) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -39,108 +39,96 @@ func seedCampaignFixture(t *testing.T, q db.Querier, attackerUnits int) (attacke
 		t.Fatalf("seedCampaignFixture: create target kingdom: %v", err)
 	}
 
+	legion, err = q.CreateLegion(ctx, db.CreateLegionParams{
+		KingdomID: attacker.ID,
+		Cap:       game.MaxLegionsPerKingdom,
+	})
+	if err != nil {
+		t.Fatalf("seedCampaignFixture: create legion: %v", err)
+	}
+
 	if attackerUnits > 0 {
-		if err := q.UpsertKingdomUnits(ctx, db.UpsertKingdomUnitsParams{
-			KingdomID: attacker.ID,
-			UnitType:  game.UnitRecruit,
-			Count:     attackerUnits,
+		if err := q.UpsertLegionUnit(ctx, db.UpsertLegionUnitParams{
+			LegionID: legion.ID,
+			UnitType: game.UnitRecruit,
+			Count:    attackerUnits,
 		}); err != nil {
-			t.Fatalf("seedCampaignFixture: upsert units: %v", err)
+			t.Fatalf("seedCampaignFixture: upsert legion unit: %v", err)
 		}
 	}
 
-	return attacker, target
+	return attacker, target, legion
 }
 
-func TestCreateCampaignIfAvailable_Success(t *testing.T) {
+func TestCreateCampaign_Success(t *testing.T) {
 	q := testhelper.WithRollback(t, testPool)
-	attacker, target := seedCampaignFixture(t, q, 50)
+	ctx := context.Background()
+	attacker, target, legion := seedCampaignFixture(t, q, 50)
 
 	travelTicks := game.TravelTicks(attacker.X, attacker.Y, target.X, target.Y)
-	campaign, err := q.CreateCampaignIfAvailable(context.Background(), db.CreateCampaignIfAvailableParams{
+	params := db.CreateCampaignParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       20,
+		LegionID:        legion.ID,
 		Action:          "attack",
 		TicksRemaining:  travelTicks,
 		ActionTicks:     4,
 		TravelTicks:     travelTicks,
-	})
+	}
+	campaign, err := q.CreateCampaign(ctx, params)
 	if err != nil {
-		t.Fatalf("CreateCampaignIfAvailable: %v", err)
+		t.Fatalf("CreateCampaign: %v", err)
 	}
 	if campaign.KingdomID != attacker.ID {
 		t.Errorf("campaign.KingdomID = %d, want %d", campaign.KingdomID, attacker.ID)
 	}
-	if campaign.Count != 20 {
-		t.Errorf("campaign.Count = %d, want 20", campaign.Count)
+	if campaign.LegionID != legion.ID {
+		t.Errorf("campaign.LegionID = %d, want %d", campaign.LegionID, legion.ID)
 	}
 	if campaign.Status != "en_route" {
 		t.Errorf("campaign.Status = %q, want en_route", campaign.Status)
 	}
-}
 
-func TestCreateCampaignIfAvailable_InsufficientUnits(t *testing.T) {
-	q := testhelper.WithRollback(t, testPool)
-	attacker, target := seedCampaignFixture(t, q, 10) // only 10 units
-
-	_, err := q.CreateCampaignIfAvailable(context.Background(), db.CreateCampaignIfAvailableParams{
-		KingdomID:       attacker.ID,
-		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       50, // more than available
-		Action:          "attack",
-		TicksRemaining:  12,
-		ActionTicks:     4,
-		TravelTicks:     12,
-	})
-	// Query returns no rows when available < requested.
-	if err == nil {
-		t.Fatal("expected no rows error when units insufficient, got nil")
+	snapParams := db.SnapshotLegionUnitsIntoCampaignParams{
+		CampaignID: campaign.ID,
+		LegionID:   legion.ID,
 	}
-	if err != pgx.ErrNoRows {
-		t.Errorf("error = %v, want pgx.ErrNoRows", err)
+	if err := q.SnapshotLegionUnitsIntoCampaign(ctx, snapParams); err != nil {
+		t.Fatalf("SnapshotLegionUnitsIntoCampaign: %v", err)
 	}
-}
-
-func TestCreateCampaignIfAvailable_NoUnitsAtAll(t *testing.T) {
-	q := testhelper.WithRollback(t, testPool)
-	attacker, target := seedCampaignFixture(t, q, 0) // no units seeded
-
-	_, err := q.CreateCampaignIfAvailable(context.Background(), db.CreateCampaignIfAvailableParams{
-		KingdomID:       attacker.ID,
-		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       1,
-		Action:          "attack",
-		TicksRemaining:  12,
-		ActionTicks:     4,
-		TravelTicks:     12,
-	})
-	if err != pgx.ErrNoRows {
-		t.Errorf("error = %v, want pgx.ErrNoRows", err)
+	if err := q.ClearLegionUnits(ctx, legion.ID); err != nil {
+		t.Fatalf("ClearLegionUnits: %v", err)
 	}
 }
 
 func TestCancelCampaign_Success(t *testing.T) {
 	q := testhelper.WithRollback(t, testPool)
 	ctx := context.Background()
-	attacker, target := seedCampaignFixture(t, q, 30)
+	attacker, target, legion := seedCampaignFixture(t, q, 30)
 
 	travelTicks := game.TravelTicks(attacker.X, attacker.Y, target.X, target.Y)
-	campaign, err := q.CreateCampaignIfAvailable(ctx, db.CreateCampaignIfAvailableParams{
+	params := db.CreateCampaignParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       10,
+		LegionID:        legion.ID,
 		Action:          "attack",
 		TicksRemaining:  travelTicks,
 		ActionTicks:     4,
 		TravelTicks:     travelTicks,
-	})
+	}
+	campaign, err := q.CreateCampaign(ctx, params)
 	if err != nil {
-		t.Fatalf("CreateCampaignIfAvailable: %v", err)
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+	snapParams := db.SnapshotLegionUnitsIntoCampaignParams{
+		CampaignID: campaign.ID,
+		LegionID:   legion.ID,
+	}
+	if err := q.SnapshotLegionUnitsIntoCampaign(ctx, snapParams); err != nil {
+		t.Fatalf("SnapshotLegionUnitsIntoCampaign: %v", err)
+	}
+	if err := q.ClearLegionUnits(ctx, legion.ID); err != nil {
+		t.Fatalf("ClearLegionUnits: %v", err)
 	}
 
 	returnedID, err := q.CancelCampaign(ctx, db.CancelCampaignParams{
@@ -158,21 +146,21 @@ func TestCancelCampaign_Success(t *testing.T) {
 func TestCancelCampaign_WrongKingdom(t *testing.T) {
 	q := testhelper.WithRollback(t, testPool)
 	ctx := context.Background()
-	attacker, target := seedCampaignFixture(t, q, 30)
+	attacker, target, legion := seedCampaignFixture(t, q, 30)
 
 	travelTicks := game.TravelTicks(attacker.X, attacker.Y, target.X, target.Y)
-	campaign, err := q.CreateCampaignIfAvailable(ctx, db.CreateCampaignIfAvailableParams{
+	params := db.CreateCampaignParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       10,
+		LegionID:        legion.ID,
 		Action:          "attack",
 		TicksRemaining:  travelTicks,
 		ActionTicks:     4,
 		TravelTicks:     travelTicks,
-	})
+	}
+	campaign, err := q.CreateCampaign(ctx, params)
 	if err != nil {
-		t.Fatalf("CreateCampaignIfAvailable: %v", err)
+		t.Fatalf("CreateCampaign: %v", err)
 	}
 
 	_, err = q.CancelCampaign(ctx, db.CancelCampaignParams{
@@ -187,31 +175,31 @@ func TestCancelCampaign_WrongKingdom(t *testing.T) {
 func TestCancelCampaign_AlreadyReturning(t *testing.T) {
 	q := testhelper.WithRollback(t, testPool)
 	ctx := context.Background()
-	attacker, target := seedCampaignFixture(t, q, 30)
+	attacker, target, legion := seedCampaignFixture(t, q, 30)
 
 	travelTicks := game.TravelTicks(attacker.X, attacker.Y, target.X, target.Y)
-	campaign, err := q.CreateCampaignIfAvailable(ctx, db.CreateCampaignIfAvailableParams{
+	params := db.CreateCampaignParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
-		UnitType:        game.UnitRecruit,
-		SendCount:       10,
+		LegionID:        legion.ID,
 		Action:          "attack",
 		TicksRemaining:  travelTicks,
 		ActionTicks:     4,
 		TravelTicks:     travelTicks,
-	})
+	}
+	campaign, err := q.CreateCampaign(ctx, params)
 	if err != nil {
-		t.Fatalf("CreateCampaignIfAvailable: %v", err)
+		t.Fatalf("CreateCampaign: %v", err)
 	}
 
-	// First cancel succeeds.
+	// First cancel succeeds — campaign moves to returning.
 	if _, err := q.CancelCampaign(ctx, db.CancelCampaignParams{
 		ID: campaign.ID, KingdomID: attacker.ID,
 	}); err != nil {
 		t.Fatalf("first CancelCampaign: %v", err)
 	}
 
-	// Second cancel on the same campaign (now in returning status) returns no rows.
+	// Second cancel on the same campaign (now returning) returns no rows.
 	_, err = q.CancelCampaign(ctx, db.CancelCampaignParams{
 		ID: campaign.ID, KingdomID: attacker.ID,
 	})

@@ -65,89 +65,105 @@ func computeLossRatios(atkPow, defPow int) (atkLoss, defLoss float64) {
 	return
 }
 
+// casKey identifies a (kingdom, unit type) pair for aggregating kingdom_units deductions.
+type casKey struct {
+	kingdomID int
+	unitType  string
+}
+
 // resolveCombatAtKingdom runs one combat round between all attackers and defenders
-// (both campaign-based defenders and the target's home army) at the given kingdom.
+// at the given kingdom. campaignUnitsByID holds unit composition for every campaign.
+// atHomeLegionUnits holds all at-home legion units for the target kingdom.
 // All data is pre-fetched by the caller; this function only performs writes.
-// It returns a CombatResult for logging, or nil when there is no power on
-// either side and combat is skipped.
+// Returns nil when there is no power on either side and combat is skipped.
 func resolveCombatAtKingdom(
 	ctx context.Context,
 	q db.Querier,
 	targetKingdom db.Kingdom,
 	targetAvailableUnits []db.KingdomAvailableUnit,
+	atHomeLegionUnits []db.GetAtHomeLegionUnitsByKingdomIDsRow,
 	attackers []db.KingdomCampaign,
 	defenders []db.KingdomCampaign,
+	campaignUnitsByID map[int][]db.KingdomCampaignUnit,
 ) (*CombatResult, error) {
-	// Compute attacker power
-	// TODO: unit attributes (Pacifism, Raiders, Flying, Archer, Worshipper, etc.)
+	// Compute attacker power across all attacking campaigns' unit types.
 	var atkPow int
 	for _, c := range attackers {
-		atkPow += totalUnitPower(c.UnitType, c.Count)
+		for _, u := range campaignUnitsByID[c.ID] {
+			atkPow += totalUnitPower(u.UnitType, u.Count)
+		}
 	}
 
-	// Compute defender power
+	// Compute defender power: reserve + at-home legions + campaign defenders.
 	var defPow int
 	for _, u := range targetAvailableUnits {
 		defPow += totalUnitPower(u.UnitType, u.Count)
 	}
+	for _, u := range atHomeLegionUnits {
+		defPow += totalUnitPower(u.UnitType, u.Count)
+	}
 	for _, c := range defenders {
-		defPow += totalUnitPower(c.UnitType, c.Count)
+		for _, u := range campaignUnitsByID[c.ID] {
+			defPow += totalUnitPower(u.UnitType, u.Count)
+		}
 	}
 
 	if atkPow == 0 && defPow == 0 {
 		return nil, nil
 	}
 
-	// Loss ratios: each side loses proportional to the opponent's power advantage.
 	atkLoss, defLoss := computeLossRatios(atkPow, defPow)
 
-	// ── Phase 1: compute all outcomes ────────────────────────────────────────
+	// ── Phase 1: compute outcomes ─────────────────────────────────────────────
 
-	// casKingdomIDs, casUnitTypes, and casCasualties accumulate kingdom_units deductions
-	// for all sides: home defenders, campaign defenders, and attackers.
-	// Home-defender entries come from the available-units view (already aggregated by
-	// (kingdom_id, unit_type)). Campaign entries are collected in campaignCas and
-	// flattened below to avoid duplicate rows for kingdoms with multiple campaigns
-	// of the same unit type.
-	casKingdomIDs := make([]int, 0)
-	casUnitTypes := make([]string, 0)
-	casCasualties := make([]int, 0)
+	// casMap aggregates kingdom_units deductions by (kingdom_id, unit_type).
+	casMap := make(map[casKey]int)
 
-	// Attacker outcomes — aggregate by unit type across all attacking kingdoms.
-	atkByType := make(map[string]*CombatUnitRecord)
-	updateIDs := make([]int, 0, len(attackers)+len(defenders))
-	updateCounts := make([]int, 0, len(attackers)+len(defenders))
-	type campaignCasKey struct {
-		kingdomID int
-		unitType  string
+	// Pending campaign unit row writes.
+	type campaignUnitRow struct {
+		campaignID int
+		unitType   string
+		count      int
 	}
-	campaignCas := make(map[campaignCasKey]int)
+	var campUpdates []campaignUnitRow // surviving rows (count > 0)
+	var campZeros []campaignUnitRow   // wiped rows (count == 0)
+	campHadUnits := make(map[int]bool)
+	campHasSurvivors := make(map[int]bool)
+
+	atkByType := make(map[string]*CombatUnitRecord)
 	var totalAtkCasualties int
 
 	for _, c := range attackers {
-		survivors := max(0, int(float64(c.Count)*(1-atkLoss)))
-		casualties := c.Count - survivors
-		if casualties > 0 {
-			updateIDs = append(updateIDs, c.ID)
-			updateCounts = append(updateCounts, survivors)
-			campaignCas[campaignCasKey{c.KingdomID, c.UnitType}] += casualties
-		}
-		totalAtkCasualties += casualties
+		for _, u := range campaignUnitsByID[c.ID] {
+			campHadUnits[c.ID] = true
+			survivors := max(0, int(float64(u.Count)*(1-atkLoss)))
+			casualties := u.Count - survivors
+			if survivors > 0 {
+				campUpdates = append(campUpdates, campaignUnitRow{c.ID, u.UnitType, survivors})
+				campHasSurvivors[c.ID] = true
+			} else {
+				campZeros = append(campZeros, campaignUnitRow{c.ID, u.UnitType, 0})
+			}
+			if casualties > 0 {
+				casMap[casKey{c.KingdomID, u.UnitType}] += casualties
+			}
+			totalAtkCasualties += casualties
 
-		r := atkByType[c.UnitType]
-		if r == nil {
-			r = &CombatUnitRecord{UnitType: c.UnitType}
-			atkByType[c.UnitType] = r
+			r := atkByType[u.UnitType]
+			if r == nil {
+				r = &CombatUnitRecord{UnitType: u.UnitType}
+				atkByType[u.UnitType] = r
+			}
+			r.Count += u.Count
+			r.Power += totalUnitPower(u.UnitType, u.Count)
+			r.Casualties += casualties
 		}
-		r.Count += c.Count
-		r.Power += totalUnitPower(c.UnitType, c.Count)
-		r.Casualties += casualties
 	}
 
-	// Defender outcomes — home available units and campaign reinforcements, aggregated by type.
 	defByType := make(map[string]*CombatUnitRecord)
 	var totalDefCasualties int
 
+	// Reserve defenders — casualties only deducted from kingdom_units.
 	for _, u := range targetAvailableUnits {
 		unitPow := totalUnitPower(u.UnitType, u.Count)
 		casualties := 0
@@ -155,9 +171,7 @@ func resolveCombatAtKingdom(
 			casualties = int(float64(u.Count) * defLoss * float64(unitPow) / float64(defPow))
 		}
 		if casualties > 0 {
-			casKingdomIDs = append(casKingdomIDs, targetKingdom.ID)
-			casUnitTypes = append(casUnitTypes, u.UnitType)
-			casCasualties = append(casCasualties, casualties)
+			casMap[casKey{targetKingdom.ID, u.UnitType}] += casualties
 		}
 		totalDefCasualties += casualties
 
@@ -171,45 +185,75 @@ func resolveCombatAtKingdom(
 		r.Casualties += casualties
 	}
 
-	for _, c := range defenders {
-		unitPow := totalUnitPower(c.UnitType, c.Count)
-		survivors := c.Count
+	// At-home legion defenders — casualties deducted from both kingdom_legion_units and kingdom_units.
+	type legionUnitRow struct {
+		legionID int
+		unitType string
+		count    int
+	}
+	var legionUpdates []legionUnitRow
+	var legionZeros []legionUnitRow
+
+	for _, u := range atHomeLegionUnits {
+		unitPow := totalUnitPower(u.UnitType, u.Count)
 		casualties := 0
 		if defLoss > 0 && defPow > 0 {
-			cDefLoss := defLoss * float64(unitPow) / float64(defPow)
-			survivors = max(0, int(float64(c.Count)*(1-cDefLoss)))
-			casualties = c.Count - survivors
+			casualties = int(float64(u.Count) * defLoss * float64(unitPow) / float64(defPow))
+		}
+		survivors := max(0, u.Count-casualties)
+		if survivors > 0 {
+			legionUpdates = append(legionUpdates, legionUnitRow{u.LegionID, u.UnitType, survivors})
+		} else {
+			legionZeros = append(legionZeros, legionUnitRow{u.LegionID, u.UnitType, 0})
 		}
 		if casualties > 0 {
-			updateIDs = append(updateIDs, c.ID)
-			updateCounts = append(updateCounts, survivors)
-			campaignCas[campaignCasKey{c.KingdomID, c.UnitType}] += casualties
+			casMap[casKey{targetKingdom.ID, u.UnitType}] += casualties
 		}
 		totalDefCasualties += casualties
 
-		r := defByType[c.UnitType]
+		r := defByType[u.UnitType]
 		if r == nil {
-			r = &CombatUnitRecord{UnitType: c.UnitType}
-			defByType[c.UnitType] = r
+			r = &CombatUnitRecord{UnitType: u.UnitType}
+			defByType[u.UnitType] = r
 		}
-		r.Count += c.Count
+		r.Count += u.Count
 		r.Power += unitPow
 		r.Casualties += casualties
 	}
 
-	// Flatten aggregated campaign casualties into the cas* slices so that
-	// BulkDeductKingdomUnitsCasualties receives one row per (kingdom_id, unit_type).
-	for k, cas := range campaignCas {
-		casKingdomIDs = append(casKingdomIDs, k.kingdomID)
-		casUnitTypes = append(casUnitTypes, k.unitType)
-		casCasualties = append(casCasualties, cas)
+	// Campaign defenders — casualties deducted from both kingdom_campaign_units and kingdom_units.
+	for _, c := range defenders {
+		for _, u := range campaignUnitsByID[c.ID] {
+			campHadUnits[c.ID] = true
+			unitPow := totalUnitPower(u.UnitType, u.Count)
+			casualties := 0
+			if defLoss > 0 && defPow > 0 {
+				casualties = int(float64(u.Count) * defLoss * float64(unitPow) / float64(defPow))
+			}
+			survivors := max(0, u.Count-casualties)
+			if survivors > 0 {
+				campUpdates = append(campUpdates, campaignUnitRow{c.ID, u.UnitType, survivors})
+				campHasSurvivors[c.ID] = true
+			} else {
+				campZeros = append(campZeros, campaignUnitRow{c.ID, u.UnitType, 0})
+			}
+			if casualties > 0 {
+				casMap[casKey{c.KingdomID, u.UnitType}] += casualties
+			}
+			totalDefCasualties += casualties
+
+			r := defByType[u.UnitType]
+			if r == nil {
+				r = &CombatUnitRecord{UnitType: u.UnitType}
+				defByType[u.UnitType] = r
+			}
+			r.Count += u.Count
+			r.Power += unitPow
+			r.Casualties += casualties
+		}
 	}
 
 	// Population stolen and per-attacker-kingdom distribution.
-	// popStolen is capped to what the target can actually lose (floor is 100),
-	// so attackers can never gain more population than the target gives up.
-	// Integer truncation in share distribution may leave some population
-	// unclaimed, which is intentional — no population is ever created.
 	var popStolen int
 	gainByKingdom := make(map[int]int)
 	if atkPow > defPow {
@@ -217,43 +261,126 @@ func resolveCombatAtKingdom(
 		calculated := max(1, int(float64(targetKingdom.Population)*ratio*0.1))
 		popStolen = min(calculated, max(0, targetKingdom.Population-100))
 		for _, c := range attackers {
-			share := int(float64(popStolen) * float64(totalUnitPower(c.UnitType, c.Count)) / float64(atkPow))
-			if share > 0 {
-				gainByKingdom[c.KingdomID] += share
+			for _, u := range campaignUnitsByID[c.ID] {
+				share := int(float64(popStolen) * float64(totalUnitPower(u.UnitType, u.Count)) / float64(atkPow))
+				if share > 0 {
+					gainByKingdom[c.KingdomID] += share
+				}
 			}
 		}
 	}
 
-	// ── Phase 2: writes ──────────────────────────────────────────────────────
+	// ── Phase 2: writes ───────────────────────────────────────────────────────
 
-	if len(updateIDs) > 0 {
-		if err := q.BulkUpdateCampaignCounts(ctx, db.BulkUpdateCampaignCountsParams{
-			Ids:    updateIDs,
-			Counts: updateCounts,
-		}); err != nil {
-			return nil, fmt.Errorf("bulk update campaign counts: %w", err)
-		}
-	}
-
-	// Delete any campaigns that were wiped out (all units killed this round).
+	// Identify fully depleted campaigns (had units, none survived).
 	var depleted []int
-	for i, count := range updateCounts {
-		if count == 0 {
-			depleted = append(depleted, updateIDs[i])
+	for _, c := range attackers {
+		if campHadUnits[c.ID] && !campHasSurvivors[c.ID] {
+			depleted = append(depleted, c.ID)
 		}
 	}
+	for _, c := range defenders {
+		if campHadUnits[c.ID] && !campHasSurvivors[c.ID] {
+			depleted = append(depleted, c.ID)
+		}
+	}
+	depletedSet := make(map[int]bool, len(depleted))
+	for _, id := range depleted {
+		depletedSet[id] = true
+	}
+
+	// Update non-zero surviving campaign unit rows (skip depleted — cascade handles them).
+	if len(campUpdates) > 0 {
+		p := db.BulkUpdateCampaignUnitCountsParams{
+			CampaignIds: make([]int, 0, len(campUpdates)),
+			UnitTypes:   make([]string, 0, len(campUpdates)),
+			Counts:      make([]int, 0, len(campUpdates)),
+		}
+		for _, u := range campUpdates {
+			if !depletedSet[u.campaignID] {
+				p.CampaignIds = append(p.CampaignIds, u.campaignID)
+				p.UnitTypes = append(p.UnitTypes, u.unitType)
+				p.Counts = append(p.Counts, u.count)
+			}
+		}
+		if len(p.CampaignIds) > 0 {
+			if err := q.BulkUpdateCampaignUnitCounts(ctx, p); err != nil {
+				return nil, fmt.Errorf("bulk update campaign unit counts: %w", err)
+			}
+		}
+	}
+
+	// Delete zero-survivor rows for non-depleted campaigns.
+	if len(campZeros) > 0 {
+		p := db.BulkDeleteCampaignUnitsZeroParams{
+			CampaignIds: make([]int, 0, len(campZeros)),
+			UnitTypes:   make([]string, 0, len(campZeros)),
+		}
+		for _, u := range campZeros {
+			if !depletedSet[u.campaignID] {
+				p.CampaignIds = append(p.CampaignIds, u.campaignID)
+				p.UnitTypes = append(p.UnitTypes, u.unitType)
+			}
+		}
+		if len(p.CampaignIds) > 0 {
+			if err := q.BulkDeleteCampaignUnitsZero(ctx, p); err != nil {
+				return nil, fmt.Errorf("bulk delete zero campaign units: %w", err)
+			}
+		}
+	}
+
+	// Delete depleted campaigns; cascade removes their kingdom_campaign_units rows.
 	if len(depleted) > 0 {
 		if err := q.BulkDeleteCampaigns(ctx, depleted); err != nil {
 			return nil, fmt.Errorf("delete depleted campaigns: %w", err)
 		}
 	}
 
-	if len(casKingdomIDs) > 0 {
-		if err := q.BulkDeductKingdomUnitsCasualties(ctx, db.BulkDeductKingdomUnitsCasualtiesParams{
-			KingdomIds: casKingdomIDs,
-			UnitTypes:  casUnitTypes,
-			Casualties: casCasualties,
-		}); err != nil {
+	// Update non-zero surviving at-home legion unit rows.
+	if len(legionUpdates) > 0 {
+		p := db.BulkUpdateLegionUnitCountsParams{
+			LegionIds: make([]int, len(legionUpdates)),
+			UnitTypes: make([]string, len(legionUpdates)),
+			Counts:    make([]int, len(legionUpdates)),
+		}
+		for i, u := range legionUpdates {
+			p.LegionIds[i] = u.legionID
+			p.UnitTypes[i] = u.unitType
+			p.Counts[i] = u.count
+		}
+		if err := q.BulkUpdateLegionUnitCounts(ctx, p); err != nil {
+			return nil, fmt.Errorf("bulk update legion unit counts: %w", err)
+		}
+	}
+
+	// Delete zero-survivor at-home legion unit rows.
+	if len(legionZeros) > 0 {
+		p := db.BulkDeleteLegionUnitsZeroParams{
+			LegionIds: make([]int, len(legionZeros)),
+			UnitTypes: make([]string, len(legionZeros)),
+		}
+		for i, u := range legionZeros {
+			p.LegionIds[i] = u.legionID
+			p.UnitTypes[i] = u.unitType
+		}
+		if err := q.BulkDeleteLegionUnitsZero(ctx, p); err != nil {
+			return nil, fmt.Errorf("bulk delete zero legion units: %w", err)
+		}
+	}
+
+	// Deduct all casualties from kingdom_units.
+	if len(casMap) > 0 {
+		p := db.BulkDeductKingdomUnitsCasualtiesParams{
+			KingdomIds: make([]int, 0, len(casMap)),
+			UnitTypes:  make([]string, 0, len(casMap)),
+			Casualties: make([]int, 0, len(casMap)),
+		}
+		for k, cas := range casMap {
+			p.KingdomIds = append(p.KingdomIds, k.kingdomID)
+			p.UnitTypes = append(p.UnitTypes, k.unitType)
+			p.Casualties = append(p.Casualties, cas)
+		}
+		if err := q.BulkDeductKingdomUnitsCasualties(ctx, p); err != nil {
 			return nil, fmt.Errorf("bulk deduct casualties: %w", err)
 		}
 	}
@@ -279,7 +406,7 @@ func resolveCombatAtKingdom(
 		}
 	}
 
-	// ── Phase 3: build result ────────────────────────────────────────────────
+	// ── Phase 3: build result ─────────────────────────────────────────────────
 
 	attackerUnits := make([]CombatUnitRecord, 0, len(atkByType))
 	for _, r := range atkByType {
@@ -294,14 +421,9 @@ func resolveCombatAtKingdom(
 	if atkPow > defPow {
 		winner = "attacker"
 	}
-	// Ties (atkPow == defPow) fall through to "defender" — the defending side
-	// holds when forces are equal.
 
-	// Build participant list — every kingdom involved in this combat round.
-	// Target kingdom is always a defender. Attackers and campaign defenders follow.
 	seen := map[int]bool{targetKingdom.ID: true}
 	participants := []CombatParticipant{{KingdomID: targetKingdom.ID, Role: "defender"}}
-
 	for _, c := range attackers {
 		if !seen[c.KingdomID] {
 			seen[c.KingdomID] = true
@@ -322,7 +444,7 @@ func resolveCombatAtKingdom(
 		}
 	}
 
-	result := &CombatResult{
+	return &CombatResult{
 		TargetKingdomID:    targetKingdom.ID,
 		AttackerUnits:      attackerUnits,
 		DefenderUnits:      defenderUnits,
@@ -333,9 +455,7 @@ func resolveCombatAtKingdom(
 		DefenderCasualties: totalDefCasualties,
 		PopulationStolen:   popStolen,
 		Participants:       participants,
-	}
-
-	return result, nil
+	}, nil
 }
 
 // ResolveCombat fires one combat round per target kingdom with active campaigns.
@@ -376,6 +496,28 @@ func ResolveCombat(ctx context.Context, pool *pgxpool.Pool, q db.Querier, tickID
 		availableByKingdom[u.KingdomID] = append(availableByKingdom[u.KingdomID], u)
 	}
 
+	allAtHomeLegionUnits, err := q.GetAtHomeLegionUnitsByKingdomIDs(ctx, targetIDs)
+	if err != nil {
+		return fmt.Errorf("combat: bulk fetch at-home legion units: %w", err)
+	}
+	legionUnitsByKingdom := make(map[int][]db.GetAtHomeLegionUnitsByKingdomIDsRow, len(targetIDs))
+	for _, u := range allAtHomeLegionUnits {
+		legionUnitsByKingdom[u.KingdomID] = append(legionUnitsByKingdom[u.KingdomID], u)
+	}
+
+	campaignIDs := make([]int, len(combatReady))
+	for i, c := range combatReady {
+		campaignIDs[i] = c.ID
+	}
+	allCampaignUnits, err := q.GetCampaignUnitsByCampaignIDs(ctx, campaignIDs)
+	if err != nil {
+		return fmt.Errorf("combat: bulk fetch campaign units: %w", err)
+	}
+	campaignUnitsByID := make(map[int][]db.KingdomCampaignUnit, len(campaignIDs))
+	for _, u := range allCampaignUnits {
+		campaignUnitsByID[u.CampaignID] = append(campaignUnitsByID[u.CampaignID], u)
+	}
+
 	for targetID, group := range grouped {
 		var attackers, campaignDefenders []db.KingdomCampaign
 		for _, c := range group {
@@ -392,8 +534,10 @@ func ResolveCombat(ctx context.Context, pool *pgxpool.Pool, q db.Querier, tickID
 			ctx, pool, tickID,
 			kingdomByID[targetID],
 			availableByKingdom[targetID],
+			legionUnitsByKingdom[targetID],
 			attackers,
 			campaignDefenders,
+			campaignUnitsByID,
 		); err != nil {
 			log.Printf("combat: kingdom %d: %v", targetID, err)
 		}
@@ -408,8 +552,10 @@ func runCombatRound(
 	tickID int,
 	targetKingdom db.Kingdom,
 	availableUnits []db.KingdomAvailableUnit,
+	atHomeLegionUnits []db.GetAtHomeLegionUnitsByKingdomIDsRow,
 	attackers []db.KingdomCampaign,
 	campaignDefenders []db.KingdomCampaign,
+	campaignUnitsByID map[int][]db.KingdomCampaignUnit,
 ) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -418,7 +564,7 @@ func runCombatRound(
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	txq := db.New(tx)
-	result, err := resolveCombatAtKingdom(ctx, txq, targetKingdom, availableUnits, attackers, campaignDefenders)
+	result, err := resolveCombatAtKingdom(ctx, txq, targetKingdom, availableUnits, atHomeLegionUnits, attackers, campaignDefenders, campaignUnitsByID)
 	if err != nil {
 		return err
 	}
@@ -460,13 +606,12 @@ func runCombatRound(
 		roles[i] = p.Role
 		popGained[i] = p.PopulationGained
 	}
-	participantParams := db.BulkInsertCombatLogParticipantsParams{
+	if err := txq.BulkInsertCombatLogParticipants(ctx, db.BulkInsertCombatLogParticipantsParams{
 		CombatLogID:      logID,
 		KingdomIds:       kingdomIDs,
 		Roles:            roles,
 		PopulationGained: popGained,
-	}
-	if err := txq.BulkInsertCombatLogParticipants(ctx, participantParams); err != nil {
+	}); err != nil {
 		return fmt.Errorf("insert combat log participants: %w", err)
 	}
 

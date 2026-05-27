@@ -59,6 +59,9 @@ func AdvanceCampaigns(ctx context.Context, q db.Querier) error {
 		}
 	}
 	if len(toDelete) > 0 {
+		if err := q.BulkRestoreLegionUnits(ctx, toDelete); err != nil {
+			return fmt.Errorf("campaigns: bulk restore legion units: %w", err)
+		}
 		if err := q.BulkDeleteCampaigns(ctx, toDelete); err != nil {
 			return fmt.Errorf("campaigns: bulk delete: %w", err)
 		}

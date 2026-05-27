@@ -86,14 +86,19 @@ type KingdomCampaign struct {
 	ID              int
 	KingdomID       int
 	TargetKingdomID int
-	UnitType        string
-	Count           int
+	LegionID        int
 	Action          string
 	Status          string
 	TicksRemaining  int
 	ActionTicks     int
 	TravelTicks     int
 	CreatedAt       time.Time
+}
+
+type KingdomCampaignUnit struct {
+	CampaignID int
+	UnitType   string
+	Count      int
 }
 
 type KingdomCombatLog struct {
@@ -125,6 +130,20 @@ type KingdomConstruction struct {
 	TicksRemaining int
 	TicksTotal     int
 	StartedAt      time.Time
+}
+
+type KingdomLegion struct {
+	ID        int
+	KingdomID int
+	Number    int
+	Name      string
+	CreatedAt time.Time
+}
+
+type KingdomLegionUnit struct {
+	LegionID int
+	UnitType string
+	Count    int
 }
 
 type KingdomMessage struct {

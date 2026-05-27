@@ -1771,6 +1771,43 @@ h1 {
   }
 }
 
+.army-legion {
+  border-left: 3px solid var(--border-color);
+}
+
+.army-legion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+
+  & .panel-title {
+    margin-bottom: 0;
+  }
+}
+
+.army-legion-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+
+  &.army-legion-badge--home {
+    color: #2d6a4f;
+    background: #d8f3dc;
+    border-color: #b7e4c7;
+  }
+
+  &.army-legion-badge--deployed {
+    color: #7d4e00;
+    background: #fff3cd;
+    border-color: #ffe083;
+  }
+}
+
 /* =============================================================================
    Home (flip card)
    ============================================================================= */

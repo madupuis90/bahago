@@ -38,6 +38,23 @@ func (q *Queries) BulkActivateCampaigns(ctx context.Context, ids []int) error {
 	return err
 }
 
+const bulkDeleteCampaignUnitsZero = `-- name: BulkDeleteCampaignUnitsZero :exec
+DELETE FROM kingdom_campaign_units
+WHERE (campaign_id, unit_type) IN (
+    SELECT unnest($1::bigint[]), unnest($2::text[])
+)
+`
+
+type BulkDeleteCampaignUnitsZeroParams struct {
+	CampaignIds []int
+	UnitTypes   []string
+}
+
+func (q *Queries) BulkDeleteCampaignUnitsZero(ctx context.Context, arg BulkDeleteCampaignUnitsZeroParams) error {
+	_, err := q.db.Exec(ctx, bulkDeleteCampaignUnitsZero, arg.CampaignIds, arg.UnitTypes)
+	return err
+}
+
 const bulkDeleteCampaigns = `-- name: BulkDeleteCampaigns :exec
 DELETE FROM kingdom_campaigns
 WHERE id = ANY($1::bigint[])
@@ -45,6 +62,21 @@ WHERE id = ANY($1::bigint[])
 
 func (q *Queries) BulkDeleteCampaigns(ctx context.Context, ids []int) error {
 	_, err := q.db.Exec(ctx, bulkDeleteCampaigns, ids)
+	return err
+}
+
+const bulkRestoreLegionUnits = `-- name: BulkRestoreLegionUnits :exec
+INSERT INTO kingdom_legion_units (legion_id, unit_type, count)
+SELECT kc.legion_id, kcu.unit_type, kcu.count
+FROM kingdom_campaign_units kcu
+JOIN kingdom_campaigns kc ON kc.id = kcu.campaign_id
+WHERE kc.id = ANY($1::bigint[])
+ON CONFLICT (legion_id, unit_type)
+DO UPDATE SET count = kingdom_legion_units.count + EXCLUDED.count
+`
+
+func (q *Queries) BulkRestoreLegionUnits(ctx context.Context, ids []int) error {
+	_, err := q.db.Exec(ctx, bulkRestoreLegionUnits, ids)
 	return err
 }
 
@@ -59,23 +91,27 @@ func (q *Queries) BulkReturnCampaigns(ctx context.Context, ids []int) error {
 	return err
 }
 
-const bulkUpdateCampaignCounts = `-- name: BulkUpdateCampaignCounts :exec
-UPDATE kingdom_campaigns
+const bulkUpdateCampaignUnitCounts = `-- name: BulkUpdateCampaignUnitCounts :exec
+UPDATE kingdom_campaign_units
 SET count = data.count
 FROM (
-    SELECT unnest($1::bigint[]) AS id,
-           unnest($2::int[]) AS count
+    SELECT
+        unnest($1::bigint[]) AS campaign_id,
+        unnest($2::text[])     AS unit_type,
+        unnest($3::int[])          AS count
 ) AS data
-WHERE kingdom_campaigns.id = data.id
+WHERE kingdom_campaign_units.campaign_id = data.campaign_id
+  AND kingdom_campaign_units.unit_type   = data.unit_type
 `
 
-type BulkUpdateCampaignCountsParams struct {
-	Ids    []int
-	Counts []int
+type BulkUpdateCampaignUnitCountsParams struct {
+	CampaignIds []int
+	UnitTypes   []string
+	Counts      []int
 }
 
-func (q *Queries) BulkUpdateCampaignCounts(ctx context.Context, arg BulkUpdateCampaignCountsParams) error {
-	_, err := q.db.Exec(ctx, bulkUpdateCampaignCounts, arg.Ids, arg.Counts)
+func (q *Queries) BulkUpdateCampaignUnitCounts(ctx context.Context, arg BulkUpdateCampaignUnitCountsParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateCampaignUnitCounts, arg.CampaignIds, arg.UnitTypes, arg.Counts)
 	return err
 }
 
@@ -103,42 +139,33 @@ func (q *Queries) CancelCampaign(ctx context.Context, arg CancelCampaignParams) 
 	return id, err
 }
 
-const createCampaignIfAvailable = `-- name: CreateCampaignIfAvailable :one
-WITH available AS (
-    SELECT count FROM kingdom_available_units
-    WHERE kingdom_id = $1 AND unit_type = $3
-)
+const createCampaign = `-- name: CreateCampaign :one
 INSERT INTO kingdom_campaigns (
-    kingdom_id, target_kingdom_id, unit_type, count,
+    kingdom_id, target_kingdom_id, legion_id,
     action, ticks_remaining, action_ticks, travel_ticks
 )
-SELECT $1, $2, $3, $4,
-       $5, $6, $7, $8
-FROM available
-WHERE available.count >= $4
-RETURNING id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at
+VALUES (
+    $1, $2, $3,
+    $4, $5, $6, $7
+)
+RETURNING id, kingdom_id, target_kingdom_id, legion_id, action, status, ticks_remaining, action_ticks, travel_ticks, created_at
 `
 
-type CreateCampaignIfAvailableParams struct {
+type CreateCampaignParams struct {
 	KingdomID       int
 	TargetKingdomID int
-	UnitType        string
-	SendCount       int
+	LegionID        int
 	Action          string
 	TicksRemaining  int
 	ActionTicks     int
 	TravelTicks     int
 }
 
-// Atomically checks that enough units are available (via kingdom_available_units
-// view) and inserts the campaign in one statement. Returns no rows if the
-// available count is insufficient, which the caller maps to "not enough units".
-func (q *Queries) CreateCampaignIfAvailable(ctx context.Context, arg CreateCampaignIfAvailableParams) (KingdomCampaign, error) {
-	row := q.db.QueryRow(ctx, createCampaignIfAvailable,
+func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) (KingdomCampaign, error) {
+	row := q.db.QueryRow(ctx, createCampaign,
 		arg.KingdomID,
 		arg.TargetKingdomID,
-		arg.UnitType,
-		arg.SendCount,
+		arg.LegionID,
 		arg.Action,
 		arg.TicksRemaining,
 		arg.ActionTicks,
@@ -149,8 +176,7 @@ func (q *Queries) CreateCampaignIfAvailable(ctx context.Context, arg CreateCampa
 		&i.ID,
 		&i.KingdomID,
 		&i.TargetKingdomID,
-		&i.UnitType,
-		&i.Count,
+		&i.LegionID,
 		&i.Action,
 		&i.Status,
 		&i.TicksRemaining,
@@ -166,17 +192,16 @@ WITH decremented AS (
     UPDATE kingdom_campaigns
     SET ticks_remaining = ticks_remaining - 1
     WHERE ticks_remaining > 0
-    RETURNING id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at
+    RETURNING id, kingdom_id, target_kingdom_id, legion_id, action, status, ticks_remaining, action_ticks, travel_ticks, created_at
 )
-SELECT id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM decremented WHERE ticks_remaining = 0
+SELECT id, kingdom_id, target_kingdom_id, legion_id, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM decremented WHERE ticks_remaining = 0
 `
 
 type DecrementAndListCampaignsAtZeroRow struct {
 	ID              int
 	KingdomID       int
 	TargetKingdomID int
-	UnitType        string
-	Count           int
+	LegionID        int
 	Action          string
 	Status          string
 	TicksRemaining  int
@@ -198,8 +223,7 @@ func (q *Queries) DecrementAndListCampaignsAtZero(ctx context.Context) ([]Decrem
 			&i.ID,
 			&i.KingdomID,
 			&i.TargetKingdomID,
-			&i.UnitType,
-			&i.Count,
+			&i.LegionID,
 			&i.Action,
 			&i.Status,
 			&i.TicksRemaining,
@@ -228,7 +252,7 @@ func (q *Queries) DeleteCampaign(ctx context.Context, id int) error {
 }
 
 const getActiveCampaignsReadyForCombat = `-- name: GetActiveCampaignsReadyForCombat :many
-SELECT id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM kingdom_campaigns
+SELECT id, kingdom_id, target_kingdom_id, legion_id, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM kingdom_campaigns
 WHERE status = 'active'
   AND ticks_remaining > 0
 `
@@ -246,8 +270,7 @@ func (q *Queries) GetActiveCampaignsReadyForCombat(ctx context.Context) ([]Kingd
 			&i.ID,
 			&i.KingdomID,
 			&i.TargetKingdomID,
-			&i.UnitType,
-			&i.Count,
+			&i.LegionID,
 			&i.Action,
 			&i.Status,
 			&i.TicksRemaining,
@@ -265,27 +288,82 @@ func (q *Queries) GetActiveCampaignsReadyForCombat(ctx context.Context) ([]Kingd
 	return items, nil
 }
 
-const getCampaignsForKingdom = `-- name: GetCampaignsForKingdom :many
-SELECT id, kingdom_id, target_kingdom_id, unit_type, count, action, status, ticks_remaining, action_ticks, travel_ticks, created_at FROM kingdom_campaigns
-WHERE kingdom_id = $1
-ORDER BY created_at ASC
+const getCampaignUnitsByCampaignIDs = `-- name: GetCampaignUnitsByCampaignIDs :many
+SELECT campaign_id, unit_type, count FROM kingdom_campaign_units
+WHERE campaign_id = ANY($1::bigint[])
 `
 
-func (q *Queries) GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]KingdomCampaign, error) {
+func (q *Queries) GetCampaignUnitsByCampaignIDs(ctx context.Context, ids []int) ([]KingdomCampaignUnit, error) {
+	rows, err := q.db.Query(ctx, getCampaignUnitsByCampaignIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []KingdomCampaignUnit
+	for rows.Next() {
+		var i KingdomCampaignUnit
+		if err := rows.Scan(&i.CampaignID, &i.UnitType, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCampaignsForKingdom = `-- name: GetCampaignsForKingdom :many
+SELECT
+    kc.id,
+    kc.kingdom_id,
+    kc.target_kingdom_id,
+    kc.legion_id,
+    kl.name    AS legion_name,
+    kl.number  AS legion_number,
+    kc.action,
+    kc.status,
+    kc.ticks_remaining,
+    kc.action_ticks,
+    kc.travel_ticks,
+    kc.created_at
+FROM kingdom_campaigns kc
+JOIN kingdom_legions kl ON kl.id = kc.legion_id
+WHERE kc.kingdom_id = $1
+ORDER BY kc.created_at ASC
+`
+
+type GetCampaignsForKingdomRow struct {
+	ID              int
+	KingdomID       int
+	TargetKingdomID int
+	LegionID        int
+	LegionName      string
+	LegionNumber    int
+	Action          string
+	Status          string
+	TicksRemaining  int
+	ActionTicks     int
+	TravelTicks     int
+	CreatedAt       time.Time
+}
+
+func (q *Queries) GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]GetCampaignsForKingdomRow, error) {
 	rows, err := q.db.Query(ctx, getCampaignsForKingdom, kingdomID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []KingdomCampaign
+	var items []GetCampaignsForKingdomRow
 	for rows.Next() {
-		var i KingdomCampaign
+		var i GetCampaignsForKingdomRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.KingdomID,
 			&i.TargetKingdomID,
-			&i.UnitType,
-			&i.Count,
+			&i.LegionID,
+			&i.LegionName,
+			&i.LegionNumber,
 			&i.Action,
 			&i.Status,
 			&i.TicksRemaining,
@@ -301,4 +379,48 @@ func (q *Queries) GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]
 		return nil, err
 	}
 	return items, nil
+}
+
+const listCampaignUnitsForKingdom = `-- name: ListCampaignUnitsForKingdom :many
+SELECT kcu.campaign_id, kcu.unit_type, kcu.count
+FROM kingdom_campaign_units kcu
+JOIN kingdom_campaigns kc ON kc.id = kcu.campaign_id
+WHERE kc.kingdom_id = $1
+`
+
+func (q *Queries) ListCampaignUnitsForKingdom(ctx context.Context, kingdomID int) ([]KingdomCampaignUnit, error) {
+	rows, err := q.db.Query(ctx, listCampaignUnitsForKingdom, kingdomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []KingdomCampaignUnit
+	for rows.Next() {
+		var i KingdomCampaignUnit
+		if err := rows.Scan(&i.CampaignID, &i.UnitType, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const snapshotLegionUnitsIntoCampaign = `-- name: SnapshotLegionUnitsIntoCampaign :exec
+INSERT INTO kingdom_campaign_units (campaign_id, unit_type, count)
+SELECT $1, unit_type, count
+FROM kingdom_legion_units
+WHERE legion_id = $2
+`
+
+type SnapshotLegionUnitsIntoCampaignParams struct {
+	CampaignID int
+	LegionID   int
+}
+
+func (q *Queries) SnapshotLegionUnitsIntoCampaign(ctx context.Context, arg SnapshotLegionUnitsIntoCampaignParams) error {
+	_, err := q.db.Exec(ctx, snapshotLegionUnitsIntoCampaign, arg.CampaignID, arg.LegionID)
+	return err
 }

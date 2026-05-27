@@ -32,36 +32,51 @@ func TestAdvanceCampaigns_StateMachine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create target kingdom: %v", err)
 	}
-	if err := q.UpsertKingdomUnits(ctx, db.UpsertKingdomUnitsParams{
+	legion, err := q.CreateLegion(ctx, db.CreateLegionParams{
 		KingdomID: attacker.ID,
-		UnitType:  UnitRecruit,
-		Count:     10,
+		Cap:       MaxLegionsPerKingdom,
+	})
+	if err != nil {
+		t.Fatalf("create legion: %v", err)
+	}
+	if err := q.UpsertLegionUnit(ctx, db.UpsertLegionUnitParams{
+		LegionID: legion.ID,
+		UnitType: UnitRecruit,
+		Count:    10,
 	}); err != nil {
-		t.Fatalf("upsert units: %v", err)
+		t.Fatalf("upsert legion unit: %v", err)
 	}
 
 	// Create campaign with ticks_remaining=1, action_ticks=1, travel_ticks=3
 	// (3 is the schema minimum). The en_route→active and active→returning
 	// transitions still take one advance each; the returning leg requires
 	// travel_ticks=3 decrements before deletion.
-	campaign, err := q.CreateCampaignIfAvailable(ctx, db.CreateCampaignIfAvailableParams{
+	campaign, err := q.CreateCampaign(ctx, db.CreateCampaignParams{
 		KingdomID:       attacker.ID,
 		TargetKingdomID: target.ID,
-		UnitType:        UnitRecruit,
-		SendCount:       5,
+		LegionID:        legion.ID,
 		Action:          "attack",
 		TicksRemaining:  1,
 		ActionTicks:     1,
 		TravelTicks:     3,
 	})
 	if err != nil {
-		t.Fatalf("CreateCampaignIfAvailable: %v", err)
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+	if err := q.SnapshotLegionUnitsIntoCampaign(ctx, db.SnapshotLegionUnitsIntoCampaignParams{
+		CampaignID: campaign.ID,
+		LegionID:   legion.ID,
+	}); err != nil {
+		t.Fatalf("SnapshotLegionUnitsIntoCampaign: %v", err)
+	}
+	if err := q.ClearLegionUnits(ctx, legion.ID); err != nil {
+		t.Fatalf("ClearLegionUnits: %v", err)
 	}
 	if campaign.Status != "en_route" {
 		t.Fatalf("initial status = %q, want en_route", campaign.Status)
 	}
 
-	findCampaign := func(t *testing.T) (db.KingdomCampaign, bool) {
+	findCampaign := func(t *testing.T) (db.GetCampaignsForKingdomRow, bool) {
 		t.Helper()
 		campaigns, err := q.GetCampaignsForKingdom(ctx, attacker.ID)
 		if err != nil {
@@ -72,7 +87,7 @@ func TestAdvanceCampaigns_StateMachine(t *testing.T) {
 				return c, true
 			}
 		}
-		return db.KingdomCampaign{}, false
+		return db.GetCampaignsForKingdomRow{}, false
 	}
 
 	// Advance 1: en_route → active

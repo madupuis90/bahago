@@ -51,8 +51,7 @@ var attacker = &db.Kingdom{ID: 1, X: 0, Y: 0, Name: "Attackia"}
 func TestValidateSendInput(t *testing.T) {
 	base := func() *sendInput {
 		return &sendInput{
-			UnitType:      "recruit",
-			SendCount:     10,
+			LegionID:      1,
 			Action:        "attack",
 			TargetName:    "Other",
 			DurationTicks: 3,
@@ -75,24 +74,9 @@ func TestValidateSendInput(t *testing.T) {
 			wantErrs: nil,
 		},
 		{
-			name:     "unknown_unit_type",
-			mutate:   func(in *sendInput) { in.UnitType = "dragon" },
-			wantErrs: []error{ErrUnknownUnitType},
-		},
-		{
-			name:     "count_zero",
-			mutate:   func(in *sendInput) { in.SendCount = 0 },
-			wantErrs: []error{ErrInvalidCount},
-		},
-		{
-			name:     "count_negative",
-			mutate:   func(in *sendInput) { in.SendCount = -1 },
-			wantErrs: []error{ErrInvalidCount},
-		},
-		{
-			name:     "count_too_large",
-			mutate:   func(in *sendInput) { in.SendCount = game.MaxUnitInput + 1 },
-			wantErrs: []error{ErrCountTooLarge},
+			name:     "invalid_legion_id",
+			mutate:   func(in *sendInput) { in.LegionID = 0 },
+			wantErrs: []error{ErrInvalidLegionID},
 		},
 		{
 			name:     "invalid_action",
@@ -126,9 +110,9 @@ func TestValidateSendInput(t *testing.T) {
 		},
 		{
 			name:   "multiple_errors_accumulated",
-			mutate: func(in *sendInput) { in.SendCount = 0; in.TargetName = ""; in.UnitType = "dragon" },
+			mutate: func(in *sendInput) { in.LegionID = 0; in.Action = ""; in.TargetName = "" },
 			// Validator surfaces every problem at once so the user sees them all.
-			wantErrs: []error{ErrUnknownUnitType, ErrInvalidCount, ErrTargetRequired},
+			wantErrs: []error{ErrInvalidLegionID, ErrInvalidAction, ErrTargetRequired},
 		},
 		{
 			name: "invalid_action_suppresses_duration_check",
@@ -309,12 +293,12 @@ func sendReq(body string, kingdom *db.Kingdom) *http.Request {
 }
 
 // TestHandleSend_ValidatorErrorRenders proves the validator integrates with the
-// handler — an unknown unit type surfaces as alert text.
+// handler — an invalid legion id surfaces as alert text.
 func TestHandleSend_ValidatorErrorRenders(t *testing.T) {
 	h := sendHandler(&stubQuerier{})
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"dragon","send_count":10,"action":"attack","target_name":"Other","duration_ticks":3}`, attacker))
-	testhelper.AssertContains(t, w.Body.String(), "unknown unit type")
+	h(w, sendReq(`{"send_legion":0,"send_action":"attack","send_target":"Other","send_ticks":3}`, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "invalid legion id")
 }
 
 // TestHandleSend_TargetNotFoundRenders proves an orchestrator user-error
@@ -328,7 +312,7 @@ func TestHandleSend_TargetNotFoundRenders(t *testing.T) {
 	}
 	h := sendHandler(stub)
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Atlantis","duration_ticks":3}`, attacker))
+	h(w, sendReq(`{"send_legion":1,"send_action":"attack","send_target":"Atlantis","send_ticks":3}`, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "target kingdom not found")
 }
 
@@ -342,7 +326,7 @@ func TestHandleSend_CannotTargetOwnKingdomRenders(t *testing.T) {
 	}
 	h := sendHandler(stub)
 	w := httptest.NewRecorder()
-	h(w, sendReq(`{"unit_type":"recruit","send_count":10,"action":"attack","target_name":"Attackia","duration_ticks":3}`, attacker))
+	h(w, sendReq(`{"send_legion":1,"send_action":"attack","send_target":"Attackia","send_ticks":3}`, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "cannot target your own kingdom")
 }
 
@@ -376,4 +360,139 @@ func TestHandleCancel_CampaignNotFoundRenders(t *testing.T) {
 	w := httptest.NewRecorder()
 	h(w, cancelReq(99, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "campaign not found or already returning")
+}
+
+// ── validateTransferInput ─────────────────────────────────────────────────────
+
+func TestValidateTransferInput(t *testing.T) {
+	base := func() *transferInput {
+		return &transferInput{
+			FromID:   0,
+			ToID:     1,
+			UnitType: "recruit",
+			Count:    1,
+		}
+	}
+
+	tests := []struct {
+		name     string
+		mutate   func(*transferInput)
+		wantErrs []error
+	}{
+		{
+			name:     "valid_reserve_to_legion",
+			mutate:   func(_ *transferInput) {},
+			wantErrs: nil,
+		},
+		{
+			name:     "valid_legion_to_reserve",
+			mutate:   func(in *transferInput) { in.FromID = 1; in.ToID = 0 },
+			wantErrs: nil,
+		},
+		{
+			name:     "valid_count_at_max",
+			mutate:   func(in *transferInput) { in.Count = game.MaxUnitInput },
+			wantErrs: nil,
+		},
+		{
+			name:     "zero_count",
+			mutate:   func(in *transferInput) { in.Count = 0 },
+			wantErrs: []error{ErrInvalidCount},
+		},
+		{
+			name:     "negative_count",
+			mutate:   func(in *transferInput) { in.Count = -1 },
+			wantErrs: []error{ErrInvalidCount},
+		},
+		{
+			name:     "count_too_large",
+			mutate:   func(in *transferInput) { in.Count = game.MaxUnitInput + 1 },
+			wantErrs: []error{ErrCountTooLarge},
+		},
+		{
+			name:     "same_legion_source_and_destination",
+			mutate:   func(in *transferInput) { in.FromID = 2; in.ToID = 2 },
+			wantErrs: []error{ErrSameSourceAndDestination},
+		},
+		{
+			name:     "both_reserve",
+			mutate:   func(in *transferInput) { in.FromID = 0; in.ToID = 0 },
+			wantErrs: []error{ErrSameSourceAndDestination},
+		},
+		{
+			name:     "unknown_unit_type",
+			mutate:   func(in *transferInput) { in.UnitType = "dragon" },
+			wantErrs: []error{ErrUnknownUnitType},
+		},
+		{
+			name:   "multiple_errors_accumulated",
+			mutate: func(in *transferInput) { in.Count = 0; in.FromID = 1; in.ToID = 1; in.UnitType = "" },
+			// All three checks run independently — user sees every problem at once.
+			wantErrs: []error{ErrInvalidCount, ErrSameSourceAndDestination, ErrUnknownUnitType},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			in := base()
+			tc.mutate(in)
+			got := validateTransferInput(in)
+
+			if len(got) != len(tc.wantErrs) {
+				t.Fatalf("validateTransferInput returned %d errs (%v), want %d (%v)", len(got), got, len(tc.wantErrs), tc.wantErrs)
+			}
+			for i, want := range tc.wantErrs {
+				if !errors.Is(got[i], want) {
+					t.Errorf("errs[%d] = %v, want %v", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
+// ── handler shell smoke tests (transfer / disband) ────────────────────────────
+//
+// transferUnits and disbandLegion reach pool.BeginTx immediately after
+// validation, so only the validator path is reachable with a nil pool. Tx-level
+// paths (ErrInsufficientUnitsInSource, ErrLegionCapReached, ErrTransferConflict)
+// belong in internal/database/db integration tests.
+
+func transferHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.KingdomArmyTransferPath]
+}
+
+func transferReq(body string, kingdom *db.Kingdom) *http.Request {
+	r := httptest.NewRequest("POST", routes.KingdomArmyTransferPath, strings.NewReader(body))
+	return r.WithContext(context.WithValue(r.Context(), contextkeys.Kingdom, kingdom))
+}
+
+// TestHandleTransfer_ValidatorErrorRenders proves the validator integrates with
+// the handler — a zero count surfaces as alert text.
+func TestHandleTransfer_ValidatorErrorRenders(t *testing.T) {
+	h := transferHandler(&stubQuerier{})
+	w := httptest.NewRecorder()
+	h(w, transferReq(`{"xfer_from":0,"xfer_to":1,"xfer_unit":"recruit","xfer_count":0}`, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "count must be at least 1")
+}
+
+func disbandHandler(q db.Querier) http.HandlerFunc {
+	cr := testhelper.NewCaptureRouter()
+	RegisterRoutes(cr, q, nil, nil)
+	return cr.Handlers["POST "+routes.KingdomArmyDisbandPath]
+}
+
+func disbandReq(id int, kingdom *db.Kingdom) *http.Request {
+	url := strings.ReplaceAll(routes.KingdomArmyDisbandPath, "{id}", strconv.Itoa(id))
+	r := httptest.NewRequest("POST", url, nil)
+	r.SetPathValue("id", strconv.Itoa(id))
+	return r.WithContext(context.WithValue(r.Context(), contextkeys.Kingdom, kingdom))
+}
+
+func TestHandleDisband_InvalidInputRenders(t *testing.T) {
+	h := disbandHandler(&stubQuerier{})
+	w := httptest.NewRecorder()
+	h(w, disbandReq(0, attacker))
+	testhelper.AssertContains(t, w.Body.String(), "invalid legion id")
 }

@@ -25,10 +25,12 @@ const (
 	KingdomMapPath     = "/kingdom/map"
 	KingdomMapFindPath = "/kingdom/map/find"
 
-	KingdomArmyPath        = "/kingdom/army"
-	KingdomArmyRefreshPath = "/kingdom/army/refresh"
-	KingdomArmySendPath    = "/kingdom/army/send"
-	KingdomArmyCancelPath  = "/kingdom/army/cancel/{id}"
+	KingdomArmyPath         = "/kingdom/army"
+	KingdomArmyRefreshPath  = "/kingdom/army/refresh"
+	KingdomArmySendPath     = "/kingdom/army/send"
+	KingdomArmyCancelPath   = "/kingdom/army/cancel/{id}"
+	KingdomArmyTransferPath = "/kingdom/army/transfer"
+	KingdomArmyDisbandPath  = "/kingdom/army/disband/{id}"
 
 	KingdomLayoutRefreshPath = "/kingdom/layout/refresh"
 
