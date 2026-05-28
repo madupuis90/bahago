@@ -76,7 +76,7 @@ func shell(title string, layoutStream Node, body ...Node) Node {
 				Link(Rel("icon"), Href("data:,")),
 				Link(Rel("preconnect"), Href("https://fonts.googleapis.com")),
 				Link(Rel("preconnect"), Href("https://fonts.gstatic.com"), Attr("crossorigin", "")),
-				Link(Rel("stylesheet"), Href("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap")),
+				Link(Rel("stylesheet"), Href("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap")),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
 				Script(Type("module"), Src("/static/datastar.js")),
 			),
@@ -106,12 +106,16 @@ func KingdomTopbar(kingdom *db.Kingdom) Node {
 		return Header(ID("kingdom-topbar"), Class("topbar"))
 	}
 	return Header(ID("kingdom-topbar"), Class("topbar"),
+		Span(Class("rivet rivet-tl")),
+		Span(Class("rivet rivet-tr")),
+		Span(Class("rivet rivet-bl")),
+		Span(Class("rivet rivet-br")),
 		Div(Class("topbar-row"),
 			Div(Class("kingdom-badge"),
-				Shield("crown", 36, false),
+				Shield("crown", 28, false),
 				Div(
 					Div(Class("kingdom-name"), Text(kingdom.Name)),
-					Div(Class("kingdom-sub text-muted"), Text(formatPopulation(kingdom.Population))),
+					Div(Class("kingdom-sub"), Text(formatPopulation(kingdom.Population))),
 				),
 			),
 			Div(Class("tick"),
@@ -135,7 +139,7 @@ func KingdomTopbar(kingdom *db.Kingdom) Node {
 
 func resourceCartouche(shieldID, label string, value int) Node {
 	return Div(Class("resource"),
-		Shield(shieldID, 22, false),
+		Div(Class("gem gem-"+shieldID), Shield(shieldID, 22, false)),
 		Div(Class("resource-text"),
 			Span(Class("resource-label"), Text(label)),
 			Span(Class("resource-value"), Text(FormatThousands(value))),
@@ -170,6 +174,10 @@ func KingdomBottomNav(currentPath string, unreadCount int) Node {
 		stones = append(stones, navStone(s, currentPath, unreadCount))
 	}
 	return Nav(ID("kingdom-bottom-nav"), Class("bottom-nav"),
+		Span(Class("rivet rivet-tl")),
+		Span(Class("rivet rivet-tr")),
+		Span(Class("rivet rivet-bl")),
+		Span(Class("rivet rivet-br")),
 		Div(Class("bottom-nav-row"), Group(stones)),
 	)
 }
@@ -185,7 +193,7 @@ func navStone(s stoneRoute, currentPath string, unreadCount int) Node {
 		badge = Span(Class("nav-stone-badge"), Text(strconv.Itoa(unreadCount)))
 	}
 	return A(Href(s.href), Class(cls),
-		Shield(s.shield, 32, active),
+		Div(Class("nav-btn"), Shield(s.shield, 28, active)),
 		Span(Class("nav-stone-label"), Text(s.label)),
 		badge,
 	)
@@ -253,7 +261,7 @@ func PageHeader(tag, body string) Node {
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
 func formatPopulation(n int) string {
-	return FormatThousands(n) + " population"
+	return "Population: " + FormatThousands(n)
 }
 
 // FormatThousands renders an integer with comma separators (e.g. 1028 → "1,028").

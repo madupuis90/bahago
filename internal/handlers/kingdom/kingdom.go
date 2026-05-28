@@ -10,7 +10,6 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
@@ -117,10 +116,13 @@ func groupCombatLog(rows []db.GetRecentCombatLogsRow) []combatLogDisplay {
 func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) Node {
 	return Div(
 		Div(ds.Init(GetSSENoSignals(routes.KingdomRefreshPath))),
-		PageHeader("", "The realm holds firm."),
+		Div(Class("folio"),
+			P(Class("folio-kicker"), Text("Kingdom of "+kingdom.Name)),
+			H1(Class("folio-title"), Text("The realm holds firm.")),
+			P(Class("folio-sub"), Text("Population: "+FormatThousands(kingdom.Population))),
+		),
 		Div(Class("overview-grid"),
-			Section(Class("overview-col"),
-				P(Classes{"caps-label": true, "text-highlight": true}, Text("Combat Log")),
+			overviewCard("red", "Journal Log",
 				Div(Class("combat-log"),
 					If(len(combatLog) == 0,
 						P(Class("combat-log-empty text-muted"), Text("No recent events.")),
@@ -128,23 +130,20 @@ func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) N
 					Group(Map(combatLog, combatLogEntry)),
 				),
 			),
-			Aside(Class("overview-col"),
-				P(Classes{"caps-label": true, "text-highlight": true}, Text("Overview")),
-				Div(Class("panel stats-panel"),
-					statRow("Population", FormatThousands(kingdom.Population), ""),
-				),
+			overviewCard("green", "World Events",
+				P(Class("text-muted"), Text("— placeholder —")),
 			),
 		),
 	)
 }
 
-func statRow(label, value, delta string) Node {
-	return Div(Class("stat-row"),
-		Span(Class("stat-row-label"), Text(label)),
-		Span(Class("stat-row-value"), Text(value)),
-		If(delta != "", Span(Class("stat-row-delta"), Text(delta))),
+func overviewCard(tabVariant, tabLabel string, content Node) Node {
+	return Div(Class("overview-card"),
+		Span(Class("card-tab card-tab--"+tabVariant), Text(tabLabel)),
+		Div(Class("card-inner"), content),
 	)
 }
+
 
 func combatLogEntry(e combatLogDisplay) Node {
 	attackerNames := participantNames(e.Attackers)
