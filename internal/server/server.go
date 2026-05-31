@@ -30,7 +30,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const tickInterval = 20 * time.Second
+const tickInterval = 200 * time.Second
 
 type Server struct {
 	mux     *http.ServeMux

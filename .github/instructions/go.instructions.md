@@ -148,6 +148,18 @@ if err := h.queries.CreateThing(ctx, db.CreateThingParams{
 }); err != nil {
 ```
 
+## Researching APIs
+
+Use `go doc` to look up stdlib and dependency documentation instead of searching through files:
+
+```
+go doc slices
+go doc slices.SortFunc
+go doc pgx/v5.Tx
+```
+
+`go doc` is a read-only lookup tool — run it directly (unlike `goose`, `sqlc`, etc. which require `task`).
+
 ## Common Pitfalls
 
 - Not checking errors

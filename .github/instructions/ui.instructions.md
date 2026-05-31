@@ -179,7 +179,7 @@ Home shell           — top-nav, content-area, side-nav, nav-group
 Shared components    — .panel, .btn, .btn-text, .form-fields, .password-field, .alert-*
 Auth                 — .auth-card and auth-specific styles
 Kingdom chrome       — .kingdom-page, parchment helpers (.uppr, .rubric, .marg, .italic, .rule-dbl, .shield, .sandglass), .topbar, .bottom-nav, .nav-stone — defined before any feature that uses them
-Kingdom overview     — .folio, .overview-grid, .chronicle, .demesne, .stat-row
+Kingdom overview     — .page-header, .overview-grid, .chronicle, .demesne, .stat-row
 Allocation           — .allocation-* (grid table + slider)
 Buildings            — .buildings-* / .building-*
 Units                — .units-* / .unit-*

@@ -9,9 +9,26 @@ import (
 
 const spritePath = "/static/sprite.svg"
 
-// Shield renders a small SVG shield from the sprite. id is the symbol id
-// without the "shield-" prefix (e.g. "crown", "sword"). active toggles the
-// accent color via the shield--active modifier.
+// Icon renders only the inner glyph of a sprite symbol — no shield background.
+// id is the full symbol ID (e.g. "shield-crown", "res-wood"). active toggles
+// the accent color via the icon--active modifier.
+func Icon(id string, sizePx int, active bool) Node {
+	cls := "icon"
+	if active {
+		cls = "icon icon--active"
+	}
+	return El("svg",
+		Class(cls),
+		Attr("width", fmt.Sprintf("%d", sizePx)),
+		Attr("height", fmt.Sprintf("%d", sizePx*23/20)),
+		Attr("aria-hidden", "true"),
+		El("use", Attr("href", spritePath+"#"+id)),
+	)
+}
+
+// Shield renders a sprite icon inside its shield background. id is the symbol
+// short name without the "shield-" prefix (e.g. "crown", "sword"). active
+// toggles the accent color via the shield--active modifier.
 func Shield(id string, sizePx int, active bool) Node {
 	cls := "shield"
 	if active {

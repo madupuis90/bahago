@@ -17,9 +17,9 @@ import (
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input struct ─────────────────────────────────────────────────────────────
@@ -231,10 +231,18 @@ func (h *handler) updateAllocations(ctx context.Context, userID int, input *allo
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
+	totalExpr := "$wood_pct + $stone_pct + $food_pct + $mana_pct + $devotion_pct + $knowledge_pct"
+	dirtyExpr := "$wood_pct !== $wood_saved || $stone_pct !== $stone_saved || $food_pct !== $food_saved || $mana_pct !== $mana_saved || $devotion_pct !== $devotion_saved || $knowledge_pct !== $knowledge_saved"
 	return Div(
-		Div(ds.Init(GetSSENoSignals(routes.KingdomAllocationRefreshPath))),
 		ds.Signals(map[string]any{
-			"idle_pct":      kingdom.IdlePct,
+			"wood_saved":      kingdom.WoodPct,
+			"stone_saved":     kingdom.StonePct,
+			"food_saved":      kingdom.FoodPct,
+			"mana_saved":      kingdom.ManaPct,
+			"devotion_saved":  kingdom.DevotionPct,
+			"knowledge_saved": kingdom.KnowledgePct,
+		}),
+		ds.Signals(map[string]any{
 			"wood_pct":      kingdom.WoodPct,
 			"stone_pct":     kingdom.StonePct,
 			"food_pct":      kingdom.FoodPct,
@@ -242,90 +250,172 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 			"devotion_pct":  kingdom.DevotionPct,
 			"knowledge_pct": kingdom.KnowledgePct,
 		}, ds.ModifierIfMissing),
-		PageHeader("", "Population Allocation"),
-		Div(Class("panel allocation-table"),
-			allocationHead(),
-			allocationRow("chevron", "Woodcutter", "wood_pct", "Wood", kingdom.WoodPct, rates.WoodProduction, rates.WoodUpkeep),
-			allocationRow("mountain", "Miner", "stone_pct", "Stone", kingdom.StonePct, rates.StoneProduction, rates.StoneUpkeep),
-			allocationRow("wheat", "Farmer", "food_pct", "Food", kingdom.FoodPct, rates.FoodProduction, rates.FoodUpkeep),
-			allocationRow("sun", "Clergy", "devotion_pct", "Devotion", kingdom.DevotionPct, rates.DevotionProduction, rates.DevotionUpkeep),
-			allocationRow("moon", "Disciple", "mana_pct", "Mana", kingdom.ManaPct, rates.ManaProduction, rates.ManaUpkeep),
-			allocationRow("book", "Scholar", "knowledge_pct", "Knowledge", kingdom.KnowledgePct, rates.KnowledgeProduction, rates.KnowledgeUpkeep),
-			idleRow(kingdom.IdlePct, rates.PopulationProduction, rates.PopulationUpkeep),
+		ds.Computed("alloc_total", totalExpr, "idle_pct", "100-("+totalExpr+")", "alloc_dirty", dirtyExpr),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomAllocationRefreshPath))),
+		Div(Class("page-header"),
+			P(Class("page-header-kicker"), Text("❦ Of the Distribution of Hands")),
+			P(Class("page-header-title"), Text("Allocation")),
+			P(Class("page-header-sub"), Text("Set what share of your souls toils at each craft.")),
 		),
-		Div(Class("allocation-footer"),
-			P(Class("allocation-hint text-muted"), Text("✦ Unassigned population encourages the growth of population.")),
-			Button(Class("btn btn--primary"),
-				ds.On("click", datastar.PostSSE(routes.KingdomAllocationSavePath)),
-				Text("Assign"),
+		Div(Class("card"),
+			Div(Class("card-inner"),
+				allocationBar(),
+				allocationLegend(),
+				Div(Class("alloc-rule")),
+				Div(Class("alloc-grid"),
+					allocationHead(),
+					allocationRow("tree", "Woodcutter", "wood_pct", "wood_saved", "Wood", kingdom.WoodPct, rates.WoodProduction-rates.WoodUpkeep),
+					allocationRow("mountain", "Miner", "stone_pct", "stone_saved", "Stone", kingdom.StonePct, rates.StoneProduction-rates.StoneUpkeep),
+					allocationRow("wheat", "Farmer", "food_pct", "food_saved", "Grain", kingdom.FoodPct, rates.FoodProduction-rates.FoodUpkeep),
+					allocationRow("flame", "Disciple", "mana_pct", "mana_saved", "Mana", kingdom.ManaPct, rates.ManaProduction-rates.ManaUpkeep),
+					allocationRow("sun", "Clergy", "devotion_pct", "devotion_saved", "Devotion", kingdom.DevotionPct, rates.DevotionProduction-rates.DevotionUpkeep),
+					allocationRow("star", "Scholar", "knowledge_pct", "knowledge_saved", "Lore", kingdom.KnowledgePct, rates.KnowledgeProduction-rates.KnowledgeUpkeep),
+					idleRow(rates.PopulationProduction-rates.PopulationUpkeep),
+				),
+				Div(Class("alloc-foot"),
+					Div(Class("alloc-total"),
+						Span(Class("alloc-total-label"), Text("Allocated")),
+						Span(
+							Classes{"alloc-total-val": true},
+							ds.Class("over", "$alloc_total > 100"),
+							ds.Text("$alloc_total+'%'"),
+						),
+					),
+					Div(Class("alloc-decree"),
+						Div(Class("alloc-error"),
+							ds.Show("$alloc_total > 100"),
+							Text("You have promised more hands than you have."),
+						),
+						allocationAlert(nil),
+						Button(
+							Class("btn btn--primary"),
+							Type("button"),
+							ds.Class("'is-locked'", "$alloc_total > 100"),
+							ds.Attr("disabled", "!$alloc_dirty || $alloc_total > 100"),
+							ds.On("click", datastar.PostSSE(routes.KingdomAllocationSavePath)),
+							Text("Allocate"),
+						),
+					),
+				),
 			),
 		),
-		allocationAlert(nil),
 	)
 }
 
 func allocationAlert(inner Node) Node { return AlertContainer("allocation-alert", inner) }
 
+func allocationBar() Node {
+	return Div(Class("allocation-bar"),
+		Span(Class("allocation-wood"), ds.Style("width", "$wood_pct+'%'")),
+		Span(Class("allocation-stone"), ds.Style("width", "$stone_pct+'%'")),
+		Span(Class("allocation-food"), ds.Style("width", "$food_pct+'%'")),
+		Span(Class("allocation-mana"), ds.Style("width", "$mana_pct+'%'")),
+		Span(Class("allocation-devotion"), ds.Style("width", "$devotion_pct+'%'")),
+		Span(Class("allocation-knowledge"), ds.Style("width", "$knowledge_pct+'%'")),
+		Span(Class("allocation-idle"), ds.Style("width", "$idle_pct+'%'")),
+	)
+}
+
+func allocationLegend() Node {
+	return Div(Class("allocation-legend"),
+		allocationKey("allocation-wood", "Woodcutter"),
+		allocationKey("allocation-stone", "Miner"),
+		allocationKey("allocation-food", "Farmer"),
+		allocationKey("allocation-mana", "Disciple"),
+		allocationKey("allocation-devotion", "Clergy"),
+		allocationKey("allocation-knowledge", "Scholar"),
+		allocationKey("allocation-idle", "Idle"),
+	)
+}
+
+func allocationKey(colorClass, label string) Node {
+	return Span(Class("allocation-key"),
+		Span(Class("allocation-dot "+colorClass)),
+		Text(label),
+	)
+}
+
 func allocationHead() Node {
-	return Div(Class("allocation-head"),
+	return Div(Class("alloc-head"),
 		Div(),
-		Div(Class("caps-label"), Text("Role")),
-		Div(Class("caps-label"), Text("Assignment")),
-		Div(Class("caps-label"), Text("Percentage")),
-		Div(Class("caps-label"), Text("Production")),
-		Div(Class("caps-label"), Text("Upkeep")),
-		Div(Class("caps-label"), Text("Total")),
-		Div(Class("caps-label"), Text("Resource")),
+		Div(Class("alloc-col-header"), Text("Craft")),
+		Div(Class("alloc-col-header"), Text("Allocation")),
+		Div(Class("alloc-col-header alloc-col-header--right"), Text("Share")),
+		Div(Class("alloc-col-header alloc-col-header--right"), Text("Net/tick")),
 	)
 }
 
-func allocationRow(shieldID, roleName, key, resourceLabel string, initialValue, production, upkeep int) Node {
-	ref := "$" + key
-	net := production - upkeep
-	return Div(Class("allocation-row"),
-		Div(Class("allocation-shield"), Shield(shieldID, 22, false)),
-		Div(Class("allocation-role"), Text(roleName)),
-		Div(Class("allocation-assign"),
-			Button(Class("btn btn--sm"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 5)", ref, ref)), Text("−5")),
-			Button(Class("btn btn--sm"), ds.On("click", fmt.Sprintf("%s = Math.max(0, %s - 1)", ref, ref)), Text("−")),
-			Input(Class("allocation-slider"), Type("range"), Min("0"), Max("100"), Value(fmt.Sprintf("%d", initialValue)),
-				ds.Bind(key),
+func allocationRow(gemID, roleName, key, savedKey, resourceLabel string, initialValue, net int) Node {
+	pendingExpr := fmt.Sprintf("$%s !== $%s", key, savedKey)
+	netClass := "alloc-net"
+	if net < 0 {
+		netClass += " neg"
+	} else if net == 0 {
+		netClass += " zero"
+	}
+	return Div(Class("alloc-row"),
+		Div(Class("gem gem-"+gemID), Icon("shield-"+gemID, 36, false)),
+		Div(Class("alloc-role-name"), Text(roleName)),
+		Div(Class("slider-controls v-diamond"),
+			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 5)", key, key)), Text("−5")),
+			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 1)", key, key)), Text("−")),
+			Div(Class("slider-wrap"),
+				Div(Class("slider-track"),
+					Div(Class("slider-fill"), ds.Style("width", fmt.Sprintf("$%s+'%%'", key))),
+					Div(Class("slider-ticks")),
+				),
+				Div(Class("slider-thumb"), ds.Style("left", fmt.Sprintf("$%s+'%%'", key))),
+				Input(Class("slider-input"), Type("range"), Min("0"), Max("100"),
+					Value(fmt.Sprintf("%d", initialValue)),
+					ds.Bind(key),
+				),
 			),
-			Button(Class("btn btn--sm"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 1)", ref, ref)), Text("+")),
-			Button(Class("btn btn--sm"), ds.On("click", fmt.Sprintf("%s = Math.min(100, %s + 5)", ref, ref)), Text("+5")),
+			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.min(100, $%s + 1)", key, key)), Text("+")),
+			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.min(100, $%s + 5)", key, key)), Text("+5")),
 		),
-		Div(Class("allocation-pct"),
-			Span(ds.Text(ref), Text(fmt.Sprintf("%d", initialValue))),
-			Span(Text("%")),
+		Div(Class("alloc-share"), ds.Text(fmt.Sprintf("$%s+'%%'", key))),
+		Div(
+			Class("alloc-net-cell"),
+			ds.Class("'is-pending'", pendingExpr),
+			Div(Class(netClass), Text(fmt.Sprintf("%+d", net))),
+			Div(
+				Class("alloc-rate"),
+				ds.Class("'is-pending'", pendingExpr),
+				ds.Text(fmt.Sprintf("$%s !== $%s ? 'pending save' : '%s/tick'", key, savedKey, resourceLabel)),
+			),
 		),
-		Div(Classes{"allocation-num": true, "allocation-num--pos": production > 0},
-			Text(fmt.Sprintf("+%d", production))),
-		Div(Classes{"allocation-num": true, "allocation-num--neg": upkeep > 0},
-			Text(fmt.Sprintf("-%d", upkeep))),
-		Div(Classes{"allocation-num": true, "allocation-num--bold": true, "allocation-num--pos": net > 0, "allocation-num--neg": net < 0},
-			Text(fmt.Sprintf("%+d", net))),
-		Div(Class("allocation-res"), Text(resourceLabel+"/tick")),
 	)
 }
 
-func idleRow(initialValue, production, upkeep int) Node {
-	net := production - upkeep
-	idleExpr := "100 - ($wood_pct + $stone_pct + $knowledge_pct + $devotion_pct + $mana_pct + $food_pct)"
-	return Div(Class("allocation-row allocation-row--idle"),
-		ds.Computed("idle_pct", idleExpr),
-		Div(Class("allocation-shield"), Shield("crown", 20, false)),
-		Div(Class("allocation-role"), Text("Idle")),
-		Div(Class("text-muted"), Text("remain unbound")),
-		Div(Class("allocation-pct"),
-			Span(ds.Text("$idle_pct"), Text(fmt.Sprintf("%d", initialValue))),
-			Span(Text("%")),
+func idleRow(net int) Node {
+	netClass := "alloc-net"
+	if net <= 0 {
+		netClass += " zero"
+	}
+	netText := "—"
+	if net > 0 {
+		netText = fmt.Sprintf("+%d", net)
+	}
+	rateLabel := "no growth"
+	if net > 0 {
+		rateLabel = "pop / tick"
+	}
+	return Div(Class("alloc-row idle"),
+		Div(Class("idle-gem"), Icon("shield-zzz", 36, false)),
+		Div(
+			Div(Class("alloc-role-name"), Text("Idle")),
 		),
-		Div(Classes{"allocation-num": true, "allocation-num--pos": production > 0},
-			Text(fmt.Sprintf("+%d", production))),
-		Div(Classes{"allocation-num": true, "allocation-num--neg": upkeep > 0},
-			Text(fmt.Sprintf("-%d", upkeep))),
-		Div(Classes{"allocation-num": true, "allocation-num--bold": true, "allocation-num--pos": net > 0, "allocation-num--neg": net < 0},
-			Text(fmt.Sprintf("%+d", net))),
-		Div(Class("allocation-res"), Text("Population/tick")),
+		P(Class("alloc-assign-note"), Text("An untasked realm breeds faster — idle hands speed your growth.")),
+		Div(Class("alloc-share"), ds.Text("$idle_pct+'%'")),
+		Div(
+			Class("alloc-net-cell"),
+			ds.Class("'is-pending'", "$alloc_dirty"),
+			Div(Class(netClass), Text(netText)),
+			Div(
+				Class("alloc-rate"),
+				ds.Class("'is-pending'", "$alloc_dirty"),
+				ds.Text(fmt.Sprintf("$alloc_dirty ? 'pending save' : '%s'", rateLabel)),
+			),
+		),
 	)
 }

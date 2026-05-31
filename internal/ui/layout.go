@@ -112,7 +112,7 @@ func KingdomTopbar(kingdom *db.Kingdom) Node {
 		Span(Class("rivet rivet-br")),
 		Div(Class("topbar-row"),
 			Div(Class("kingdom-badge"),
-				Shield("crown", 28, false),
+				Icon("shield-crown", 28, false),
 				Div(
 					Div(Class("kingdom-name"), Text(kingdom.Name)),
 					Div(Class("kingdom-sub"), Text(formatPopulation(kingdom.Population))),
@@ -137,9 +137,9 @@ func KingdomTopbar(kingdom *db.Kingdom) Node {
 	)
 }
 
-func resourceCartouche(shieldID, label string, value int) Node {
+func resourceCartouche(id, label string, value int) Node {
 	return Div(Class("resource"),
-		Div(Class("gem gem-"+shieldID), Shield(shieldID, 22, false)),
+		Div(Class("gem gem-"+id), Icon("shield-"+id, 44, false)),
 		Div(Class("resource-text"),
 			Span(Class("resource-label"), Text(label)),
 			Span(Class("resource-value"), Text(FormatThousands(value))),
@@ -149,21 +149,21 @@ func resourceCartouche(shieldID, label string, value int) Node {
 
 // stoneRoute pairs a bottom-nav stone with its destination.
 type stoneRoute struct {
-	label  string
-	shield string
-	href   string
+	label string
+	icon  string
+	href  string
 }
 
 var kingdomStones = []stoneRoute{
-	{"Kingdom", "crown", routes.KingdomPath},
-	{"Allocate", "sliders", routes.KingdomAllocationPath},
-	{"Builds", "house", routes.KingdomBuildingsPath},
-	{"Units", "person", routes.KingdomUnitsPath},
-	{"Campaign", "swords", routes.KingdomArmyPath},
-	{"World", "globe", routes.KingdomMapPath},
-	{"Prayers", "cross", routes.KingdomPrayersPath},
-	{"Messages", "envelope", routes.KingdomMessagesPath},
-	{"Guild", "flag", routes.GuildPath},
+	{"Kingdom", "shield-crown", routes.KingdomPath},
+	{"Allocate", "shield-sliders", routes.KingdomAllocationPath},
+	{"Builds", "shield-house", routes.KingdomBuildingsPath},
+	{"Units", "shield-person", routes.KingdomUnitsPath},
+	{"Campaign", "shield-swords", routes.KingdomArmyPath},
+	{"World", "shield-globe", routes.KingdomMapPath},
+	{"Prayers", "shield-cross", routes.KingdomPrayersPath},
+	{"Messages", "shield-envelope", routes.KingdomMessagesPath},
+	{"Guild", "shield-flag", routes.GuildPath},
 }
 
 // KingdomBottomNav renders the 9-stone bottom navigation. currentPath selects
@@ -193,7 +193,7 @@ func navStone(s stoneRoute, currentPath string, unreadCount int) Node {
 		badge = Span(Class("nav-stone-badge"), Text(strconv.Itoa(unreadCount)))
 	}
 	return A(Href(s.href), Class(cls),
-		Div(Class("nav-btn"), Shield(s.shield, 28, active)),
+		Div(Class("nav-btn"), Icon(s.icon, 56, active)),
 		Span(Class("nav-stone-label"), Text(s.label)),
 		badge,
 	)
