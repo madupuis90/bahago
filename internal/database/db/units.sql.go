@@ -34,6 +34,42 @@ func (q *Queries) BulkDeductKingdomUnitsCasualties(ctx context.Context, arg Bulk
 	return err
 }
 
+const cancelTrainingWithRefund = `-- name: CancelTrainingWithRefund :exec
+WITH deleted AS (
+    DELETE FROM kingdom_training WHERE kingdom_id = $4 AND kingdom_training.id = $5 RETURNING id, kingdom_id, unit_type, count, ticks_remaining, ticks_total, started_at
+)
+UPDATE kingdoms SET
+    wood  = wood  + $1,
+    stone = stone + $2,
+    mana  = mana  + $3,
+    updated_at = NOW()
+FROM deleted
+WHERE kingdoms.id = $4
+`
+
+type CancelTrainingWithRefundParams struct {
+	WoodRefund  int
+	StoneRefund int
+	ManaRefund  int
+	KingdomID   int
+	TrainingID  int
+}
+
+// Atomically deletes the training row and refunds the resource cost back to the
+// kingdom. The UPDATE runs only when a row was actually deleted (via the FROM
+// deleted join), so if the tick already completed training before this fires
+// the kingdom is not credited twice.
+func (q *Queries) CancelTrainingWithRefund(ctx context.Context, arg CancelTrainingWithRefundParams) error {
+	_, err := q.db.Exec(ctx, cancelTrainingWithRefund,
+		arg.WoodRefund,
+		arg.StoneRefund,
+		arg.ManaRefund,
+		arg.KingdomID,
+		arg.TrainingID,
+	)
+	return err
+}
+
 const decrementAndListTrainingAtZero = `-- name: DecrementAndListTrainingAtZero :many
 WITH decremented AS (
     UPDATE kingdom_training

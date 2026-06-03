@@ -184,6 +184,30 @@ A small `isXxxUserError(err) bool` predicate distinguishes user-visible sentinel
 
 See `internal/handlers/army/` for the reference implementation.
 
+## Design System Workflow
+
+UI design is produced by **Claude Design**, which has read-only access to the repo via GitHub. The flow is:
+
+- **Claude Design → me**: a handoff folder (`design_handoff_<feature>/`) dropped at the repo root. The `README.md` inside is authoritative for that feature's implementation — when the design and existing code disagree, the design wins.
+- **Me → Claude Design**: anything I commit (`web/static/styles.css`, `design/components.md`, `design/naming.md`) is readable by Claude Design at the start of its next session.
+- **Prompt relay**: when I make a decision Claude Design should know about (a rename, a new shared component, a pattern deviation), I include a **"Relay to Claude Design:"** block at the end of the response so you can paste it in.
+
+### Shared registries (I maintain, Claude Design reads)
+
+- `.claude/design/components.md` — live registry of every design system component: class names, implementation status, `styles.css` section, and Design Reference link. Update after implementing any component from a handoff (flip `pending` → `live`).
+- `.claude/design/naming.md` — translation table from Design Reference names to codebase semantic names, plus naming rules for new components.
+
+Claude Design supplies a **"Registry delta"** section in each handoff README with the exact rows to add or update — applying it is mechanical, not inferential.
+
+### Implementing a handoff
+
+1. Read `design_handoff_<feature>/README.md` — it defines scope, component specs, and the registry delta.
+2. Check `design/naming.md` for any name that needs translating before writing CSS or markup.
+3. Implement CSS in `web/static/styles.css` in the correct named section; implement markup in the feature handler package.
+4. Apply the registry delta: update `design/components.md` (add new rows, flip `pending` → `live`).
+5. Apply any naming delta to `design/naming.md`.
+6. Include a "Relay to Claude Design:" block if anything diverged from the handoff spec.
+
 ## Configuration
 - Non-sensitive config (port, DSN for local dev) lives in `docker-compose.yml`
 - Sensitive or environment-specific values (API keys, tokens) go in `.env` — see `.env.example` for all required keys

@@ -58,6 +58,22 @@ SELECT * FROM decremented WHERE ticks_remaining = 0;
 DELETE FROM kingdom_training
 WHERE kingdom_id = $1;
 
+-- name: CancelTrainingWithRefund :exec
+-- Atomically deletes the training row and refunds the resource cost back to the
+-- kingdom. The UPDATE runs only when a row was actually deleted (via the FROM
+-- deleted join), so if the tick already completed training before this fires
+-- the kingdom is not credited twice.
+WITH deleted AS (
+    DELETE FROM kingdom_training WHERE kingdom_id = @kingdom_id AND kingdom_training.id = @training_id RETURNING *
+)
+UPDATE kingdoms SET
+    wood  = wood  + @wood_refund,
+    stone = stone + @stone_refund,
+    mana  = mana  + @mana_refund,
+    updated_at = NOW()
+FROM deleted
+WHERE kingdoms.id = @kingdom_id;
+
 -- name: DeductKingdomUnitsCasualties :exec
 UPDATE kingdom_units
 SET count = GREATEST(0, count - @casualties), updated_at = NOW()

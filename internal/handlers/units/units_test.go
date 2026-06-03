@@ -13,14 +13,6 @@ import (
 
 type stubQuerier struct {
 	db.Querier
-	onGetKingdomBuildings func(ctx context.Context, kingdomID int) ([]db.KingdomBuilding, error)
-}
-
-func (s *stubQuerier) GetKingdomBuildings(ctx context.Context, kingdomID int) ([]db.KingdomBuilding, error) {
-	if s.onGetKingdomBuildings != nil {
-		return s.onGetKingdomBuildings(ctx, kingdomID)
-	}
-	panic("stubQuerier: unexpected call to GetKingdomBuildings")
 }
 
 // ── validateTrainInput ────────────────────────────────────────────────────────
@@ -66,9 +58,10 @@ func TestValidateTrainInput(t *testing.T) {
 //
 // Reachable without a real pool:
 //   - Summons-unlock fail → ErrSummonsNotUnlocked
-//   - GetKingdomBuildings error → wrapped
 //   - CanTrain fail → ErrUnitNotAvailable
 //
+// Buildings are fetched by the handler before calling trainUnits, so DB error
+// paths for GetKingdomBuildings are exercised at the handler level.
 // Tx-level branches (insufficient resources, serialization failure) live in
 // internal/database/db integration tests.
 
@@ -86,28 +79,10 @@ func TestTrainUnits_SummonsNotUnlocked(t *testing.T) {
 		t.Skip("no summon units in game.UnitDefs")
 	}
 
-	q := &stubQuerier{}
-	h := &handler{queries: q}
-	err := h.trainUnits(context.Background(), &db.Kingdom{ID: 1}, &trainInput{UnitType: summonName, Count: 1})
+	h := &handler{queries: &stubQuerier{}}
+	err := h.trainUnits(context.Background(), &db.Kingdom{ID: 1}, &trainInput{UnitType: summonName, Count: 1}, nil)
 	if !errors.Is(err, ErrSummonsNotUnlocked) {
 		t.Fatalf("err = %v, want ErrSummonsNotUnlocked", err)
-	}
-}
-
-func TestTrainUnits_GetBuildingsError(t *testing.T) {
-	boom := errors.New("connection refused")
-	q := &stubQuerier{
-		onGetKingdomBuildings: func(_ context.Context, _ int) ([]db.KingdomBuilding, error) {
-			return nil, boom
-		},
-	}
-	h := &handler{queries: q}
-	err := h.trainUnits(context.Background(), &db.Kingdom{ID: 1}, &trainInput{UnitType: game.UnitRecruit, Count: 1})
-	if !errors.Is(err, boom) {
-		t.Fatalf("err = %v, want wrapped %v", err, boom)
-	}
-	if isTrainUserError(err) {
-		t.Errorf("unexpected user-error classification: %v", err)
 	}
 }
 
@@ -135,13 +110,8 @@ func TestTrainUnits_UnitNotAvailable(t *testing.T) {
 		}
 	}
 
-	q := &stubQuerier{
-		onGetKingdomBuildings: func(_ context.Context, _ int) ([]db.KingdomBuilding, error) {
-			return nil, nil
-		},
-	}
-	h := &handler{queries: q}
-	err := h.trainUnits(context.Background(), &db.Kingdom{ID: 1}, &trainInput{UnitType: gated, Count: 1})
+	h := &handler{queries: &stubQuerier{}}
+	err := h.trainUnits(context.Background(), &db.Kingdom{ID: 1}, &trainInput{UnitType: gated, Count: 1}, nil)
 	if !errors.Is(err, ErrUnitNotAvailable) {
 		t.Fatalf("err = %v, want ErrUnitNotAvailable", err)
 	}

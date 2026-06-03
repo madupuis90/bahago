@@ -40,6 +40,11 @@ type Querier interface {
 	CancelJoinRequest(ctx context.Context, arg CancelJoinRequestParams) error
 	CancelOtherPendingRequests(ctx context.Context, arg CancelOtherPendingRequestsParams) error
 	CancelProposal(ctx context.Context, id int) error
+	// Atomically deletes the training row and refunds the resource cost back to the
+	// kingdom. The UPDATE runs only when a row was actually deleted (via the FROM
+	// deleted join), so if the tick already completed training before this fires
+	// the kingdom is not credited twice.
+	CancelTrainingWithRefund(ctx context.Context, arg CancelTrainingWithRefundParams) error
 	ClearLegionUnits(ctx context.Context, legionID int) error
 	ConsumeEmailVerification(ctx context.Context, token string) (int, error)
 	ConsumePasswordResetToken(ctx context.Context, token string) (int, error)

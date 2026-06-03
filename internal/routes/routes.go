@@ -21,6 +21,7 @@ const (
 	KingdomUnitsPath        = "/kingdom/units"
 	KingdomUnitsRefreshPath = "/kingdom/units/refresh"
 	KingdomUnitsTrainPath   = "/kingdom/units/train"
+	KingdomUnitsCancelPath  = "/kingdom/units/cancel"
 
 	KingdomMapPath     = "/kingdom/map"
 	KingdomMapFindPath = "/kingdom/map/find"
