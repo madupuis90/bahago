@@ -27,6 +27,11 @@ WHERE kc.kingdom_id = $1;
 SELECT * FROM kingdom_campaign_units
 WHERE campaign_id = ANY(@ids::bigint[]);
 
+-- name: IsLegionDeployed :one
+SELECT EXISTS(
+    SELECT 1 FROM kingdom_campaigns WHERE legion_id = $1
+) AS deployed;
+
 -- name: CreateCampaign :one
 INSERT INTO kingdom_campaigns (
     kingdom_id, target_kingdom_id, legion_id,
@@ -112,8 +117,14 @@ WHERE id = $1;
 -- Atomically verifies ownership and non-returning status, then sets the campaign
 -- to returning. Returns no rows if the campaign does not exist, belongs to a
 -- different kingdom, or is already returning — all treated as a no-op by the caller.
+-- When en_route, the return trip is proportional to distance already traveled;
+-- when active (at target), the full travel_ticks applies.
 UPDATE kingdom_campaigns
-SET status = 'returning', ticks_remaining = travel_ticks
+SET status = 'returning',
+    ticks_remaining = CASE
+        WHEN status = 'en_route' THEN GREATEST(travel_ticks - ticks_remaining, 1)
+        ELSE travel_ticks
+    END
 WHERE id = @id
   AND kingdom_id = @kingdom_id
   AND status != 'returning'

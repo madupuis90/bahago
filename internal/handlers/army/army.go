@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
@@ -68,7 +67,7 @@ var (
 	ErrTransferConflict          = errors.New("transfer conflict, please try again")
 )
 
-// ── Route registration ───────────────────────────────────────662943─────────────────
+// ── Route registration ───────────────────────────────────────────────────────────────
 
 func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) {
 	h := &handler{queries: queries, pool: pool, hub: tickHub}
@@ -283,6 +282,9 @@ func validateTransferInput(input *transferInput) []error {
 	} else if input.Count > game.MaxUnitInput {
 		errs = append(errs, ErrCountTooLarge)
 	}
+	if input.FromID < 0 {
+		errs = append(errs, ErrInvalidLegionID)
+	}
 	if input.FromID == input.ToID {
 		errs = append(errs, ErrSameSourceAndDestination)
 	}
@@ -429,14 +431,12 @@ func (h *handler) transferUnits(ctx context.Context, kingdom *db.Kingdom, input 
 			}
 			return fmt.Errorf("get to-legion for update: %w", err)
 		}
-		campaigns, err := q.GetCampaignsForKingdom(ctx, kingdom.ID)
+		deployed, err := q.IsLegionDeployed(ctx, toID)
 		if err != nil {
-			return fmt.Errorf("get campaigns: %w", err)
+			return fmt.Errorf("check legion deployed: %w", err)
 		}
-		for _, c := range campaigns {
-			if c.LegionID == toID {
-				return ErrLegionInUse
-			}
+		if deployed {
+			return ErrLegionInUse
 		}
 	}
 
@@ -655,53 +655,230 @@ func firstKingdomUnit(data armyData) string {
 	return ""
 }
 
-func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) Node {
-	otherIndex := make(map[int]string, len(data.others))
-	for _, o := range data.others {
-		otherIndex[o.ID] = o.Name
+func romanNumeral(n int) string {
+	switch n {
+	case 1:
+		return "I"
+	case 2:
+		return "II"
+	case 3:
+		return "III"
 	}
+	return strconv.Itoa(n)
+}
 
-	// Default send legion = first at-home legion.
-	var defaultSendLegion int
-	for _, l := range data.legions {
-		if !l.CampaignStatus.Valid {
-			defaultSendLegion = l.ID
-			break
+func unitIcon(utype string) string {
+	switch utype {
+	case game.UnitRecruit:
+		return "spear"
+	case game.UnitArcher:
+		return "soldiers"
+	case game.UnitRaider:
+		return "flag"
+	case game.UnitKnight:
+		return "swords"
+	case game.UnitCatapult:
+		return "helmet"
+	case game.UnitShade:
+		return "flame"
+	case game.UnitDreadKnight:
+		return "flame"
+	}
+	return "spear"
+}
+
+func statusPill(campaign *db.GetCampaignsForKingdomRow) Node {
+	var tone, label string
+	if campaign == nil {
+		tone, label = "home", "At home"
+	} else {
+		switch campaign.Status {
+		case "en_route":
+			tone, label = "march", "Marching out"
+		case "returning":
+			tone, label = "return", "Returning home"
+		default:
+			if campaign.Action == "attack" {
+				tone, label = "combat", "In combat"
+			} else {
+				tone, label = "guard", "On guard"
+			}
 		}
 	}
-
-	return Div(
-		H1(Class("page-title"), Text("Army")),
-		ds.Signals(map[string]any{
-			"xfer_from":   0,
-			"xfer_to":     0,
-			"xfer_unit":   firstKingdomUnit(data),
-			"xfer_count":  1,
-			"send_legion": defaultSendLegion,
-			"send_action": action,
-			"send_target": targetName,
-			"send_ticks":  4,
-		}, ds.ModifierIfMissing),
-		Div(ds.Init(GetSSENoSignals(routes.KingdomArmyRefreshPath))),
-		armyAlert(nil),
-		transferForm(data),
-		reservePanel(data.reserve),
-		Group(Map(data.legions, func(l db.ListLegionsForKingdomRow) Node {
-			return legionPanel(l, data.legionUnits[l.ID])
-		})),
-		sendForm(data),
-		campaignsSection(data.campaigns, data.campaignUnits, otherIndex),
+	return Span(Classes{"status-pill": true, "status-pill--" + tone: true},
+		Span(Class("status-dot")),
+		Text(label),
 	)
 }
 
-func transferForm(data armyData) Node {
-	var atHomeLegions []db.ListLegionsForKingdomRow
-	for _, l := range data.legions {
-		if !l.CampaignStatus.Valid {
-			atHomeLegions = append(atHomeLegions, l)
+func actionTag(action string) Node {
+	var tone, icon, label string
+	if action == "attack" {
+		tone, icon, label = "attack", "swords", "Attack"
+	} else {
+		tone, icon, label = "defend", "chevron", "Defend"
+	}
+	return Span(Classes{"action-tag": true, "action-tag--" + tone: true},
+		Icon("shield-"+icon, 13, false),
+		Text(label),
+	)
+}
+
+func unitToken(utype string, count, size int) Node {
+	unit := game.UnitDefs[utype]
+	sz := strconv.Itoa(size)
+	return Div(Class("unit-token"),
+		Div(Class("unit-medallion"),
+			Style(fmt.Sprintf("width:%spx;height:%spx", sz, sz)),
+			Title(unit.Name),
+			Icon("shield-"+unitIcon(utype), size/2, false),
+		),
+		Span(Class("unit-tally"), Text(strconv.Itoa(count))),
+	)
+}
+
+func rosterStrip(units []db.KingdomLegionUnit, max, size int) Node {
+	allOrdered := append(append([]string{}, game.UnitOrder...), game.SummonOrder...)
+	byType := make(map[string]int, len(units))
+	for _, u := range units {
+		byType[u.UnitType] = u.Count
+	}
+	var tokens []Node
+	extra := 0
+	for _, utype := range allOrdered {
+		count := byType[utype]
+		if count <= 0 {
+			continue
+		}
+		if len(tokens) < max {
+			tokens = append(tokens, unitToken(utype, count, size))
+		} else {
+			extra++
 		}
 	}
+	isEmpty := len(tokens) == 0 && extra == 0
+	return Div(Class("roster-strip"),
+		Group(tokens),
+		If(extra > 0, Span(Class("roster-more"), Text(fmt.Sprintf("+%d", extra)))),
+		If(isEmpty, Span(Class("roster-empty"), Text("Empty — transfer companies from the Reserve above."))),
+	)
+}
 
+func rosterStripCampaign(units []db.KingdomCampaignUnit, max, size int) Node {
+	allOrdered := append(append([]string{}, game.UnitOrder...), game.SummonOrder...)
+	byType := make(map[string]int, len(units))
+	for _, u := range units {
+		byType[u.UnitType] = u.Count
+	}
+	var tokens []Node
+	extra := 0
+	for _, utype := range allOrdered {
+		count := byType[utype]
+		if count <= 0 {
+			continue
+		}
+		if len(tokens) < max {
+			tokens = append(tokens, unitToken(utype, count, size))
+		} else {
+			extra++
+		}
+	}
+	isEmpty := len(tokens) == 0 && extra == 0
+	return Div(Class("roster-strip"),
+		Group(tokens),
+		If(extra > 0, Span(Class("roster-more"), Text(fmt.Sprintf("+%d", extra)))),
+		If(isEmpty, Span(Class("roster-empty"), Text("No companies committed."))),
+	)
+}
+
+func renderStrengthLine(power, total int) Node {
+	return Div(Class("strength-line"),
+		Span(Class("sl-item"), Icon("shield-swords", 14, false), B(Text(strconv.Itoa(power))), Text(" power")),
+		Span(Class("sl-sep"), Text("·")),
+		Span(Class("sl-item"), B(Text(strconv.Itoa(total))), Text(" units")),
+	)
+}
+
+func strengthLine(units []db.KingdomLegionUnit) Node {
+	var power, total int
+	for _, u := range units {
+		def := game.UnitDefs[u.UnitType]
+		power += def.Power * u.Count
+		total += u.Count
+	}
+	return renderStrengthLine(power, total)
+}
+
+func strengthLineCampaign(units []db.KingdomCampaignUnit) Node {
+	var power, total int
+	for _, u := range units {
+		def := game.UnitDefs[u.UnitType]
+		power += def.Power * u.Count
+		total += u.Count
+	}
+	return renderStrengthLine(power, total)
+}
+
+func strengthLineReserve(units []db.GetAvailableKingdomUnitsRow) Node {
+	var power, total int
+	for _, u := range units {
+		def := game.UnitDefs[u.UnitType]
+		power += def.Power * u.Count
+		total += u.Count
+	}
+	return renderStrengthLine(power, total)
+}
+
+func campaignTimeline(c db.GetCampaignsForKingdomRow) Node {
+	type phase struct{ key, label string }
+	midLabel := "At the gates"
+	if c.Action == "defend" {
+		midLabel = "On guard"
+	}
+	phases := []phase{
+		{"en_route", "March out"},
+		{"active", midLabel},
+		{"returning", "March home"},
+	}
+	at := 0
+	for i, p := range phases {
+		if p.key == c.Status {
+			at = i
+			break
+		}
+	}
+	var stops []Node
+	for i, p := range phases {
+		state := "todo"
+		if i < at {
+			state = "done"
+		} else if i == at {
+			state = "now"
+		}
+		stops = append(stops,
+			Div(Classes{"tl-stop": true, "tl-stop--" + state: true},
+				If(i > 0, Span(Class("tl-line"))),
+				Span(Class("tl-dot")),
+				Span(Class("tl-label"), Text(p.label)),
+			),
+		)
+	}
+	return Div(Class("timeline"), Group(stops))
+}
+
+func legionCrest(n int, afield bool, size int) Node {
+	h := int(float64(size) * 1.18)
+	return Div(
+		Classes{"legion-crest": true, "is-afield": afield},
+		Style(fmt.Sprintf("width:%dpx;height:%dpx", size, h)),
+		Span(Class("crest-num"),
+			Style(fmt.Sprintf("font-size:%dpx", int(float64(size)*0.46))),
+			Text(romanNumeral(n)),
+		),
+	)
+}
+
+func quartermasterCard(data armyData) Node {
 	existing := make(map[string]bool)
 	for _, u := range data.reserve {
 		if u.Count > 0 {
@@ -715,261 +892,305 @@ func transferForm(data armyData) Node {
 			}
 		}
 	}
-
-	canCreateLegion := len(data.legions) < game.MaxLegionsPerKingdom
 	allOrdered := append(append([]string{}, game.UnitOrder...), game.SummonOrder...)
 
-	return Div(Class("army-section panel"),
-		P(Class("panel-title"), Text("Transfer Units")),
-		Div(Class("army-form"),
-			Label(For("xfer-from"), Text("From")),
-			Select(
-				ID("xfer-from"),
-				ds.Bind("xfer_from"),
-				Option(Value("0"), Text("Reserve")),
-				Group(Map(atHomeLegions, func(l db.ListLegionsForKingdomRow) Node {
-					return Option(Value(strconv.Itoa(l.ID)), Text(l.Name))
-				})),
-			),
-
-			Label(For("xfer-to"), Text("To")),
-			Select(
-				ID("xfer-to"),
-				ds.Bind("xfer_to"),
-				Option(Value("0"), Text("Reserve")),
-				Group(Map(atHomeLegions, func(l db.ListLegionsForKingdomRow) Node {
-					return Option(Value(strconv.Itoa(l.ID)), Text(l.Name))
-				})),
-				If(canCreateLegion, Option(Value("-1"), Text("New Legion"))),
-			),
-
-			Label(For("xfer-unit"), Text("Unit type")),
-			Select(
-				ID("xfer-unit"),
-				ds.Bind("xfer_unit"),
-				Group(Map(allOrdered, func(utype string) Node {
-					return If(existing[utype], Option(Value(utype), Text(game.UnitDefs[utype].Name)))
-				})),
-			),
-
-			Label(For("xfer-count"), Text("Count")),
-			Input(
-				ID("xfer-count"),
-				Type("number"),
-				Min("1"),
-				Value("1"),
-				ds.Bind("xfer_count"),
-			),
-
-			Button(
-				Class("btn"),
-				ds.On("click", datastar.PostSSE(routes.KingdomArmyTransferPath)),
-				Text("Transfer"),
-			),
-		),
-	)
-}
-
-func reservePanel(reserve []db.GetAvailableKingdomUnitsRow) Node {
-	return Div(Class("army-section panel"),
-		P(Class("panel-title"), Text("Reserve")),
-		Iff(len(reserve) == 0, func() Node {
-			return P(Class("army-empty"), Text("No units in reserve."))
-		}),
-		Iff(len(reserve) > 0, func() Node {
-			return Table(Class("army-table"),
-				THead(Tr(
-					Th(Text("Unit")),
-					Th(Text("Count")),
-					Th(Text("Power")),
-				)),
-				TBody(Group(Map(reserve, func(u db.GetAvailableKingdomUnitsRow) Node {
-					unit := game.UnitDefs[u.UnitType]
-					return Tr(
-						Td(Text(unit.Name)),
-						Td(Text(strconv.Itoa(u.Count))),
-						Td(Text(strconv.Itoa(unit.Power))),
-					)
-				}))),
-			)
-		}),
-	)
-}
-
-func legionPanel(l db.ListLegionsForKingdomRow, units []db.KingdomLegionUnit) Node {
-	isDeployed := l.CampaignStatus.Valid
-	return Div(Class("army-section panel army-legion"),
-		Div(Class("army-legion-header"),
-			P(Class("panel-title"), Text(l.Name)),
-			Span(Classes{
-				"army-legion-badge":           true,
-				"army-legion-badge--home":     !isDeployed,
-				"army-legion-badge--deployed": isDeployed,
-			}, Text(legionStatusLabel(l.CampaignStatus))),
-		),
-		Iff(len(units) == 0, func() Node {
-			return P(Class("army-empty"), Text("No units assigned."))
-		}),
-		Iff(len(units) > 0, func() Node {
-			return Table(Class("army-table"),
-				THead(Tr(
-					Th(Text("Unit")),
-					Th(Text("Count")),
-					Th(Text("Power")),
-				)),
-				TBody(Group(Map(units, func(u db.KingdomLegionUnit) Node {
-					unit := game.UnitDefs[u.UnitType]
-					return Tr(
-						Td(Text(unit.Name)),
-						Td(Text(strconv.Itoa(u.Count))),
-						Td(Text(strconv.Itoa(unit.Power))),
-					)
-				}))),
-			)
-		}),
-		Iff(!isDeployed, func() Node {
-			return Button(
-				Class("btn btn-text"),
-				ds.On("click", datastar.PostSSE("%s", disbandURL(l.ID))),
-				Text("Disband"),
-			)
-		}),
-	)
-}
-
-func legionStatusLabel(status pgtype.Text) string {
-	if !status.Valid {
-		return "At Home"
-	}
-	switch status.String {
-	case "en_route":
-		return "En Route"
-	case "active":
-		return "Active"
-	case "returning":
-		return "Returning"
-	}
-	return status.String
-}
-
-func sendForm(data armyData) Node {
 	var atHomeLegions []db.ListLegionsForKingdomRow
 	for _, l := range data.legions {
 		if !l.CampaignStatus.Valid {
 			atHomeLegions = append(atHomeLegions, l)
 		}
 	}
+	canCreateLegion := len(data.legions) < game.MaxLegionsPerKingdom
 
-	attackOptions := durationOptions(1, 5)
-	defendOptions := durationOptions(1, 24)
+	var reserveTokens []Node
+	for _, u := range data.reserve {
+		if u.Count > 0 {
+			reserveTokens = append(reserveTokens, unitToken(u.UnitType, u.Count, 46))
+		}
+	}
 
-	return Div(Class("army-section panel"),
-		P(Class("panel-title"), Text("Send Campaign")),
-		Div(Class("army-form"),
-			Label(For("send-legion"), Text("Legion")),
-			Select(
-				ID("send-legion"),
-				ds.Bind("send_legion"),
-				Iff(len(atHomeLegions) == 0, func() Node {
-					return Option(Value("0"), Text("No legions available"))
-				}),
-				Group(Map(atHomeLegions, func(l db.ListLegionsForKingdomRow) Node {
-					return Option(Value(strconv.Itoa(l.ID)), Text(l.Name))
-				})),
-			),
-
-			Label(For("send-action"), Text("Action")),
-			Select(
-				ID("send-action"),
-				ds.Bind("send_action"),
-				ds.On("change", "$send_ticks = 4"),
-				Option(Value("attack"), Text("Attack")),
-				Option(Value("defend"), Text("Defend")),
-			),
-
-			Label(For("send-duration"), Text("Duration")),
-			Div(
-				Select(
-					ID("send-duration"),
-					ds.Bind("send_ticks"),
-					ds.Show(`$send_action === 'attack'`),
-					Group(attackOptions),
+	return Div(Class("qm-card qm-stacked card is-lit"),
+		Div(Class("card-header-row"),
+			P(Class("section-title"), Text("The Reserve")),
+			strengthLineReserve(data.reserve),
+		),
+		Div(Class("qm-strip"),
+			Iff(len(reserveTokens) == 0, func() Node {
+				return Span(Class("roster-empty"), Text("The Reserve is empty — every company is committed."))
+			}),
+			If(len(reserveTokens) > 0, Group(reserveTokens)),
+		),
+		Div(Class("qm-stacked-form"),
+			Span(Class("eyebrow"), Text("Transfer companies")),
+			Div(Class("xfer-grid"),
+				Label(Class("field-group"),
+					Span(Class("field-label"), Text("From")),
+					Select(Class("field"),
+						ds.Bind("xfer_from"),
+						Option(Value("0"), Text("The Reserve")),
+						Group(Map(atHomeLegions, func(l db.ListLegionsForKingdomRow) Node {
+							return Option(Value(strconv.Itoa(l.ID)), Text(l.Name))
+						})),
+					),
 				),
-				Select(
-					ds.Bind("send_ticks"),
-					ds.Show(`$send_action === 'defend'`),
-					Group(defendOptions),
+				Label(Class("field-group"),
+					Span(Class("field-label"), Text("To")),
+					Select(Class("field"),
+						ds.Bind("xfer_to"),
+						Option(Value("0"), Text("The Reserve")),
+						Group(Map(atHomeLegions, func(l db.ListLegionsForKingdomRow) Node {
+							return Option(Value(strconv.Itoa(l.ID)), Text(l.Name))
+						})),
+						If(canCreateLegion, Option(Value("-1"), Text("＋ New Legion"))),
+					),
 				),
-			),
-
-			Label(For("send-target"), Text("Target kingdom")),
-			Input(
-				ID("send-target"),
-				Type("text"),
-				Placeholder("Kingdom name"),
-				ds.Bind("send_target"),
-			),
-
-			Button(
-				Class("btn"),
-				ds.On("click", datastar.PostSSE(routes.KingdomArmySendPath)),
-				Text("Send"),
+				Label(Class("field-group"),
+					Span(Class("field-label"), Text("Company")),
+					Select(Class("field"),
+						ds.Bind("xfer_unit"),
+						Group(Map(allOrdered, func(utype string) Node {
+							return If(existing[utype], Option(Value(utype), Text(game.UnitDefs[utype].Name)))
+						})),
+					),
+				),
+				Label(Class("field-group xfer-count"),
+					Span(Class("field-label"), Text("Count")),
+					Input(Class("field"), Type("number"), Min("1"), Value("1"), ds.Bind("xfer_count")),
+				),
+				Button(Class("btn btn--primary xfer-go"),
+					ds.On("click", datastar.PostSSE(routes.KingdomArmyTransferPath)),
+					Text("Transfer"),
+				),
 			),
 		),
 	)
 }
 
-func campaignsSection(campaigns []db.GetCampaignsForKingdomRow, campaignUnits map[int][]db.KingdomCampaignUnit, otherIndex map[int]string) Node {
-	return Div(Class("army-section panel"),
-		P(Class("panel-title"), Text("Active Campaigns")),
-		Iff(len(campaigns) == 0, func() Node {
-			return P(Class("army-empty"), Text("No active campaigns."))
-		}),
-		Iff(len(campaigns) > 0, func() Node {
-			return Table(Class("army-table"),
-				THead(Tr(
-					Th(Text("Legion")),
-					Th(Text("Units")),
-					Th(Text("Action")),
-					Th(Text("Target")),
-					Th(Text("Status")),
-					Th(Text("Phase ends in")),
-					Th(Text("Returns in")),
-					Th(Text("")),
-				)),
-				TBody(Group(Map(campaigns, func(c db.GetCampaignsForKingdomRow) Node {
-					return campaignRow(c, campaignUnits[c.ID], otherIndex)
-				}))),
-			)
-		}),
+func legionDispatch(l db.ListLegionsForKingdomRow, hasUnits bool) Node {
+	if !hasUnits {
+		return Div(Class("legion-dispatch"),
+			Span(Class("eyebrow"), Text("March orders")),
+			P(Class("dispatch-empty"), Text("Transfer companies into this banner from the Reserve before it can march.")),
+		)
+	}
+	attackOptions := durationOptions(1, 5)
+	defendOptions := durationOptions(1, 24)
+	marchExpr := fmt.Sprintf("$send_legion = %d; %s", l.ID, datastar.PostSSE(routes.KingdomArmySendPath))
+	return Div(Class("legion-dispatch"),
+		Span(Class("eyebrow"), Text("March orders")),
+		Div(Class("field-group"),
+			Span(Class("field-label"), Text("Order")),
+			Div(Class("action-toggle"),
+				Button(Type("button"),
+					Classes{"seg": true, "seg--attack": true},
+					ds.Class("'is-on'", "$send_action === 'attack'"),
+					ds.On("click", "$send_action = 'attack'; $send_ticks = 4"),
+					Icon("shield-swords", 13, false),
+					Text("Attack"),
+				),
+				Button(Type("button"),
+					Classes{"seg": true, "seg--defend": true},
+					ds.Class("'is-on'", "$send_action === 'defend'"),
+					ds.On("click", "$send_action = 'defend'; $send_ticks = 12"),
+					Icon("shield-chevron", 13, false),
+					Text("Defend"),
+				),
+			),
+		),
+		Label(Class("field-group"),
+			Span(Class("field-label"), Text("Target Kingdom")),
+			Input(Class("field"), Type("text"), Placeholder("Name a Kingdom…"), ds.Bind("send_target")),
+		),
+		Label(Class("field-group"),
+			Span(Class("field-label"), Text("Time at target")),
+			Select(Class("field"),
+				ds.Bind("send_ticks"),
+				ds.Show("$send_action === 'attack'"),
+				Group(attackOptions),
+			),
+			Select(Class("field"),
+				ds.Bind("send_ticks"),
+				ds.Show("$send_action === 'defend'"),
+				Group(defendOptions),
+			),
+		),
+		Button(Class("btn btn--primary dispatch-go"),
+			ds.On("click", marchExpr),
+			Icon("shield-flag", 14, false),
+			Span(ds.Text("$send_action === 'attack' ? 'March to war' : 'Send to defend'")),
+		),
 	)
 }
 
-func campaignRow(c db.GetCampaignsForKingdomRow, units []db.KingdomCampaignUnit, otherIndex map[int]string) Node {
-	statusLabel := campaignStatusLabel(c.Status, c.Action)
-	eta := campaignETA(c)
-	targetName := otherIndex[c.TargetKingdomID]
-	if targetName == "" {
-		targetName = strconv.Itoa(c.TargetKingdomID)
+func legionCard(l db.ListLegionsForKingdomRow, units []db.KingdomLegionUnit, campaign *db.GetCampaignsForKingdomRow, campaignUnits []db.KingdomCampaignUnit, otherIndex map[int]string) Node {
+	afield := campaign != nil
+	returning := afield && campaign.Status == "returning"
+	var totalUnits int
+	for _, u := range units {
+		totalUnits += u.Count
 	}
-	canCancel := c.Status != "returning"
-
-	return Tr(
-		Td(Text(c.LegionName)),
-		Td(Text(unitCompositionStr(units))),
-		Td(Text(c.Action)),
-		Td(Text(targetName)),
-		Td(Text(statusLabel)),
-		Td(Text(fmt.Sprintf("%d ticks", c.TicksRemaining))),
-		Td(Text(fmt.Sprintf("%d ticks", eta))),
-		Td(
-			Iff(canCancel, func() Node {
-				return Button(
-					Class("btn btn-text"),
-					ds.On("click", datastar.PostSSE("%s", cancelURL(c.ID))),
-					Text("Cancel"),
+	return Div(Classes{"legion-card": true, "card": true, "is-afield": afield, "is-returning": returning},
+		Div(Class("legion-card-head"),
+			legionCrest(l.Number, afield, 46),
+			Div(Class("legion-card-id"),
+				Span(Class("legion-name"), Text(l.Name)),
+				statusPill(campaign),
+			),
+			Iff(afield, func() Node {
+				return Div(Class("legion-head-order"),
+					actionTag(campaign.Action),
+					Span(Class("afield-arrow"), Text("→")),
+					Span(Class("afield-target"), Text(otherIndex[campaign.TargetKingdomID])),
 				)
 			}),
+		),
+		Iff(afield, func() Node {
+			eta := campaignETA(*campaign)
+			etaUnit := "ticks"
+			if eta == 1 {
+				etaUnit = "tick"
+			}
+			phaseUnit := "ticks"
+			if campaign.TicksRemaining == 1 {
+				phaseUnit = "tick"
+			}
+			phaseLabel := "This phase ends in"
+			if returning {
+				phaseLabel = "Almost home"
+			}
+			return Div(Class("legion-campaign"),
+				campaignTimeline(*campaign),
+				Div(Class("cc-body"),
+					Div(Class("cc-roster"),
+						Span(Class("cc-label"), Text("Companies committed")),
+						rosterStripCampaign(campaignUnits, 6, 40),
+						strengthLineCampaign(campaignUnits),
+					),
+					Div(Class("cc-eta"),
+						Div(Class("cc-eta-row"),
+							Span(Class("cc-eta-lbl"), Text(phaseLabel)),
+							Span(Class("cc-eta-val"),
+								Text(strconv.Itoa(campaign.TicksRemaining)),
+								Span(Class("cc-eta-unit"), Text(phaseUnit)),
+							),
+						),
+						Div(Class("cc-eta-row cc-eta-row--total"),
+							Span(Class("cc-eta-lbl"), Text("Returns home in")),
+							Span(Class("cc-eta-val"),
+								Text(strconv.Itoa(eta)),
+								Span(Class("cc-eta-unit"), Text(etaUnit)),
+							),
+						),
+					),
+				),
+				Div(Class("cc-foot"),
+					If(returning,
+						Span(Class("cc-foot-note"), Text(fmt.Sprintf("Survivors rejoin %s on arrival.", l.Name))),
+					),
+					If(!returning,
+						Span(Class("cc-foot-note"), Text("Returning turns the legion around immediately.")),
+					),
+					If(!returning,
+						Button(Class("btn btn--sm"),
+							ds.On("click", datastar.PostSSE("%s", cancelURL(campaign.ID))),
+							Text("Return home"),
+						),
+					),
+				),
+			)
+		}),
+		If(!afield, Div(Class("legion-home"),
+			Div(Class("legion-muster"),
+				rosterStrip(units, 6, 42),
+				strengthLine(units),
+				Button(Class("btn btn--sm btn--quiet legion-disband"),
+					ds.On("click", datastar.PostSSE("%s", disbandURL(l.ID))),
+					Text("Disband legion"),
+				),
+			),
+			legionDispatch(l, totalUnits > 0),
+		)),
+	)
+}
+
+func legionSlotCard(slotNum int) Node {
+	return Div(Class("legion-card legion-slot"),
+		Div(Class("slot-crest"),
+			Span(Text(romanNumeral(slotNum))),
+		),
+		Div(Class("slot-copy"),
+			Div(Class("slot-h"), Text(fmt.Sprintf("Legion %s", romanNumeral(slotNum)))),
+			Div(Class("slot-sub"), Text("Not formed yet")),
+		),
+	)
+}
+
+func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) Node {
+	otherIndex := make(map[int]string, len(data.others))
+	for _, o := range data.others {
+		otherIndex[o.ID] = o.Name
+	}
+
+	campaignByLegion := make(map[int]*db.GetCampaignsForKingdomRow, len(data.campaigns))
+	for i := range data.campaigns {
+		c := &data.campaigns[i]
+		campaignByLegion[c.LegionID] = c
+	}
+
+	legionByNumber := make(map[int]db.ListLegionsForKingdomRow, len(data.legions))
+	for _, l := range data.legions {
+		legionByNumber[l.Number] = l
+	}
+
+	var defaultSendLegion int
+	for _, l := range data.legions {
+		if !l.CampaignStatus.Valid {
+			defaultSendLegion = l.ID
+			break
+		}
+	}
+	defaultTicks := 4
+	if action == "defend" {
+		defaultTicks = 12
+	}
+
+	var legionCards []Node
+	for n := range game.MaxLegionsPerKingdom {
+		slotNum := n + 1
+		l, ok := legionByNumber[slotNum]
+		if !ok {
+			legionCards = append(legionCards, legionSlotCard(slotNum))
+			continue
+		}
+		campaign := campaignByLegion[l.ID]
+		var cu []db.KingdomCampaignUnit
+		if campaign != nil {
+			cu = data.campaignUnits[campaign.ID]
+		}
+		legionCards = append(legionCards, legionCard(l, data.legionUnits[l.ID], campaign, cu, otherIndex))
+	}
+
+	return Div(
+		ds.Signals(map[string]any{
+			"xfer_from":   0,
+			"xfer_to":     0,
+			"xfer_unit":   firstKingdomUnit(data),
+			"xfer_count":  1,
+			"send_legion": defaultSendLegion,
+			"send_action": action,
+			"send_target": targetName,
+			"send_ticks":  defaultTicks,
+		}, ds.ModifierIfMissing),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomArmyRefreshPath))),
+		armyAlert(nil),
+		Div(Class("page-header"),
+			H1(Text("Command Tent")),
+		),
+		quartermasterCard(data),
+		Div(Class("army-grid"),
+			Div(Class("legion-stack"),
+				Group(legionCards),
+			),
 		),
 	)
 }

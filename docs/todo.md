@@ -4,6 +4,7 @@ Raw thoughts. No commitment, no structure. May never happen.
 - Find a name
 - Spawn near a player
 - daily message: the realm holds firm
+- [campaing] timeline bar from left to right kingdom to target with a direction
 - [skills] Design skills
 - [events] Add a Journal of events — could have...
 - [timers] safe timers

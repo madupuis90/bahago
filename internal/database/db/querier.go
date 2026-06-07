@@ -36,6 +36,8 @@ type Querier interface {
 	// Atomically verifies ownership and non-returning status, then sets the campaign
 	// to returning. Returns no rows if the campaign does not exist, belongs to a
 	// different kingdom, or is already returning — all treated as a no-op by the caller.
+	// When en_route, the return trip is proportional to distance already traveled;
+	// when active (at target), the full travel_ticks applies.
 	CancelCampaign(ctx context.Context, arg CancelCampaignParams) (int, error)
 	CancelJoinRequest(ctx context.Context, arg CancelJoinRequestParams) error
 	CancelOtherPendingRequests(ctx context.Context, arg CancelOtherPendingRequestsParams) error
@@ -123,6 +125,7 @@ type Querier interface {
 	IncrementKingdomBuilding(ctx context.Context, arg IncrementKingdomBuildingParams) error
 	InsertCombatLog(ctx context.Context, arg InsertCombatLogParams) (int, error)
 	InsertTick(ctx context.Context) (int, error)
+	IsLegionDeployed(ctx context.Context, legionID int) (bool, error)
 	ListActiveGuilds(ctx context.Context) ([]ListActiveGuildsRow, error)
 	ListAllKingdoms(ctx context.Context) ([]Kingdom, error)
 	ListAllLegionUnitsForKingdom(ctx context.Context, kingdomID int) ([]KingdomLegionUnit, error)

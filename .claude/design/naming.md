@@ -13,7 +13,7 @@
 | `.kbtn`, `.kbtn--primary`, `.kbtn--danger`, `.kbtn--quiet`, `.kbtn--sm`, `.btn--insufficient`, `.btn--locked`, `.is-disabled` | `.btn` + same modifier suffixes | live | One button system; modifiers map 1:1 |
 | `.kslider` | `.slider-*` + `.v-diamond` | live | Already in `styles.css` |
 | `.folio` | `.page-header` (or feature-specific, e.g. `.unit-folio`) | pending | Bookish name → semantic; exact name chosen per feature |
-| `.kfield` / `.kselect` | `.field` / `.input--num` | pending | Not yet in `styles.css`; host page count input will establish the pattern |
+| `.kfield`, `.kfield-group`, `.kfield-label`, `.kfield-hint` | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Campaign handoff renamed `.kfield*` → `.field*`; now in `styles.css` Shared components section |
 | `.kattr`, `.kattr-row`, `.kattr--*` | `.kattr`, `.kattr-row`, `.kattr--*` | pending | `k` prefix acceptable — domain-flavored but unambiguous; no rename planned |
 | `.kmeter`, `.kmeter-fill` | `.kmeter`, `.kmeter-fill` | pending | Same as above — keep as-is |
 

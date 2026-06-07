@@ -117,7 +117,11 @@ func (q *Queries) BulkUpdateCampaignUnitCounts(ctx context.Context, arg BulkUpda
 
 const cancelCampaign = `-- name: CancelCampaign :one
 UPDATE kingdom_campaigns
-SET status = 'returning', ticks_remaining = travel_ticks
+SET status = 'returning',
+    ticks_remaining = CASE
+        WHEN status = 'en_route' THEN GREATEST(travel_ticks - ticks_remaining, 1)
+        ELSE travel_ticks
+    END
 WHERE id = $1
   AND kingdom_id = $2
   AND status != 'returning'
@@ -132,6 +136,8 @@ type CancelCampaignParams struct {
 // Atomically verifies ownership and non-returning status, then sets the campaign
 // to returning. Returns no rows if the campaign does not exist, belongs to a
 // different kingdom, or is already returning — all treated as a no-op by the caller.
+// When en_route, the return trip is proportional to distance already traveled;
+// when active (at target), the full travel_ticks applies.
 func (q *Queries) CancelCampaign(ctx context.Context, arg CancelCampaignParams) (int, error) {
 	row := q.db.QueryRow(ctx, cancelCampaign, arg.ID, arg.KingdomID)
 	var id int
@@ -379,6 +385,19 @@ func (q *Queries) GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]
 		return nil, err
 	}
 	return items, nil
+}
+
+const isLegionDeployed = `-- name: IsLegionDeployed :one
+SELECT EXISTS(
+    SELECT 1 FROM kingdom_campaigns WHERE legion_id = $1
+) AS deployed
+`
+
+func (q *Queries) IsLegionDeployed(ctx context.Context, legionID int) (bool, error) {
+	row := q.db.QueryRow(ctx, isLegionDeployed, legionID)
+	var deployed bool
+	err := row.Scan(&deployed)
+	return deployed, err
 }
 
 const listCampaignUnitsForKingdom = `-- name: ListCampaignUnitsForKingdom :many
