@@ -25,6 +25,93 @@ func GetSSENoSignals(urlFormat string, args ...any) string {
 	return fmt.Sprintf(`@get('%s', {openWhenHidden: true, filterSignals: {include: /^$/}})`, fmt.Sprintf(urlFormat, args...))
 }
 
+// svgDefs is the inline SVG symbol library. Prepended to <body> so all glyph
+// symbols are defined before any element references them.
+const svgDefs = `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"
+     style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sandglass" viewBox="0 0 10 14">
+      <path d="M1 1 H9 L5 6 L9 11 V13 H1 V11 L5 6 Z"
+            fill="none" stroke="currentColor" stroke-width="0.8"/>
+      <path d="M3 11 L7 11 L5 8 Z" fill="currentColor"/>
+    </symbol>
+    <g id="g-crown"><path d="M5 14.5 L5 10 L7.5 12 L10 8 L12.5 12 L15 10 L15 14.5 Z"
+      fill="none" stroke="currentColor" stroke-width="0.9"
+      stroke-linecap="square" stroke-linejoin="round"/></g>
+    <g id="g-cross"><g fill="none" stroke="currentColor" stroke-width="1.1"
+      stroke-linecap="square" stroke-linejoin="round">
+      <line x1="10" y1="6" x2="10" y2="15"/>
+      <line x1="6.5" y1="10" x2="13.5" y2="10"/></g></g>
+    <g id="g-swords"><g fill="none" stroke="currentColor" stroke-width="0.85"
+      stroke-linecap="round" stroke-linejoin="round">
+      <line x1="7.5" y1="7.5" x2="12.5" y2="16"/>
+      <line x1="7.9" y1="11.1" x2="10.5" y2="9.6"/>
+      <line x1="12.5" y1="7.5" x2="7.5" y2="16"/>
+      <line x1="9.5" y1="9.6" x2="12.1" y2="11.1"/></g></g>
+    <g id="g-sliders"><g stroke="currentColor" stroke-linecap="round">
+      <line x1="5" y1="9.5" x2="15" y2="9.5" fill="none" stroke-width="0.8"/>
+      <circle cx="8.5" cy="9.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/>
+      <line x1="5" y1="12.5" x2="15" y2="12.5" fill="none" stroke-width="0.8"/>
+      <circle cx="11.5" cy="12.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/>
+      <line x1="5" y1="15.5" x2="15" y2="15.5" fill="none" stroke-width="0.8"/>
+      <circle cx="9.5" cy="15.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/></g></g>
+    <g id="g-house"><g fill="none" stroke="currentColor" stroke-width="0.95"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 13.5 L10 8.5 L15 13.5"/>
+      <path d="M6 13.5 L6 17 L14 17 L14 13.5"/>
+      <path d="M8.5 17 L8.5 14.5 L11.5 14.5 L11.5 17"/></g></g>
+    <g id="g-person"><g fill="none" stroke="currentColor" stroke-width="0.95"
+      stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="10" cy="9" r="2.2"/>
+      <path d="M6.5 17.5 C6.5 14 8 12.5 10 12.5 C12 12.5 13.5 14 13.5 17.5"/></g></g>
+    <g id="g-globe"><g fill="none" stroke="currentColor" stroke-linecap="round"
+      stroke-linejoin="round">
+      <circle cx="10" cy="12" r="4.5" stroke-width="0.9"/>
+      <line x1="5.5" y1="12" x2="14.5" y2="12" stroke-width="0.65"/>
+      <path d="M10 7.5 C8 9.5 8 14.5 10 16.5" stroke-width="0.65"/>
+      <path d="M10 7.5 C12 9.5 12 14.5 10 16.5" stroke-width="0.65"/></g></g>
+    <g id="g-envelope"><g fill="none" stroke="currentColor" stroke-width="0.95"
+      stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="8.5" width="10" height="7" rx="0.3"/>
+      <path d="M5 8.5 L10 13 L15 8.5"/></g></g>
+    <g id="g-tree"><g fill="none" stroke="currentColor"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 8 L14.5 15 L5.5 15 Z" stroke-width="0.95"/>
+      <line x1="10" y1="15" x2="10" y2="17.5" stroke-width="1.2"/></g></g>
+    <g id="g-mountain"><path d="M4.5 15.5 L8 11 L10.5 13 L13.5 9 L15.5 15.5 Z"
+      fill="none" stroke="currentColor" stroke-width="1.1"
+      stroke-linecap="square" stroke-linejoin="round"/></g>
+    <g id="g-wheat"><g fill="none" stroke="currentColor" stroke-width="0.9"
+      stroke-linecap="round" stroke-linejoin="round">
+      <line x1="10" y1="6.5" x2="10" y2="15.5"/>
+      <line x1="10" y1="9.5" x2="7.5" y2="11"/>
+      <line x1="10" y1="9.5" x2="12.5" y2="11"/>
+      <line x1="10" y1="12" x2="7.5" y2="13.5"/>
+      <line x1="10" y1="12" x2="12.5" y2="13.5"/></g></g>
+    <g id="g-flame"><path d="M10 8 C11 10 12.5 11.5 12.5 13.5 C12.5 15.8 11.4 17 10 17
+      C8.6 17 7.5 15.8 7.5 13.5 C7.5 11.5 9 10 10 8 Z"
+      fill="none" stroke="currentColor" stroke-width="0.9"
+      stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 16 C9.5 14.5 9.5 12.5 10.5 11"
+      fill="none" stroke="currentColor" stroke-width="0.65" stroke-linecap="round"/></g>
+    <g id="g-sun"><g fill="none" stroke="currentColor" stroke-width="0.9"
+      stroke-linecap="square" stroke-linejoin="round">
+      <circle cx="10" cy="11.5" r="2.4"/>
+      <g stroke-linecap="round">
+        <line x1="10" y1="6.5" x2="10" y2="8"/>
+        <line x1="10" y1="15" x2="10" y2="16.5"/>
+        <line x1="5.5" y1="11.5" x2="7" y2="11.5"/>
+        <line x1="13" y1="11.5" x2="14.5" y2="11.5"/>
+        <line x1="7" y1="8.5" x2="8" y2="9.5"/>
+        <line x1="12" y1="13.5" x2="13" y2="14.5"/>
+        <line x1="7" y1="14.5" x2="8" y2="13.5"/>
+        <line x1="12" y1="9.5" x2="13" y2="8.5"/></g></g></g>
+    <g id="g-star"><path d="M10,7 L11,10.1 L14.2,10.1 L11.6,12 L12.6,15.1
+      L10,13.2 L7.4,15.1 L8.4,12 L5.8,10.1 L9,10.1 Z"
+      fill="none" stroke="currentColor" stroke-width="0.85" stroke-linejoin="round"/></g>
+  </defs>
+</svg>`
+
 // ── Layout functions ──────────────────────────────────────────────────────────
 
 // HomeLayout renders a full page with the home top-nav active and home side-nav.
@@ -41,15 +128,14 @@ func HomeLayout(r *http.Request, title string, content ...Node) Node {
 	)
 }
 
-// KingdomLayout renders a full page with the parchment topbar and bottom nav.
-// currentPath drives which bottom-nav stone is highlighted.
+// KingdomLayout renders a full page with the CommandBar chrome.
+// currentPath drives which nav link is highlighted and is forwarded to the layout refresh SSE stream.
 func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *db.Kingdom, content ...Node) Node {
 	layoutStream := Div(ds.Init(GetSSENoSignals(routes.KingdomLayoutRefreshPath+"?path=%s", currentPath)))
 	return shell(title, layoutStream,
 		Div(Class("kingdom-page"),
-			KingdomTopbar(kingdom),
+			KingdomTopbar(kingdom, currentPath),
 			MainContent(content...),
-			KingdomBottomNav(currentPath, 0),
 		),
 	)
 }
@@ -60,11 +146,10 @@ func MainContent(content ...Node) Node {
 	return Main(ID("main-content"), Group(content))
 }
 
-// shell is the shared HTML document structure. Body children are rendered in
-// order; layoutStream is appended at the very end (kept separate so SSE init
-// markers don't visually interleave with chrome).
+// shell is the shared HTML document structure. The SVG defs block is prepended to <body>
+// so all glyph symbols are available before any element references them.
 func shell(title string, layoutStream Node, body ...Node) Node {
-	bodyChildren := append([]Node{}, body...)
+	bodyChildren := append([]Node{Raw(svgDefs)}, body...)
 	if layoutStream != nil {
 		bodyChildren = append(bodyChildren, layoutStream)
 	}
@@ -97,45 +182,117 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 	)
 }
 
-// ── Kingdom chrome (topbar + bottom nav) ──────────────────────────────────────
+// ── Kingdom chrome (CommandBar) ───────────────────────────────────────────────
 
-// KingdomTopbar renders the parchment topbar: realm badge + tick chip + 6 resource cartouches.
-// Exported so SSE handlers can re-render it on tick.
-func KingdomTopbar(kingdom *db.Kingdom) Node {
+// KingdomTopbar renders the unified CommandBar. Exported for SSE re-render on tick.
+func KingdomTopbar(kingdom *db.Kingdom, currentPath string) Node {
 	if kingdom == nil {
-		return Header(ID("kingdom-topbar"), Class("topbar"))
+		return Header(ID("kingdom-topbar"), Classes{"bar": true, "barB2": true})
 	}
-	return Header(ID("kingdom-topbar"), Class("topbar"),
-		Span(Class("rivet rivet-tl")),
-		Span(Class("rivet rivet-tr")),
-		Span(Class("rivet rivet-bl")),
-		Span(Class("rivet rivet-br")),
-		Div(Class("topbar-row"),
-			Div(Class("kingdom-badge"),
-				Icon("shield-crown", 28, false),
-				Div(
-					Div(Class("kingdom-name"), Text(kingdom.Name)),
-					Div(Class("kingdom-sub"), Text(formatPopulation(kingdom.Population))),
-				),
+	return Header(ID("kingdom-topbar"), Classes{"bar": true, "barB2": true},
+		Div(Class("barB2-info"),
+			commandBarIdentity(kingdom),
+			Div(Class("barB2-res"),
+				resourcePill("tree", "Wood", kingdom.Wood),
+				resourcePill("mountain", "Stone", kingdom.Stone),
+				resourcePill("wheat", "Grain", kingdom.Food),
+				resourcePill("flame", "Mana", kingdom.Mana),
+				resourcePill("sun", "Devotion", kingdom.Devotion),
+				resourcePill("star", "Lore", kingdom.Knowledge),
 			),
-			Div(Class("tick"),
-				Div(Class("tick-chip"),
-					Hourglass(9),
-					Span(Class("caps-label"), Text("next tick")),
-					Span(Class("tick-value"), Text("--:--")),
-				),
+			Div(Class("barB2-right"),
+				commandBarTick(),
+				commandBarLeave(),
 			),
 		),
-		Div(Class("resources"),
-			resourceCartouche("tree", "Wood", kingdom.Wood),
-			resourceCartouche("mountain", "Stone", kingdom.Stone),
-			resourceCartouche("wheat", "Food", kingdom.Food),
-			resourceCartouche("flame", "Mana", kingdom.Mana),
-			resourceCartouche("sun", "Devotion", kingdom.Devotion),
-			resourceCartouche("star", "Knowledge", kingdom.Knowledge),
+		commandBarNav(currentPath),
+	)
+}
+
+// Glyph renders a bare SVG glyph from the inline symbol library.
+func Glyph(id string, sizePx int) Node {
+	sz := strconv.Itoa(sizePx)
+	return El("svg",
+		Class("gly"),
+		Attr("width", sz),
+		Attr("height", sz),
+		Attr("viewBox", "4 6 12 12"),
+		Attr("aria-hidden", "true"),
+		El("use", Attr("href", "#g-"+id)),
+	)
+}
+
+func commandBarIdentity(kingdom *db.Kingdom) Node {
+	return Div(Class("id"),
+		Raw(`<svg class="crest id-crest" width="40" height="46" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`),
+		Div(
+			Div(Class("id-name"), Text(kingdom.Name)),
+			Div(Class("id-sub"), Text(formatPopulation(kingdom.Population))),
 		),
 	)
 }
+
+func commandBarTick() Node {
+	return Span(Class("tick"),
+		Raw(`<svg width="9" height="13" viewBox="0 0 10 14" aria-hidden="true"><use href="#sandglass"/></svg>`),
+		Span(Class("tick-l"), Text("Tick")),
+		Span(Class("tick-v"), Text("--:--")),
+	)
+}
+
+func commandBarLeave() Node {
+	return A(Class("leave"), Href(routes.HomePath), Attr("title", "Leave the kingdom"),
+		Raw(`<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 2.5 H3.4 A1 1 0 0 0 2.4 3.5 V12.5 A1 1 0 0 0 3.4 13.5 H6.5"/><path d="M10 5 L13 8 L10 11"/><path d="M13 8 H6.4"/></svg>`),
+		Span(Class("leave-l"), Text("Leave")),
+	)
+}
+
+func resourcePill(id, label string, value int) Node {
+	return Span(Class("pill"),
+		Span(
+			Classes{"gem": true, "gem-" + id: true},
+			Style("width:30px;height:30px"),
+			Glyph(id, 19),
+		),
+		Span(Class("pill-txt"),
+			Span(Class("pill-l"), Text(label)),
+			Span(Classes{"pill-v": true, "is-zero": value == 0}, Text(FormatThousands(value))),
+		),
+	)
+}
+
+type navItem struct {
+	label string
+	glyph string
+	href  string
+}
+
+var kingdomNavItems = []navItem{
+	{"Kingdom", "crown", routes.KingdomPath},
+	{"Allocate", "sliders", routes.KingdomAllocationPath},
+	{"Builds", "house", routes.KingdomBuildingsPath},
+	{"Units", "person", routes.KingdomUnitsPath},
+	{"Campaign", "swords", routes.KingdomArmyPath},
+	{"World", "globe", routes.KingdomMapPath},
+	{"Prayers", "cross", routes.KingdomPrayersPath},
+	{"Messages", "envelope", routes.KingdomMessagesPath},
+	{"Guild", "star", routes.GuildPath},
+}
+
+func commandBarNav(currentPath string) Node {
+	links := make([]Node, len(kingdomNavItems))
+	for i, item := range kingdomNavItems {
+		links[i] = A(
+			Classes{"nav-link": true, "is-on": currentPath == item.href},
+			Href(item.href),
+			Glyph(item.glyph, 16),
+			Span(Class("nav-link-l"), Text(item.label)),
+		)
+	}
+	return Nav(Class("barB2-nav"), Group(links))
+}
+
+// ── Old chrome helpers — kept until all templates confirmed working ────────────
 
 func resourceCartouche(id, label string, value int) Node {
 	return Div(Class("resource"),
@@ -199,16 +356,16 @@ func navStone(s stoneRoute, currentPath string, unreadCount int) Node {
 	)
 }
 
-// ── Home nav helpers (unchanged) ──────────────────────────────────────────────
+// ── Home nav helpers ──────────────────────────────────────────────────────────
 
 func NavItem(href, name, currentPath string) Node {
 	return A(Href(href), If(currentPath == href, Attr("aria-current", "page")), Text(name))
 }
 
-func NavGroup(name string, navItems ...Node) Node {
+func NavGroup(name string, items ...Node) Node {
 	return Div(Class("nav-group"),
 		Div(P(Class("nav-group-name"), Text(name))),
-		Div(Class("nav-group-content"), Group(navItems)),
+		Div(Class("nav-group-content"), Group(items)),
 	)
 }
 
@@ -261,7 +418,7 @@ func PageHeader(tag, body string) Node {
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
 func formatPopulation(n int) string {
-	return "Population: " + FormatThousands(n)
+	return "Pop. " + FormatThousands(n)
 }
 
 // FormatThousands renders an integer with comma separators (e.g. 1028 → "1,028").

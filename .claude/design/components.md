@@ -15,7 +15,13 @@
 | Slider | `.slider-*`, `.v-diamond` | live | Allocation | Slider |
 | Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) | live | Kingdom chrome | Resource gems |
 | Alert | `.alert--error`, `.alert--success` | live | Shared components | Alert |
-| Topbar chrome | `.topbar`, `.tick-chip` | live | Kingdom chrome | Topbar |
+| CommandBar chrome | `.bar`, `.barB2`, `.barB2-info`, `.barB2-res`, `.barB2-right`, `.barB2-nav`, `.barB2-nav--ico` | live | Kingdom chrome | CommandBar (chrome redesign) |
+| CommandBar identity | `.id`, `.id-crest`, `.crest`, `.crest-frame`, `.crest-shield`, `.crest-glyph`, `.id-name`, `.id-sub` | live | Kingdom chrome | CommandBar — identity block |
+| CommandBar resource pill | `.pill`, `.pill-txt`, `.pill-l`, `.pill-v`, `.is-zero` | live | Kingdom chrome | CommandBar — resource pill |
+| CommandBar tick | `.tick`, `.tick-l`, `.tick-v` | live | Kingdom chrome | CommandBar — tick display |
+| CommandBar leave | `.leave`, `.leave-l` | live | Kingdom chrome | CommandBar — leave link |
+| CommandBar nav link | `.nav-link`, `.is-on` | live | Kingdom chrome | CommandBar — nav link |
+| SVG glyph | `.gly` | live | Kingdom chrome | Inline SVG glyph via `<use>` |
 | Form field | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Shared components | Fields (from Campaign transfer form) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |

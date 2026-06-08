@@ -14,11 +14,10 @@ import (
 	. "bahago/internal/ui"
 )
 
-// patchChrome re-renders the kingdom topbar (so resource values reflect the
-// latest tick) and the bottom nav (so the messages badge reflects the latest
-// unread count) over the SSE connection.
+// patchChrome re-renders the topbar (so resource values reflect the latest tick)
+// and the bottom nav (so the messages badge reflects the latest unread count).
 func patchChrome(sse *datastar.ServerSentEventGenerator, kingdom *db.Kingdom, currentPath string, unreadCount int) error {
-	if err := sse.PatchElementGostar(KingdomTopbar(kingdom)); err != nil {
+	if err := sse.PatchElementGostar(KingdomTopbar(kingdom, currentPath)); err != nil {
 		return err
 	}
 	return sse.PatchElementGostar(KingdomBottomNav(currentPath, unreadCount))

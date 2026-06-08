@@ -628,7 +628,7 @@ select.field:focus { outline: none; border-color: var(--chrome-accent); box-shad
   width: 100%;
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   font-family: var(--font-body);
   color: var(--ink);
@@ -1131,6 +1131,262 @@ select.field:focus { outline: none; border-color: var(--chrome-accent); box-shad
     font-size: 10px;
   }
 }
+
+/* =============================================================================
+   Bahago — REDESIGN · Chrome iteration LAB
+   Two things live here:
+     1. The fixed ICON SYSTEM — glyph / crest / gem, built on redesign/icons.svg
+        (bare glyph + a separate shield frame, composed in markup not baked in).
+     2. The chrome BUILDING BLOCKS — identity, resource chips, nav links, tick,
+        leave — and four single-bar LAYOUTS assembled from them.
+   Skin tokens are the game's wood + brass chrome (web/static/styles.css).
+   ============================================================================= */
+
+/* ── 1 · ICON SYSTEM ──────────────────────────────────────────────────────── */
+
+/* a bare glyph — just the line-art, no shield, no frame */
+.gly { display: block; color: inherit; }
+
+/* crest composition tokens — declared at root so they register as DS tokens;
+   overridden per-context (e.g. .crest--ghost, .nav-ico:hover) as needed */
+:root {
+  /* crest defaults — used as direct CSS on .crest-shield / .crest-glyph */
+  --crest-fill: rgba(255, 250, 236, .5); /* @kind other */
+  /* bar ink scale — defaults for the command bar chrome */
+  --c-ink:        #e6cf94;                     /* @kind color */
+  --c-ink-strong: #fff8dc;                     /* @kind color */
+  --c-sub:        #c2a468;                     /* @kind color */
+  --c-divider:    1px solid rgba(0,0,0,.4);    /* @kind other */
+}
+
+/* a glyph composed INSIDE the shield frame — shield path is inlined in JSX */
+.crest { display: block; overflow: visible; }
+.crest .crest-shield { fill: var(--crest-fill); }
+.crest--ghost .crest-shield { fill: transparent; }
+
+/* a glyph on a colored resource disc — the heraldry suppressed entirely */
+.gem {
+  position: relative; display: inline-grid; place-items: center; flex: none;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -2px 3px rgba(0, 0, 0, .25);
+}
+.gem .gly { color: rgba(255, 255, 255, .92); }
+.gem-tree     { background: linear-gradient(180deg, #c2895d, #8b5630 60%, #5d3818); border: 1.5px solid #3d2515; }
+.gem-mountain { background: linear-gradient(180deg, #9da1a6, #6b6f74 60%, #43474b); border: 1.5px solid #262a2e; }
+.gem-wheat    { background: linear-gradient(180deg, #f0c25e, #b88526 60%, #7a521a); border: 1.5px solid #4a3208; }
+.gem-flame    { background: linear-gradient(180deg, #82a8d5, #4870a5 60%, #2a4a7a); border: 1.5px solid #142848; }
+.gem-sun      { background: linear-gradient(180deg, #de8a92, #b04858 60%, #7a2030); border: 1.5px solid #4a0c18; }
+.gem-star     { background: linear-gradient(180deg, #ad8ec6, #74548f 60%, #4a2e62); border: 1.5px solid #2e1844; }
+
+/* ── 2 · CHROME BUILDING BLOCKS ───────────────────────────────────────────── */
+
+/* the bar shell — the game's wood + brass chrome */
+.bar {
+  font-family: var(--font-cinzel);
+  background: var(--chrome-bg);
+  border-bottom: 3px solid var(--chrome-border);
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .4), 0 2px 0 var(--chrome-accent), 0 3px 0 var(--chrome-border);
+  color: var(--c-ink);
+  width: 100%;
+  box-sizing: border-box;
+}
+.bar * { box-sizing: border-box; }
+
+/* identity — crest + name + population */
+.id { display: flex; align-items: center; gap: 11px; flex: none; }
+.id-crest { flex: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
+.id-crest .crest-frame  { color: var(--chrome-accent); }
+.id-crest .crest-shield { fill: rgba(247, 238, 213, .62); }
+.id-crest .crest-glyph  { color: var(--highlight); }
+.id-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 16px;
+  color: var(--c-ink-strong); line-height: 1.05; letter-spacing: .01em;
+}
+.id-sub {
+  margin-top: 3px; font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--c-sub);
+}
+
+/* resource chip — full (gem + label + value) */
+.res { display: inline-flex; align-items: center; gap: 8px; }
+.res-gem { width: 30px; height: 30px; }
+.res-txt { display: flex; flex-direction: column; line-height: 1; }
+.res-l { font-size: 8.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
+.res-v { margin-top: 2px; font-size: 14px; font-weight: 700; color: var(--c-ink-strong); font-variant-numeric: lining-nums; }
+.res-v.is-zero { color: #f0a98a; }
+
+/* resource chip — mini (gem + value only) for dense rows */
+.res-mini { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 4px;
+  border-radius: 16px; background: rgba(0, 0, 0, .16); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3); }
+.res-mini .res-gem { width: 24px; height: 24px; }
+.res-mini .res-v { margin-top: 0; font-size: 12.5px; }
+
+/* a resources panel — the inset readout strip */
+.res-panel {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px;
+  padding: 7px 16px; border-radius: 6px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, .06));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35), inset 0 -1px 0 rgba(255, 230, 180, .12);
+}
+
+/* nav link — glyph + label, horizontal */
+.nav-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px; border-radius: 6px; text-decoration: none; white-space: nowrap;
+  border: 1px solid transparent; color: var(--c-ink); cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.nav-link .gly { color: currentColor; }
+.nav-link-l { font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; }
+.nav-link:hover { background: rgba(255, 235, 200, .1); color: var(--c-ink-strong); }
+.nav-link.is-on {
+  background: linear-gradient(180deg, rgba(240, 194, 94, .3), rgba(200, 138, 42, .16));
+  border-color: rgba(240, 200, 120, .5); color: var(--c-ink-strong);
+  box-shadow: 0 0 10px rgba(255, 200, 120, .3);
+}
+
+/* nav icon-only — a tappable crest button (heraldry kept here on purpose) */
+.nav-ico {
+  display: inline-grid; place-items: center; width: 40px; height: 44px; cursor: pointer;
+  border: none; background: none; padding: 0; color: var(--c-ink);
+  transition: color .12s; position: relative;
+}
+.nav-ico .crest { margin-bottom: 1px; }
+.nav-ico .crest-frame  { color: rgba(230, 207, 148, .55); }
+.nav-ico .crest-shield { fill: transparent; }
+.nav-ico:hover { color: var(--c-ink-strong); }
+.nav-ico:hover .crest-frame { color: rgba(230, 207, 148, .8); }
+.nav-ico.is-on { color: var(--c-ink-strong); }
+.nav-ico.is-on .crest-frame  { color: rgba(240, 200, 120, .9); }
+.nav-ico.is-on .crest-shield { fill: rgba(240, 194, 94, .2); }
+.nav-ico-l { font-size: 7.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--c-sub); margin-top: -3px; }
+.nav-ico.is-on .nav-ico-l { color: var(--c-ink); }
+
+/* tick chip */
+.tick {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  background: linear-gradient(180deg, #2e1808, #4a2814); border: 1.5px solid var(--chrome-accent);
+  border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 200, 120, .2), 0 1px 0 rgba(0, 0, 0, .4);
+}
+.tick .gly, .tick svg { color: var(--chrome-accent); }
+.tick-l { font-size: 8px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--chrome-accent-light); }
+.tick-v { font-size: 13px; font-weight: 700; color: rgba(251, 233, 191, .92); font-variant-numeric: oldstyle-nums; }
+
+/* leave button */
+.leave {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; cursor: pointer;
+  border-radius: 6px; font: inherit; background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 230, 180, .28); color: var(--c-ink);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.leave:hover { background: rgba(168, 50, 50, .28); color: #f7d2c2; border-color: rgba(200, 80, 60, .55); }
+.leave-l { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+
+.vrule { width: 1px; align-self: stretch; background: rgba(0, 0, 0, .4); box-shadow: 1px 0 0 rgba(255, 230, 180, .1); }
+
+/* ── 3 · THE FOUR LAYOUTS ─────────────────────────────────────────────────── */
+
+/* A — stacked, centered (the refined current direction) */
+.barA { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: stretch; }
+.barA .id { padding: 0 20px; border-right: var(--c-divider); }
+.barA-stack { display: flex; flex-direction: column; min-width: 0; }
+.barA-res { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px; padding: 9px 18px 8px; }
+.barA-nav { display: flex; align-items: center; gap: 4px; padding: 7px 14px 8px; border-top: 1px solid rgba(0, 0, 0, .28); }
+.barA-right { display: flex; align-items: center; gap: 11px; padding: 0 18px; border-left: var(--c-divider); }
+
+/* B — two full-width rows: info row over nav row */
+.barB { display: flex; flex-direction: column; }
+.barB-info { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 9px 22px; }
+.barB-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 8px 18px; border-top: 1px solid rgba(0, 0, 0, .28); background: rgba(0, 0, 0, .1); }
+.barB-nav-links { display: flex; align-items: center; gap: 4px; }
+.barB-right { display: flex; align-items: center; gap: 11px; }
+
+/* C — single dense line, nav as icon-crests */
+.barC { display: flex; align-items: center; gap: 14px; padding: 9px 18px; }
+.barC .id { padding-right: 4px; }
+.barC-res { display: flex; align-items: center; gap: 7px; }
+.barC-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.barC-right { display: flex; align-items: center; gap: 10px; }
+
+/* D — nav-forward: command row on top, slim resource ribbon beneath */
+.barD { display: flex; flex-direction: column; }
+.barD-cmd { display: flex; align-items: center; gap: 16px; padding: 9px 20px; }
+.barD-cmd .id { border-right: var(--c-divider); padding-right: 16px; }
+.barD-nav { display: flex; align-items: center; gap: 4px; }
+.barD-cmd-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.barD-ribbon { display: flex; align-items: center; gap: 10px; padding: 6px 20px;
+  border-top: 1px solid rgba(0, 0, 0, .3);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, .08));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35); }
+.barD-ribbon .tick { margin-left: auto; }
+
+/* ── Layout B, refined ────────────────────────────────────────────────────
+   Row 1: identity (left) · resource pills (centered) · tick + Leave (far right)
+   Row 2: a full-width band of section links                                   */
+.barB2 { display: flex; flex-direction: column; }
+.barB2-info { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 9px 20px; }
+.barB2-res { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 10px; }
+.barB2-right { display: flex; align-items: center; gap: 11px; }
+.barB2-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 7px 22px; border-top: 1px solid rgba(0, 0, 0, .28);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .15), rgba(0, 0, 0, .04));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25), inset 0 -1px 0 rgba(255, 230, 180, .08);
+}
+/* the icon-crest fallback row sits the crests evenly across the band */
+.barB2-nav--ico { padding: 5px 22px; }
+
+/* resource PILL — dark inset cartouche (matches the dense chips in C) */
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 13px 4px 4px;
+  background: rgba(0, 0, 0, .16); border-radius: 22px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3), inset 0 -1px 0 rgba(255, 230, 180, .08);
+}
+.pill .res-gem { width: 30px; height: 30px; }
+.pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
+.pill-l { font-size: 8px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--c-sub); }
+.pill-v { margin-top: 2px; font-size: 14px; font-weight: 700; color: var(--c-ink-strong); font-variant-numeric: lining-nums; }
+.pill-v.is-zero { color: #f0a98a; }
+.pill--mini { padding: 4px 12px 4px 4px; }
+.pill--mini .pill-v { margin-top: 0; font-size: 13px; }
+
+/* nav as BARE icons (no shields) — the mobile / compact link treatment */
+.nav-gly {
+  display: inline-grid; place-items: center; gap: 3px; width: 46px; cursor: pointer;
+  border: none; background: none; padding: 5px 2px; color: var(--c-ink); border-radius: 7px;
+  transition: background .12s, color .12s;
+}
+.nav-gly .gly { color: currentColor; }
+.nav-gly:hover { background: rgba(255, 235, 200, .1); color: var(--c-ink-strong); }
+.nav-gly.is-on {
+  background: linear-gradient(180deg, rgba(240, 194, 94, .3), rgba(200, 138, 42, .16));
+  color: var(--c-ink-strong); box-shadow: 0 0 10px rgba(255, 200, 120, .25);
+}
+.nav-gly-l { font-size: 8px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--c-sub); }
+.nav-gly.is-on .nav-gly-l { color: var(--c-ink); }
+
+/* a tiny stage so each bar sits on a believable game backdrop in its artboard */
+.lab-stage { height: 100%; display: flex; flex-direction: column; background: #f0eee9; }
+.lab-stage-body { flex: 1; background:
+  radial-gradient(120% 80% at 50% -10%, rgba(120, 90, 50, .1), transparent 60%),
+  repeating-linear-gradient(115deg, rgba(120, 90, 50, .05) 0 2px, transparent 2px 26px), #efe9dd; }
+
+/* note card on the canvas */
+.lab-note { font-family: var(--font-ui); font-size: 12px; line-height: 1.5; color: #6a5c44; max-width: 230px; }
+.lab-note b { color: #3c3322; font-weight: 700; }
+
+/* the icon-system demo cells */
+.demo { display: flex; flex-wrap: wrap; gap: 26px 30px; align-items: flex-end;
+  padding: 26px; background: #efe9dd; font-family: var(--font-ui); height: 100%; box-sizing: border-box; }
+.demo-cell { display: flex; flex-direction: column; align-items: center; gap: 9px; color: #6a5c44; }
+.demo-cell-cap { font-size: 10.5px; letter-spacing: .04em; color: #8a7a5e; }
+.demo-on-dark { background: linear-gradient(180deg, #8c5e3d, #6b4226); border-radius: 6px;
+  padding: 16px 20px; box-shadow: inset 0 1px 0 rgba(255, 230, 180, .3); }
+.demo-h { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: #5a3820; width: 100%; margin: 0 0 2px; }
+.demo-sub { font-family: var(--font-ui); font-size: 11.5px; color: #8a7a5e; width: 100%; margin: -6px 0 4px; }
 
 /* =============================================================================
    Kingdom overview (page header, cards, combat log, stats panel)
