@@ -134,7 +134,7 @@ func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *d
 	layoutStream := Div(ds.Init(GetSSENoSignals(routes.KingdomLayoutRefreshPath+"?path=%s", currentPath)))
 	return shell(title, layoutStream,
 		Div(Class("kingdom-page"),
-			KingdomTopbar(kingdom, currentPath),
+			KingdomTopbar(kingdom, currentPath, 0),
 			MainContent(content...),
 		),
 	)
@@ -185,7 +185,7 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 // ── Kingdom chrome (CommandBar) ───────────────────────────────────────────────
 
 // KingdomTopbar renders the unified CommandBar. Exported for SSE re-render on tick.
-func KingdomTopbar(kingdom *db.Kingdom, currentPath string) Node {
+func KingdomTopbar(kingdom *db.Kingdom, currentPath string, msgCount int) Node {
 	if kingdom == nil {
 		return Header(ID("kingdom-topbar"), Classes{"bar": true, "barB2": true})
 	}
@@ -205,7 +205,7 @@ func KingdomTopbar(kingdom *db.Kingdom, currentPath string) Node {
 				commandBarLeave(),
 			),
 		),
-		commandBarNav(currentPath),
+		commandBarNav(currentPath, msgCount),
 	)
 }
 
@@ -279,13 +279,21 @@ var kingdomNavItems = []navItem{
 	{"Guild", "star", routes.GuildPath},
 }
 
-func commandBarNav(currentPath string) Node {
+func commandBarNav(currentPath string, msgCount int) Node {
 	links := make([]Node, len(kingdomNavItems))
 	for i, item := range kingdomNavItems {
+		isMessages := item.label == "Messages"
+		badgeNode := Iff(isMessages && msgCount > 0, func() Node {
+			badgeText := "99+"
+			if msgCount <= 99 {
+				badgeText = strconv.Itoa(msgCount)
+			}
+			return Span(Class("nav-badge"), Text(badgeText))
+		})
 		links[i] = A(
-			Classes{"nav-link": true, "is-on": currentPath == item.href},
+			Classes{"nav-link": true, "is-on": currentPath == item.href, "is-alert": isMessages && msgCount > 0},
 			Href(item.href),
-			Glyph(item.glyph, 16),
+			Span(Class("nav-link-ico"), Glyph(item.glyph, 16), badgeNode),
 			Span(Class("nav-link-l"), Text(item.label)),
 		)
 	}
