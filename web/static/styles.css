@@ -2407,380 +2407,348 @@ select.field:focus { outline: none; border-color: var(--chrome-accent); box-shad
    World map
    ============================================================================= */
 
-.map-info {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.map-main-row {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-}
-
-.map-coords {
-  font-size: 0.8rem;
-  color: var(--panel-link-color);
-}
-
-.map-find-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  & form {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  & .map-find-input {
-    width: 14rem;
-  }
-}
-
-/* Outer flex layout: N above, [W grid E] in middle, S below */
-.map-grid-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  width: fit-content;
-}
-
-.map-grid-middle {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-/*
- * Diamond isometric container.
- * The transform makes the 8×8 grid appear as a flat diamond viewed from above.
- * No perspective — pure orthographic isometric (no foreshortening).
- * overflow: visible lets the rotated diamond bleed outside its box.
- */
-/*
- * Width = grid diagonal = (--map-page-size × cell + axis×2) × √2.
- * Sizing the container to the actual diamond width keeps W/E nav links
- * visually outside the diamond — without this they sit behind the grid.
- */
-.map-iso-container {
-  width: calc((var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2) * 1.415);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-}
-
-/*
- * The 3D scene root. The isometric transform lives here so that child elements
- * (grid top face + box walls) share the same 3D space via transform-style: preserve-3d.
- */
-.map-iso-stage {
-  position: relative;
-  width: calc(var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2);
-  height: calc(var(--map-cell-size) * var(--map-page-size) + var(--map-axis-label-size) * 2);
-
-  transform: rotateX(60deg) rotateZ(45deg);
-  transform-style: preserve-3d;
-}
-
-/* Top face — no transform needed, the stage handles it. */
-.map-grid {
-  position: absolute;
-  inset: 0;
+/* ── Main layout — map column | command panel ────────────────────────────── */
+.world { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; }
+.world-main {
+  flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: var(--map-axis-label-size) repeat(var(--map-page-size), var(--map-cell-size)) var(--map-axis-label-size);
-  grid-template-rows: var(--map-axis-label-size) repeat(var(--map-page-size), var(--map-cell-size)) var(--map-axis-label-size);
-  transform-style: preserve-3d;
-  /* Continuous surface gradient — replace with background-image for a texture later. */
-  background: linear-gradient(135deg, #9aba70 0%, #8aaa60 50%, #6a9040 100%);
+  grid-template-columns: 1fr 296px;
+  grid-template-rows: 1fr;
+  gap: 16px;
+  align-items: stretch;
 }
 
-/*
- * South wall: placed immediately below the stage (top: 100%), so its top edge
- * is exactly the stage's bottom edge — the hinge. transform-origin 0% 0%
- * anchors rotation to that shared edge. rotateX(-90deg) swings the bottom
- * away from the viewer, creating a face that drops straight down in 3D.
- * Width extends by --map-wall-size to cover the bottom-right corner where
- * the two walls meet.
- */
-.map-box-wall--s {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  height: var(--map-wall-size);
-  background: #5c7a40;
-  transform-origin: 0% 0%;
-  transform: rotateX(-90deg);
+/* ── Left: map board — parchment table that frames the grid ──────────────── */
+.world-board {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  padding: 14px 18px 14px;
+  position: relative;
+}
+.board-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.board-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.5rem;
+  line-height: 1; color: var(--red-darker);
+  text-shadow: 0 1px 0 rgba(255,245,200,.4);
+}
+.board-region {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 5px;
+  font-family: var(--font-cinzel); font-weight: 700; font-size: .72rem;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft);
+}
+.board-region .shield { color: var(--wood-dark); }
+.board-stage {
+  flex: 1; min-height: 0; overflow: hidden;
+  position: relative; cursor: default;
 }
 
-/*
- * East wall: placed immediately to the right of the stage (left: 100%), so
- * its left edge is the stage's right edge — the hinge. rotateY(-90deg)
- * swings the right side away from the viewer, creating a face flush with
- * the south wall at the corner.
- */
-.map-box-wall--e {
-  position: absolute;
-  top: 0;
-  left: 100%;
-  width: var(--map-wall-size);
-  height: 100%;
-  background: #4a6830;
-  transform-origin: 0% 0%;
-  transform: rotateY(90deg);
-}
+/* ── Nav layout helpers ───────────────────────────────────────────────────── */
+.map-grid-container { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+.map-grid-middle    { display: flex; align-items: center; gap: .8rem; }
 
+/* =============================================================================
+   SHARED TILE LANGUAGE
+   ============================================================================= */
 .map-cell {
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: transparent;
-  transform-style: flat;
-  cursor: default;
-
-  &:hover {
-    outline: 2px solid rgba(255, 255, 255, 0.7);
-    outline-offset: -2px;
-  }
-
-  &.map-cell--occupied {
-    background: rgba(0, 0, 0, 0.12);
-
-    &:hover {
-      outline-color: rgba(255, 255, 255, 0.9);
-    }
-  }
-
-  &.map-cell--own {
-    background: rgba(0, 0, 0, 0.2);
-    outline: 2px solid #ffdf60;
-    outline-offset: -2px;
-  }
-
-  &.map-cell--clickable {
-    cursor: pointer;
-  }
-
-  &.map-cell--highlighted {
-    outline: 2px solid var(--btn-bg);
-    outline-offset: -2px;
-    z-index: 1;
-  }
+  --tile-grad: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--tile) 86%, #fff 14%) 0%,
+    var(--tile) 46%,
+    var(--tile-deep, var(--tile)) 100%
+  );
+  border: 1px solid rgba(60,40,20,.16);
+  background: var(--tile-grad);
+  position: relative; cursor: default; overflow: visible;
 }
-
-/*
- * 2D inverse of the isometric projection (rotateX(60deg) rotateZ(45deg)).
- * CSS `rotate(-45deg) scaleY(2)` computes to the matrix M⁻¹; combined with the
- * stage's M the net transform is identity, so content appears upright at natural
- * scale in screen space — no 3D transforms involved, so Firefox handles it fine.
- */
-.map-cell-content {
-  transform: rotate(-45deg) scaleY(2) translateY(-10%);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
+.map-cell:hover { outline: 2px solid var(--chrome-accent); outline-offset: -2px; z-index: 2; }
+.map-cell--clickable { cursor: pointer; }
+.map-cell.map-cell--occupied { background: var(--tile-grad); }
+.map-cell.map-cell--own {
+  outline: 2.5px solid var(--chrome-accent); outline-offset: -2px; z-index: 1;
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(232,196,120,.42), transparent 60%),
+    var(--tile-grad);
 }
+.map-cell.map-cell--selected { outline: 3px solid var(--red-darker); outline-offset: -2px; z-index: 3; }
+.map-cell-content { width: 100%; height: 100%; display: grid; place-items: center; overflow: visible; }
 
-.map-cell-tooltip {
-  display: none;
-  position: absolute;
-  left: calc(100% + 0.5rem);
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  background: var(--panel-bg);
-  border: var(--panel-border);
-  border-radius: 4px;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--panel-link-color);
-  pointer-events: none;
-  z-index: 10;
+/* Reset any isometric inverse-projection transform */
+.map-flat .map-cell-content { transform: none; }
+
+/* =============================================================================
+   FLAT BOARD
+   ============================================================================= */
+.map-flat {
+  --map-cell-size: 72px;
+  position: relative; display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  grid-template-rows:    1.5rem 1fr;
+  padding: 10px 34px 34px 10px; border-radius: 6px;
 }
-
-.map-cell:hover .map-cell-tooltip {
-  display: block;
+.map-flat-corner { grid-area: 1 / 1; }
+.map-flat-cols {
+  grid-area: 1 / 2;
+  display: grid; grid-auto-flow: column;
+  grid-template-columns: repeat(8, var(--map-cell-size));
 }
-
-.map-axis-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.map-flat-rows {
+  grid-area: 2 / 1;
+  display: grid; grid-template-rows: repeat(8, var(--map-cell-size));
 }
-
-.map-axis-label-content {
-  transform: rotate(-45deg) scaleY(2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.65);
-  pointer-events: none;
-  user-select: none;
-
-  &.map-axis-label-content--name {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.9);
-  }
+.map-flat-axis {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-cinzel); font-weight: 700; font-size: .68rem;
+  color: var(--wood-dark); letter-spacing: .04em;
 }
-
-.map-icon {
-  font-size: 1.2rem;
-  line-height: 1;
-  user-select: none;
-
-  &.map-icon--own {
-    color: #ffdf60;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  }
-}
-
-.map-popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.map-popup {
-  background: var(--panel-bg);
-  border: var(--panel-border);
-  border-radius: 8px;
-  padding: 1.5rem;
-  min-width: 16rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.map-popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.map-popup-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0;
-  color: var(--panel-text);
-}
-
-.map-popup-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.4rem;
-  color: var(--panel-link-color);
-  line-height: 1;
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--panel-text);
-  }
-}
-
-.map-popup-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.map-popup-btn {
-  width: 100%;
-  text-align: center;
-
-  &.map-popup-btn--attack {
-    &:hover {
-      background: #c03030;
-      border-color: #c03030;
-    }
-  }
-
-  &.map-popup-btn--defend {
-    &:hover {
-      background: #2a70b8;
-      border-color: #2a70b8;
-    }
-  }
-}
-
-/* Mini-map — compact PageCount×PageCount page grid styled as a tiny world */
-.map-minimap {
+.map-flat-grid {
+  grid-area: 2 / 2;
   display: grid;
-  grid-template-columns: repeat(var(--map-page-size), var(--map-minimap-cell-size));
-  grid-template-rows: repeat(var(--map-page-size), var(--map-minimap-cell-size));
-  gap: 2px;
-  padding: 0.35rem;
-  background: #3a5a28;
-  border: 1px solid #2a4a1a;
-  border-radius: 4px;
-  width: fit-content;
+  grid-template-columns: repeat(8, var(--map-cell-size));
+  grid-template-rows:    repeat(8, var(--map-cell-size));
+  border: 1px solid var(--wood); border-radius: 2px; overflow: visible;
+}
+.map-flat .map-cell { border-color: rgba(60,40,20,.05); }
+
+.map-flat-compass {
+  position: absolute; left: 18px; bottom: 16px; width: 42px; height: 42px;
+  opacity: .42; pointer-events: none; color: var(--wood-dark);
 }
 
-.map-minimap-cell {
-  display: block;
-  width: var(--map-minimap-cell-size);
-  height: var(--map-minimap-cell-size);
-  background: #5c7a40;
-  border-radius: 2px;
-  text-decoration: none;
-
-  &:hover {
-    background: #7a9a55;
-  }
-
-  &.map-minimap-cell--current {
-    background: #9aba70;
-    cursor: default;
-  }
-}
-
-/* Navigation links — shared base styles for both <a> and disabled <span> */
-.map-nav-btn {
-  display: inline-block;
-  background: var(--panel-bg);
-  border: var(--panel-border);
-  border-radius: 4px;
-  padding: 0.4rem 0.9rem;
-  font-size: 1rem;
+/* =============================================================================
+   MARKERS
+   ============================================================================= */
+.map-marker {
+  position: relative; display: inline-flex; flex-direction: column; align-items: center;
   line-height: 1;
+}
+.marker-rel-dot {
+  position: absolute; top: -3px; right: -5px; width: 8px; height: 8px;
+  border-radius: 50%; border: 1.5px solid #fff8e6; box-shadow: 0 1px 2px rgba(0,0,0,.4); z-index: 2;
+}
+
+.map-marker--crest .marker-crest {
+  width: 22px; height: 25px; display: grid; place-items: center;
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 48%, var(--wood-dark) 100%);
+  box-shadow: 0 1px 3px rgba(40,24,10,.5);
+}
+.map-marker--crest .marker-crest .shield { color: #fbeec6; }
+.rel-self .marker-crest {
+  background: linear-gradient(180deg, var(--chrome-accent-light) 0%, var(--chrome-accent) 55%, #9a6f28 100%);
+}
+.rel-self .marker-crest .shield { color: #4a2e08; }
+.map-marker[data-tip] { position: relative; }
+.map-marker[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-cinzel); font-weight: 700; font-size: .58rem;
+  letter-spacing: .04em; color: var(--ink);
+  background: linear-gradient(180deg, #fffaf0 0%, #f6eed8 100%);
+  border: 1px solid var(--wood); border-radius: 4px;
+  padding: 2px 7px 3px;
+  box-shadow: 0 2px 8px rgba(40,24,10,.28);
+  pointer-events: none;
+  opacity: 0; transition: opacity .12s;
+  z-index: 20;
+}
+.map-cell:hover .map-marker[data-tip]::after { opacity: 1; }
+
+.map-marker--plate .marker-dotpin {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f5ecd0, #b89a5c 72%);
+  border: 1.5px solid var(--wood-dark); box-shadow: 0 1px 2px rgba(40,24,10,.4);
+}
+.rel-self .marker-dotpin {
+  background: radial-gradient(circle at 35% 30%, var(--chrome-accent-light), var(--chrome-accent) 72%);
+  border-color: #7a5418;
+}
+
+/* =============================================================================
+   N/S/E/W NAV STONES
+   ============================================================================= */
+.map-nav-btn {
+  display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem;
+  padding: 0; font-size: .9rem; line-height: 1; cursor: pointer;
+  color: #fbeec6; border-radius: 6px;
+  border: 1px solid var(--wood-dark);
+  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 55%, var(--wood-dark) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,248,220,.3), 0 1px 3px rgba(40,24,10,.35);
+}
+.map-nav-btn:hover {
+  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent));
+  color: #4a2e08;
+}
+
+/* =============================================================================
+   MINIMAP
+   ============================================================================= */
+.map-minimap {
+  --map-minimap-cell-size: 1.1rem;
+  gap: 2px; padding: 5px;
+  display: grid; grid-template-columns: repeat(8, var(--map-minimap-cell-size));
+  background:
+    var(--parchment-noise),
+    linear-gradient(135deg, #e9dab2, #ddca98);
+  border: 1.5px solid var(--wood); border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255,248,220,.5), 0 2px 6px rgba(60,40,20,.18);
+}
+.map-minimap-cell {
+  height: var(--map-minimap-cell-size);
+  background: color-mix(in srgb, var(--tile, #9aba70) 78%, var(--wood) 22%);
+  border-radius: 1px; border: 1px solid rgba(60,40,20,.1); cursor: pointer;
+}
+.map-minimap-cell:hover { outline: 1.5px solid var(--chrome-accent); outline-offset: -1px; }
+.map-minimap-cell--current {
+  outline: 2px solid var(--chrome-accent); outline-offset: -1px;
+  box-shadow: 0 0 0 2px rgba(200,154,74,.28);
+}
+
+.odds-good { color: #2d6a3a; }
+.odds-even { color: #8a5a14; }
+.odds-bad  { color: var(--red-darker); }
+
+/* =============================================================================
+   RIGHT: UNIFIED COMMAND PANEL (world-cmd)
+   ============================================================================= */
+.world-cmd {
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  border-radius: 10px;
+  background:
+    var(--parchment-noise),
+    linear-gradient(175deg, #fffaf0 0%, #f5ecda 100%);
+  border: 1.5px solid var(--edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 14px rgba(60,40,20,.14);
+}
+
+.cmd-nav {
+  padding: 14px 16px 13px;
+  border-bottom: 1px solid var(--edge);
+  background: linear-gradient(180deg, rgba(125,81,50,.07), transparent);
+}
+.cmd-nav-bar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 11px;
+}
+.cmd-section-title {
+  font-family: var(--font-caps); letter-spacing: .14em; text-transform: uppercase;
+  font-size: 10px; color: var(--wood-dark); font-weight: 700;
+}
+.cmd-coords {
+  font-family: var(--font-cinzel); font-weight: 700; font-size: .66rem;
+  color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cmd-minimap-wrap { display: flex; justify-content: center; }
+.cmd-nav-hint {
+  margin-top: 8px; text-align: center;
+  font-family: var(--font-body); font-style: italic; font-size: .75rem;
+  color: var(--ink-soft);
+}
+.cmd-search {
+  display: flex; gap: 6px; margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--edge);
+}
+.cmd-search-input {
+  flex: 1; min-width: 0;
+  height: 30px; padding: 0 8px;
+  font-family: var(--font-body); font-size: .82rem; color: var(--ink);
+  background: rgba(255,250,236,.7);
+  border: 1px solid var(--wood);
+  border-radius: 4px;
+  outline: none;
+}
+.cmd-search-input:focus {
+  border-color: var(--chrome-accent);
+  box-shadow: 0 0 0 2px rgba(200,154,74,.2);
+}
+.cmd-search-input::placeholder { color: var(--ink-soft); }
+.cmd-search-btn {
+  height: 30px; padding: 0 10px;
+  font-family: var(--font-cinzel); font-weight: 700; font-size: .68rem;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: #fbeec6; cursor: pointer;
+  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 55%, var(--wood-dark) 100%);
+  border: 1px solid var(--wood-dark); border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,248,220,.3), 0 1px 2px rgba(40,24,10,.3);
+}
+.cmd-search-btn:hover {
+  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent));
+  color: #4a2e08;
+}
+
+.cmd-detail {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px 18px;
+}
+.cmd-detail::-webkit-scrollbar { width: 6px; }
+.cmd-detail::-webkit-scrollbar-thumb { background: rgba(120,80,30,.22); border-radius: 3px; }
+
+.cmd-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 26px 12px 10px; }
+.cmd-empty-rose { color: var(--edge); margin-bottom: 12px; }
+.cmd-empty-h { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--ink-soft); }
+.cmd-empty-sub {
+  font-family: var(--font-body); font-style: italic; font-size: .86rem;
+  color: var(--ink-soft); margin-top: 4px; text-wrap: pretty;
+}
+
+/* =============================================================================
+   KINGDOM DETAIL PANEL
+   ============================================================================= */
+.kd-panel { display: flex; flex-direction: column; }
+.kd-head  { display: flex; align-items: flex-start; gap: 11px; }
+.kd-crest {
+  flex: none; width: 36px; height: 41px; display: grid; place-items: center;
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 48%, var(--wood-dark) 100%);
+}
+.kd-crest .shield { color: #fbeec6; }
+.kd-crest.is-self {
+  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent) 55%, #9a6f28);
+}
+.kd-crest.is-self .shield { color: #4a2e08; }
+.kd-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.28rem;
+  line-height: 1.05; color: var(--red-darker);
+}
+.kd-sub {
+  font-family: var(--font-body); font-style: italic; font-size: .88rem;
+  color: var(--ink-soft); margin-top: 2px;
+}
+.kd-actions {
+  display: flex; flex-direction: column; gap: 8px; margin-top: 4px;
+}
+.kd-action-btn {
+  width: 100%; height: 38px; display: flex; align-items: center; justify-content: center;
   text-decoration: none;
-  color: var(--panel-link-color);
-
-  &:hover:not(.map-nav-btn--disabled) {
-    background: var(--panel-link-color);
-    color: #fff;
-  }
-
-  &.map-nav-btn--disabled {
-    opacity: 0.25;
-    cursor: default;
-    pointer-events: none;
-  }
-
-  &.map-nav-btn--N,
-  &.map-nav-btn--S {
-    align-self: center;
-  }
+}
+.kd-action-btn--attack {
+  background: linear-gradient(180deg, #b03a2e 0%, #8c2a1e 100%);
+  border-color: #6e1f15;
+  color: #fbeec6;
+  box-shadow: inset 0 1px 0 rgba(255,200,180,.2), 0 1px 3px rgba(80,20,10,.35);
+}
+.kd-action-btn--attack:hover {
+  background: linear-gradient(180deg, #c04030 0%, #9c3020 100%);
+  color: #fff;
+}
+.kd-action-btn--defend {
+  background: linear-gradient(180deg, #2a5a8c 0%, #1e3f6e 100%);
+  border-color: #152e55;
+  color: #cce0ff;
+  box-shadow: inset 0 1px 0 rgba(180,210,255,.2), 0 1px 3px rgba(10,20,60,.35);
+}
+.kd-action-btn--defend:hover {
+  background: linear-gradient(180deg, #306898 0%, #224878 100%);
+  color: #fff;
+}
+.kd-self-note {
+  font-family: var(--font-body); font-style: italic; font-size: .86rem;
+  color: var(--ink-soft); margin-top: 10px; text-wrap: pretty;
+  padding: 10px 12px; border-radius: 6px;
+  background: rgba(120,80,30,.07); border: 1px dashed var(--edge);
 }
 
 /* =============================================================================

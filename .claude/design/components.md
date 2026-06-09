@@ -21,6 +21,7 @@
 | CommandBar tick | `.tick`, `.tick-l`, `.tick-v` | live | Kingdom chrome | CommandBar — tick display |
 | CommandBar leave | `.leave`, `.leave-l` | live | Kingdom chrome | CommandBar — leave link |
 | CommandBar nav link | `.nav-link`, `.is-on` | live | Kingdom chrome | CommandBar — nav link |
+| NavBadge | `.nav-link-ico`, `.nav-gly-ico`, `.nav-badge`, `badge-glow` keyframe | live | Kingdom chrome | CommandBar — unread badge |
 | SVG glyph | `.gly` | live | Kingdom chrome | Inline SVG glyph via `<use>` |
 | Form field | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Shared components | Fields (from Campaign transfer form) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
@@ -60,3 +61,20 @@
 | Train control | `.train-ctl` | pending | Units | Inline train control |
 | Lock banner | `.lock-banner` | pending | Units | Summons — lock banner |
 | Toast | `.toast` | pending | Units | Toast notification |
+
+---
+
+## World Map  _(handoff: `design_handoff_worldmap_messages/`)_
+
+| Component | Class(es) | Status | styles.css Section | Design Reference |
+|---|---|---|---|---|
+| World page layout | `.world`, `.world-main`, `.world-board`, `.world-cmd` | live | World map | WorldPage |
+| Board head | `.board-head`, `.board-name`, `.board-region`, `.board-stage` | live | World map | WorldPage — board |
+| Flat board | `.map-flat`, `.map-flat-corner`, `.map-flat-cols`, `.map-flat-rows`, `.map-flat-axis`, `.map-flat-grid` | live | World map | FlatBoard |
+| Map tile | `.map-cell`, `.map-cell--occupied`, `.map-cell--own`, `.map-cell--clickable`, `.map-cell--selected` | live | World map | Cell |
+| Map grid container | `.map-grid-container`, `.map-grid-middle` | live | World map | FlatBoard |
+| Kingdom marker | `.map-marker`, `.map-marker--crest`, `.marker-crest`, `.marker-rel-dot`, `.rel-self`, `.rel-neutral` | live | World map | Marker |
+| Command nav | `.cmd-nav`, `.cmd-nav-bar`, `.cmd-section-title`, `.cmd-coords`, `.cmd-minimap-wrap` | live | World map | WorldPage — command panel |
+| Command detail | `.cmd-detail`, `.cmd-empty`, `.cmd-empty-rose`, `.cmd-empty-h`, `.cmd-empty-sub` | live | World map | WorldPage — detail panel |
+| Find bar | `.cmd-search`, `.cmd-search-input`, `.cmd-search-btn` | live | World map | WorldPage — find bar |
+| Kingdom detail panel | `.kd-panel`, `.kd-head`, `.kd-crest`, `.kd-name`, `.kd-sub`, `.kd-actions`, `.kd-action-btn`, `.kd-action-btn--attack`, `.kd-action-btn--defend`, `.kd-self-note` | live | World map | KingdomDetailPanel |

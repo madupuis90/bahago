@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -21,9 +20,9 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // RegisterRoutes wires the world map handler into the router.
@@ -138,27 +137,56 @@ func tileURL(tileX, tileY int) string {
 }
 
 func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
-	return Div(
+	initialSelectedID := 0
+	for _, k := range kingdoms {
+		if strings.EqualFold(k.Name, highlight) {
+			initialSelectedID = k.ID
+			break
+		}
+	}
+
+	return Div(Class("world"),
 		ds.Signals(map[string]any{
-			"selected_kingdom_name": "",
+			"selected_kingdom_id": initialSelectedID,
 		}),
-		H1(Class("page-title"), Text("World Map")),
-		Div(Class("map-info panel"),
-			P(Class("map-coords"),
-				Text(fmt.Sprintf("X: %d-%d, Y: %d-%d", tileX0, tileX0+game.PageSize-1, tileY0, tileY0+game.PageSize-1)),
+		Div(Class("world-main"),
+			Div(Class("world-board"),
+				Div(Class("board-head"),
+					H1(Class("board-name"), Text("World Map")),
+					P(Class("board-region"), Text(fmt.Sprintf("Page %d · %d", pageX, pageY))),
+				),
+				Div(Class("board-stage"),
+					flatBoard(kingdoms, myKingdomID, tileX0, tileY0, initialSelectedID, pageX, pageY),
+				),
 			),
-			findBar(),
+			Div(Class("world-cmd"),
+				Div(Class("cmd-nav"),
+					Div(Class("cmd-nav-bar"),
+						Span(Class("cmd-section-title"), Text("Region")),
+						Span(Class("cmd-coords"),
+							Text(fmt.Sprintf("X %d–%d  Y %d–%d", tileX0, tileX0+game.PageSize-1, tileY0, tileY0+game.PageSize-1)),
+						),
+					),
+					Div(Class("cmd-minimap-wrap"), miniMap(pageX, pageY)),
+					findBar(),
+				),
+				Div(Class("cmd-detail"),
+					Div(
+						If(initialSelectedID != 0, Style("display:none")),
+						ds.Show("$selected_kingdom_id === 0"),
+						emptyState(),
+					),
+					Map(kingdoms, func(k db.GetKingdomsInViewportRow) Node {
+						return kingdomDetail(k, k.ID == myKingdomID, initialSelectedID)
+					}),
+				),
+			),
 		),
-		Div(Class("map-main-row"),
-			mapGrid(kingdoms, myKingdomID, pageX, pageY, tileX0, tileY0, highlight),
-			miniMap(pageX, pageY),
-		),
-		kingdomPopup(),
 	)
 }
 
-// mapGrid renders the 8×8 diamond isometric tile grid with surrounding nav links.
-func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
+// flatBoard renders the 8×8 flat tile grid with surrounding nav buttons and axis labels.
+func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tileY0, initialSelectedID, pageX, pageY int) Node {
 	index := make(map[game.Coord]*db.GetKingdomsInViewportRow, len(kingdoms))
 	for i := range kingdoms {
 		k := &kingdoms[i]
@@ -167,55 +195,37 @@ func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, 
 
 	const maxPage = game.PageCount - 1
 
+	colLabels := make([]Node, game.PageSize)
+	for x := range game.PageSize {
+		colLabels[x] = Div(Class("map-flat-axis"), Text(string(rune('A'+x))))
+	}
+
+	rowLabels := make([]Node, game.PageSize)
+	for y := range game.PageSize {
+		rowLabels[y] = Div(Class("map-flat-axis"), Text(strconv.Itoa(y+1)))
+	}
+
+	// Visual y=0 is the top row, which corresponds to the highest tile Y coordinate.
+	cells := make([]Node, 0, game.PageSize*game.PageSize)
+	for y := range game.PageSize {
+		for x := range game.PageSize {
+			tx := tileX0 + x
+			ty := tileY0 + (game.PageSize - 1 - y)
+			k := index[game.Coord{X: tx, Y: ty}]
+			isOwn := k != nil && k.ID == myKingdomID
+			cells = append(cells, flatCell(k, isOwn, initialSelectedID, tx, ty))
+		}
+	}
+
 	return Div(Class("map-grid-container"),
 		navLink("N", tileX0, tileY0+game.PageSize, pageY < maxPage),
 		Div(Class("map-grid-middle"),
 			navLink("W", tileX0-game.PageSize, tileY0, pageX > 0),
-			Div(Class("map-iso-container"),
-				Div(Class("map-iso-stage"),
-					Div(Class("map-grid"),
-						Map(makeRange((game.PageSize+2)*(game.PageSize+2)), func(i int) Node {
-							col := i % (game.PageSize + 2)
-							row := i / (game.PageSize + 2)
-							// Top-left: X axis name
-							if row == game.PageSize+1 && col == 0 {
-								return axisNameLabelCell("X")
-							}
-							// Top-right: Y axis name
-							if row == 0 && col == game.PageSize+1 {
-								return axisNameLabelCell("Y")
-							}
-							// Top row (rest): blank
-							if row == 0 {
-								return Div(Class("map-axis-label"))
-							}
-							// Left column (rest): blank
-							if col == 0 {
-								return Div(Class("map-axis-label"))
-							}
-							// Right column: Y coord numbers, blank at bottom corner
-							if col == game.PageSize+1 {
-								if row == game.PageSize+1 {
-									return Div(Class("map-axis-label"))
-								}
-								return axisLabelCell(tileY0 + (game.PageSize - row))
-							}
-							// Bottom row: X coord numbers (cols 1..PageSize)
-							if row == game.PageSize+1 {
-								return axisLabelCell(tileX0 + col - 1)
-							}
-							// Tile cells (rows 1..PageSize, cols 1..PageSize)
-							tx := tileX0 + col - 1
-							ty := tileY0 + (game.PageSize - row)
-							k := index[game.Coord{X: tx, Y: ty}]
-							isOwn := k != nil && k.ID == myKingdomID
-							isHighlighted := k != nil && strings.EqualFold(k.Name, highlight)
-							return mapCell(k, isOwn, isHighlighted)
-						}),
-					),
-					Div(Class("map-box-wall--s")),
-					Div(Class("map-box-wall--e")),
-				),
+			Div(Class("map-flat"),
+				Div(Class("map-flat-corner")),
+				Div(Class("map-flat-cols"), Group(colLabels)),
+				Div(Class("map-flat-rows"), Group(rowLabels)),
+				Div(Class("map-flat-grid"), Group(cells)),
 			),
 			navLink("E", tileX0+game.PageSize, tileY0, pageX < maxPage),
 		),
@@ -223,11 +233,141 @@ func mapGrid(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, 
 	)
 }
 
+// flatCell renders a single tile in the flat board grid.
+func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx, ty int) Node {
+	tile, tileDeep := biomeColor(tx, ty)
+	selected := k != nil && k.ID == initialSelectedID
+
+	var dataAttr, onClickAttr Node
+	if k != nil {
+		dataAttr = Data("kingdom-id", strconv.Itoa(k.ID))
+		onClickAttr = ds.On("click", "$selected_kingdom_id = +el.dataset.kingdomId")
+	}
+
+	return Div(
+		Classes{
+			"map-cell":            true,
+			"map-cell--own":       isOwn,
+			"map-cell--occupied":  k != nil,
+			"map-cell--clickable": k != nil,
+			"map-cell--selected":  selected,
+		},
+		Style(fmt.Sprintf("--tile:%s;--tile-deep:%s", tile, tileDeep)),
+		dataAttr,
+		onClickAttr,
+		Div(Class("map-cell-content"),
+			Iff(k != nil, func() Node { return crestMarker(k, isOwn) }),
+		),
+	)
+}
+
+// biomeTints provides deterministic terrain colours for map tiles.
+// Each entry is [tile, tile-deep] (light face, shadow face).
+var biomeTints = [][2]string{
+	{"#a9c47e", "#7f9d5b"},
+	{"#7f9d5b", "#5c7a40"},
+	{"#c6b478", "#a08a50"},
+	{"#8fb4c4", "#6a8a9a"},
+	{"#9aaa7c", "#728a5a"},
+	{"#ab9d82", "#8a7a60"},
+}
+
+// biomeColor returns CSS colour values for a tile at world position (x, y).
+func biomeColor(x, y int) (tile, tileDeep string) {
+	b := biomeTints[(x*3+y*5)%len(biomeTints)]
+	return b[0], b[1]
+}
+
+// crestMarker renders the heraldic kingdom marker placed on an occupied tile.
+func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
+	relClass := "rel-neutral"
+	dotColor := "#3a6390"
+	if isOwn {
+		relClass = "rel-self"
+		dotColor = "var(--chrome-accent)"
+	}
+	return Div(
+		Classes{
+			"map-marker":        true,
+			"map-marker--crest": true,
+			relClass:            true,
+		},
+		Attr("data-tip", k.Name),
+		Div(Class("marker-crest"), Glyph("shield", 13)),
+		Span(Class("marker-rel-dot"), Style("background:"+dotColor)),
+	)
+}
+
+// kingdomDetail renders the right-panel detail card for one kingdom.
+// The card is hidden until $selected_kingdom_id matches k.ID.
+func kingdomDetail(k db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID int) Node {
+	selected := k.ID == initialSelectedID
+	attackHref := routes.KingdomArmyPath + "?target=" + url.QueryEscape(k.Name) + "&action=attack"
+	defendHref := routes.KingdomArmyPath + "?target=" + url.QueryEscape(k.Name) + "&action=defend"
+	msgHref := routes.KingdomMessagesComposePath + "?to=" + url.QueryEscape(k.Name)
+
+	return Div(
+		Class("kd-panel"),
+		If(!selected, Style("display:none")),
+		ds.Show(fmt.Sprintf("$selected_kingdom_id === %d", k.ID)),
+		Div(Class("kd-head"),
+			Div(Classes{"kd-crest": true, "is-self": isOwn}, Glyph("shield", 18)),
+			Div(
+				P(Class("kd-name"), Text(k.Name)),
+				P(Class("kd-sub"), Text(fmt.Sprintf("%d, %d", k.X, k.Y))),
+			),
+		),
+		If(!isOwn, Div(Class("kd-actions"),
+			A(Class("btn kd-action-btn kd-action-btn--attack"), Href(attackHref), Text("Attack")),
+			A(Class("btn kd-action-btn kd-action-btn--defend"), Href(defendHref), Text("Defend")),
+			A(Class("btn kd-action-btn"), Href(msgHref), Text("Message")),
+		)),
+		Iff(isOwn, func() Node {
+			return P(Class("kd-self-note"), Text("This is your home tile."))
+		}),
+	)
+}
+
+// emptyState renders the prompt shown in the command panel before any tile is selected.
+func emptyState() Node {
+	return Div(Class("cmd-empty"),
+		compassRose("cmd-empty-rose"),
+		P(Class("cmd-empty-h"), Text("Select a tile")),
+		P(Class("cmd-empty-sub"), Text("Click any marker on the map to view kingdom details.")),
+	)
+}
+
+// compassRose renders a decorative SVG compass rose.
+func compassRose(class string) Node {
+	return El("svg",
+		Attr("viewBox", "0 0 40 40"),
+		Attr("width", "40"),
+		Attr("height", "40"),
+		Class(class),
+		Attr("fill", "none"),
+		Attr("aria-hidden", "true"),
+		Style("display:block"),
+		El("circle", Attr("cx", "20"), Attr("cy", "20"), Attr("r", "17.5"), Attr("stroke", "currentColor"), Attr("stroke-width", "1")),
+		El("circle", Attr("cx", "20"), Attr("cy", "20"), Attr("r", "12"), Attr("stroke", "currentColor"), Attr("stroke-width", ".6"), Attr("opacity", ".45")),
+		El("path", Attr("d", "M20 3 L23.5 20 L20 37 L16.5 20 Z"), Attr("fill", "currentColor"), Attr("opacity", ".48")),
+		El("path", Attr("d", "M3 20 L20 16.5 L37 20 L20 23.5 Z"), Attr("fill", "currentColor"), Attr("opacity", ".22")),
+		El("text",
+			Attr("x", "20"), Attr("y", "10.5"),
+			Attr("text-anchor", "middle"),
+			Attr("font-size", "6.5"),
+			Attr("font-weight", "700"),
+			Attr("fill", "currentColor"),
+			Attr("font-family", "Cinzel, serif"),
+			Text("N"),
+		),
+	)
+}
+
 // navLink renders a navigation link to an adjacent page. When disabled (at a
 // world edge) it renders a non-interactive span instead.
 func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node {
 	labels := map[string]string{
-		"N": "↑", "S": "↓", "W": "←", "E": "→",
+		"N": "▲", "S": "▼", "W": "◀", "E": "▶",
 	}
 	label := labels[direction]
 	classes := Classes{
@@ -241,95 +381,40 @@ func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node 
 	return A(Href(tileURL(targetTileX, targetTileY)), classes, Text(label))
 }
 
-func mapCell(kingdom *db.GetKingdomsInViewportRow, isOwn, isHighlighted bool) Node {
-	clickable := kingdom != nil && !isOwn
-	var nameAttr, onClickAttr Node
-	if clickable {
-		nameAttr = Data("kingdom-name", kingdom.Name)
-		onClickAttr = ds.On("click", "$selected_kingdom_name = el.dataset.kingdomName")
-	}
-	return Div(
-		Classes{
-			"map-cell":              true,
-			"map-cell--own":         isOwn,
-			"map-cell--occupied":    kingdom != nil && !isOwn,
-			"map-cell--clickable":   clickable,
-			"map-cell--highlighted": isHighlighted,
-		},
-		nameAttr,
-		onClickAttr,
-		Div(Class("map-cell-content"),
-			Iff(kingdom != nil, func() Node {
-				icon := Span(Class("map-icon"), Text([]string{"🛖", "⛩️", "🏡"}[rand.IntN(3)]))
-				if isOwn {
-					icon = Span(Class("map-icon map-icon--own"), Text("🏰"))
-				}
-				return Group([]Node{
-					icon,
-					Span(Class("map-cell-tooltip"), Text(fmt.Sprintf("%s (%d, %d)", kingdom.Name, kingdom.X, kingdom.Y))),
-				})
-			}),
-		),
-	)
-}
-
 // miniMap renders a compact PageCount×PageCount grid showing all world pages.
 // The current page is highlighted; each other page is a navigation link.
 // Rows are rendered top-to-bottom with py = PageCount-1-row so that py=0
 // sits at the visual bottom, matching the Y-flipped main grid.
 func miniMap(pageX, pageY int) Node {
 	cells := make([]Node, 0, game.PageCount*game.PageCount)
-	for row := 0; row < game.PageCount; row++ {
+	for row := range game.PageCount {
 		py := game.PageCount - 1 - row
-		for px := 0; px < game.PageCount; px++ {
+		for px := range game.PageCount {
+			tile, _ := biomeColor(px, py)
+			tileStyle := Style("--tile:" + tile)
 			if px == pageX && py == pageY {
-				cell := Div(Class("map-minimap-cell map-minimap-cell--current"))
-				cells = append(cells, cell)
+				cells = append(cells, Div(Class("map-minimap-cell map-minimap-cell--current"), tileStyle))
 			} else {
-				cell := A(Href(tileURL(px*game.PageSize, py*game.PageSize)), Class("map-minimap-cell"))
-				cells = append(cells, cell)
+				cells = append(cells, A(Href(tileURL(px*game.PageSize, py*game.PageSize)), Class("map-minimap-cell"), tileStyle))
 			}
 		}
 	}
 	return Div(Class("map-minimap"), Group(cells))
 }
 
-// makeRange returns a slice of ints [0, n).
-func makeRange(n int) []int {
-	s := make([]int, n)
-	for i := range s {
-		s[i] = i
-	}
-	return s
-}
-
-// axisLabelCell renders a coordinate number on the grid edge.
-func axisLabelCell(coord int) Node {
-	return Div(Class("map-axis-label"),
-		Div(Class("map-axis-label-content"), Text(strconv.Itoa(coord))),
-	)
-}
-
-// axisNameLabelCell renders an axis name label ("X" or "Y") on the outer edge.
-func axisNameLabelCell(name string) Node {
-	return Div(Class("map-axis-label"),
-		Div(Class("map-axis-label-content map-axis-label-content--name"), Text(name)),
-	)
-}
-
-// findBar renders the kingdom search input and button.
+// findBar renders the kingdom search form in the command panel.
 func findBar() Node {
-	return Div(Class("map-find-bar"),
+	return Div(Class("cmd-search"),
 		Form(
 			ds.On("submit", datastar.PostSSE(routes.KingdomMapFindPath)),
 			Input(
 				Type("text"),
-				Placeholder("Kingdom name"),
-				Class("map-find-input"),
+				Placeholder("Kingdom name…"),
+				Class("cmd-search-input"),
 				ds.Bind("find_name"),
 			),
 			Button(
-				Class("btn"),
+				Class("btn cmd-search-btn"),
 				Type("submit"),
 				Disabled(),
 				ds.Indicator("find_fetching"),
@@ -344,31 +429,4 @@ func findBar() Node {
 // findAlertComponent is the SSE patch target for find errors.
 func findAlertComponent(inner Node) Node {
 	return Div(ID("map-find-alert"), inner)
-}
-
-// kingdomPopup renders a fixed overlay popup that appears when a non-own kingdom
-// tile is clicked. Three action buttons navigate to compose, attack, or defend
-// pages with the target kingdom name pre-filled via query params.
-func kingdomPopup() Node {
-	msgHref := "'" + routes.KingdomMessagesComposePath + "?to='+encodeURIComponent($selected_kingdom_name)"
-	attackHref := "'" + routes.KingdomArmyPath + "?target='+encodeURIComponent($selected_kingdom_name)+'&action=attack'"
-	defendHref := "'" + routes.KingdomArmyPath + "?target='+encodeURIComponent($selected_kingdom_name)+'&action=defend'"
-
-	return Div(Class("map-popup-overlay"),
-		Style("display:none"),
-		ds.Show("$selected_kingdom_name !== ''"),
-		ds.On("click", "$selected_kingdom_name = ''"),
-		Div(Class("map-popup"),
-			ds.On("click", "{}", ds.ModifierStop),
-			Div(Class("map-popup-header"),
-				P(Class("map-popup-name"), ds.Text("$selected_kingdom_name")),
-				Button(Class("map-popup-close"), ds.On("click", "$selected_kingdom_name = ''"), Text("×")),
-			),
-			Div(Class("map-popup-actions"),
-				A(Class("btn map-popup-btn"), Href("#"), ds.Attr("href", msgHref), Text("✉️ Send Message")),
-				A(Class("btn map-popup-btn map-popup-btn--attack"), Href("#"), ds.Attr("href", attackHref), Text("⚔️ Attack")),
-				A(Class("btn map-popup-btn map-popup-btn--defend"), Href("#"), ds.Attr("href", defendHref), Text("🛡 Defend")),
-			),
-		),
-	)
 }
