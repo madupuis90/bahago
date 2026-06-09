@@ -197,12 +197,12 @@ func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tile
 
 	colLabels := make([]Node, game.PageSize)
 	for x := range game.PageSize {
-		colLabels[x] = Div(Class("map-flat-axis"), Text(string(rune('A'+x))))
+		colLabels[x] = Div(Class("map-flat-axis"), Text(strconv.Itoa(tileX0+x)))
 	}
 
 	rowLabels := make([]Node, game.PageSize)
 	for y := range game.PageSize {
-		rowLabels[y] = Div(Class("map-flat-axis"), Text(strconv.Itoa(y+1)))
+		rowLabels[y] = Div(Class("map-flat-axis"), Text(strconv.Itoa(tileY0+(game.PageSize-1-y))))
 	}
 
 	// Visual y=0 is the top row, which corresponds to the highest tile Y coordinate.
