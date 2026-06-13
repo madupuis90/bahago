@@ -98,6 +98,7 @@ SELECT
     m.body,
     m.action_url,
     m.action_text,
+    m.is_guild_message,
     m.read_at,
     m.created_at,
     fk.name AS from_kingdom_name,
@@ -121,8 +122,9 @@ type GetInboxMessageByIDRow struct {
 	ToKingdomID     int
 	Subject         string
 	Body            string
-	ActionUrl       pgtype.Text
-	ActionText      pgtype.Text
+	ActionUrl       string
+	ActionText      string
+	IsGuildMessage  bool
 	ReadAt          pgtype.Timestamptz
 	CreatedAt       time.Time
 	FromKingdomName string
@@ -140,6 +142,7 @@ func (q *Queries) GetInboxMessageByID(ctx context.Context, arg GetInboxMessageBy
 		&i.Body,
 		&i.ActionUrl,
 		&i.ActionText,
+		&i.IsGuildMessage,
 		&i.ReadAt,
 		&i.CreatedAt,
 		&i.FromKingdomName,
@@ -157,6 +160,8 @@ SELECT
     m.body,
     m.read_at,
     m.created_at,
+    m.is_guild_message,
+    (m.action_url != '') AS has_action,
     fk.name AS from_kingdom_name
 FROM kingdom_messages m
 JOIN kingdoms fk ON fk.id = m.from_kingdom_id
@@ -174,6 +179,8 @@ type ListInboxMessagesRow struct {
 	Body            string
 	ReadAt          pgtype.Timestamptz
 	CreatedAt       time.Time
+	IsGuildMessage  bool
+	HasAction       bool
 	FromKingdomName string
 }
 
@@ -194,6 +201,8 @@ func (q *Queries) ListInboxMessages(ctx context.Context, toKingdomID int) ([]Lis
 			&i.Body,
 			&i.ReadAt,
 			&i.CreatedAt,
+			&i.IsGuildMessage,
+			&i.HasAction,
 			&i.FromKingdomName,
 		); err != nil {
 			return nil, err

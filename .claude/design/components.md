@@ -16,6 +16,7 @@
 | Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) | live | Kingdom chrome | Resource gems |
 | Alert | `.alert--error`, `.alert--success` | live | Shared components | Alert |
 | CommandBar chrome | `.bar`, `.barB2`, `.barB2-info`, `.barB2-res`, `.barB2-right`, `.barB2-nav`, `.barB2-nav--ico` | live | Kingdom chrome | CommandBar (chrome redesign) |
+| Chrome field pattern | `--chrome-bg` (CSS custom property) | live | Tokens | P3: single horizontal timber seam at `62%`; replaced 95° repeating diagonal seams |
 | CommandBar identity | `.id`, `.id-crest`, `.crest`, `.crest-frame`, `.crest-shield`, `.crest-glyph`, `.id-name`, `.id-sub` | live | Kingdom chrome | CommandBar — identity block |
 | CommandBar resource pill | `.pill`, `.pill-txt`, `.pill-l`, `.pill-v`, `.is-zero` | live | Kingdom chrome | CommandBar — resource pill |
 | CommandBar tick | `.tick`, `.tick-l`, `.tick-v` | live | Kingdom chrome | CommandBar — tick display |

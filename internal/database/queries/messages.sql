@@ -7,6 +7,8 @@ SELECT
     m.body,
     m.read_at,
     m.created_at,
+    m.is_guild_message,
+    (m.action_url != '') AS has_action,
     fk.name AS from_kingdom_name
 FROM kingdom_messages m
 JOIN kingdoms fk ON fk.id = m.from_kingdom_id
@@ -24,6 +26,7 @@ SELECT
     m.body,
     m.action_url,
     m.action_text,
+    m.is_guild_message,
     m.read_at,
     m.created_at,
     fk.name AS from_kingdom_name,
