@@ -25,6 +25,10 @@
 | NavBadge | `.nav-link-ico`, `.nav-gly-ico`, `.nav-badge`, `badge-glow` keyframe | live | Kingdom chrome | CommandBar — unread badge |
 | SVG glyph | `.gly` | live | Kingdom chrome | Inline SVG glyph via `<use>` |
 | Form field | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Shared components | Fields (from Campaign transfer form) |
+| Textarea field | `textarea.field` · `.field-hint-row` | live | Shared components | Fields (textarea extension — guild handoff) |
+| Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live | Shared components | Section header (guild handoff) |
+| Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` | live | Shared components | Card header (guild handoff) |
+| Eyebrow | `.eyebrow` | live | Shared components | Eyebrow (guild handoff) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |
 | Roster strip / unit token | `.roster-strip`, `.unit-token`, `.unit-medallion`, `.unit-tally`, `.roster-more`, `.roster-empty` | live | Army + Units | Roster / unit token |
@@ -79,3 +83,29 @@
 | Command detail | `.cmd-detail`, `.cmd-empty`, `.cmd-empty-rose`, `.cmd-empty-h`, `.cmd-empty-sub` | live | World map | WorldPage — detail panel |
 | Find bar | `.cmd-search`, `.cmd-search-input`, `.cmd-search-btn` | live | World map | WorldPage — find bar |
 | Kingdom detail panel | `.kd-panel`, `.kd-head`, `.kd-crest`, `.kd-name`, `.kd-sub`, `.kd-actions`, `.kd-action-btn`, `.kd-action-btn--attack`, `.kd-action-btn--defend`, `.kd-self-note` | live | World map | KingdomDetailPanel |
+
+---
+
+## Guild  _(handoff: `design_handoff_guild/`)_
+
+| Component | Class(es) | Status | styles.css Section | Design Reference |
+|---|---|---|---|---|
+| Table / ledger | `.table` (full design-system version) | live | Guild | Table / ledger |
+| Table identity cell | `.table-id` · `.table-id-name` · `.table-id-sub` | live | Guild | Table identity cell |
+| Sortable head | `.table-sort` · `.sort-diamond` | live | Guild | Sortable head |
+| Empty state | `.empty-state` (`--row`) · `.empty-state-title` · `.empty-state-hint` | live | Guild | Empty state |
+| Guild crest slot | `.guild-crest` (`--sm`/`--lg`/`--empty`) · `.guild-crest-tag` | live | Guild | Guild crest slot |
+| Support meter | `.meter--support` · `.meter-fill--support` · `.seal-cell` · `.seal-count` | live | Guild | Support meter |
+| Role tag | `.role-tag` (`--leader`/`--officer`/`--supporter`) | live | Guild | Role tag |
+| Door layout | `.doors` · `.door` · `.door-inner` · `.door-crest` · `.door-title` · `.door-text` · `.door-meta` · `.doors-seam` · `.seam-rule` · `.seam-or` | live | Guild | Door layout |
+| Guild head | `.guild-head` (`--row`) · `.guild-meta` · `.guild-meta-sep` | live | Guild | Guild head |
+| Standing bar | `.standing-bare` (`--foot`) · `.standing-actions` · `.standing-note` | live | Guild | Standing bar |
+| Manage head | `.manage-head` · `.manage-head-body` · `.manage-head-guild` · `.manage-head-sub` · `.manage-back` | live | Guild | Manage head |
+| Invite form | `.invite-form` · `.invite-row` | live | Guild | Invite form |
+| Leader grid | `.manage-leader-grid` | live | Guild | Leader grid |
+| Disband note | `.disband-note` | live | Guild | Disband note |
+| Charter layout | `.charter-wrap` · `.charter-grid` · `.charter-form` · `.charter-actions` · `.charter-oath` | live | Guild | Charter layout |
+| Founding rite | `.rite-list` · `.rite-body` · `.rite-name` · `.rite-text` · `.rite-note` | live | Guild | Founding rite |
+| Roll grid | `.roll-grid` · `.charter-item` · `.charter-item-head` · `.charter-item-foot` · `.charter-lapse` | live | Guild | Roll grid |
+| Viewer row | `.is-you` · `.you-mark` | live | Guild | Viewer row |
+| Ledger footnote | `.ledger-footnote` | live | Guild | Ledger footnote |

@@ -682,7 +682,6 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	slug := g.Slug
 	isLeader := viewerRole.IsLeader()
 
-	// Build member options for transfer leadership select.
 	eligibleMembers := make([]db.ListGuildMembersWithNamesRow, 0)
 	for _, m := range members {
 		if r := _guild.MemberRole(m.Role); r == _guild.RoleMember || r == _guild.RoleOfficer {
@@ -691,168 +690,216 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	}
 
 	return Div(
-		H1(Class("page-title"), Text("Manage "+g.Name)),
+		// Compact manage head — crest + guild name + back link
+		Div(Class("manage-head"),
+			El("span", Class("guild-crest guild-crest--sm guild-crest--empty"),
+				Icon("star", 15, false),
+			),
+			Div(Class("manage-head-body"),
+				Div(Class("manage-head-guild"), Text(g.Name)),
+				Div(Class("manage-head-sub"), Text("Manage")),
+			),
+			A(Href(slugURL(routes.GuildViewPath, slug)), Class("manage-back"), Text("← Guild page")),
+		),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
 		guildAlert(nil),
-		A(Href(slugURL(routes.GuildViewPath, slug)), Text("← Back to guild page")),
 
-		// ── Join Requests section
-		Iff(len(pending) > 0, func() Node {
-			return Div(Class("guild-manage-section panel"),
-				P(Class("panel-title"), Text("Join Requests")),
-				Table(Class("guild-member-table"),
+		// ── Join Requests
+		Div(Class("card"), Div(Class("card-inner"),
+			Div(Class("section-header"),
+				Div(Class("section-title"), Text("Join Requests")),
+				Div(Class("section-rule")),
+				Iff(len(pending) > 0, func() Node {
+					return Span(Class("section-meta"), Text(fmt.Sprintf("%d pending", len(pending))))
+				}),
+			),
+			Iff(len(pending) == 0, func() Node {
+				return Div(Class("empty-state empty-state--row"),
+					Icon("person", 22, false),
+					Div(Class("empty-state-title"), Text("No requests await")),
+				)
+			}),
+			Iff(len(pending) > 0, func() Node {
+				return Table(Class("table"),
 					THead(Tr(
 						Th(Text("Kingdom")),
-						Th(Text("Actions")),
+						Th(Class("is-actions")),
 					)),
 					TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
 						return Tr(
-							Td(Text(p.KingdomName)),
-							Td(
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))), Text("Approve")),
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))), Text("Reject")),
-							),
+							Td(Span(Class("table-id-name"), Text(p.KingdomName))),
+							Td(Class("is-actions"), Div(Class("table-actions"),
+								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))), Text("Approve")),
+								Button(Class("btn btn--sm btn--danger"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))), Text("Reject")),
+							)),
 						)
 					})),
-				),
-			)
-		}),
+				)
+			}),
+		)),
 
-		// ── Members section
-		Div(Class("guild-manage-section panel"),
-			P(Class("panel-title"), Text("Members")),
-			Table(Class("guild-member-table"),
+		// ── Members
+		Div(Class("card"), Div(Class("card-inner"),
+			Div(Class("section-header"),
+				Div(Class("section-title"), Text("Members")),
+				Div(Class("section-rule")),
+				Span(Class("section-meta"), Text(fmt.Sprintf("%d of 20", countActiveMembers(members)))),
+			),
+			Table(Class("table"),
 				THead(Tr(
 					Th(Text("Kingdom")),
-					Th(Text("Role")),
-					Th(Text("Actions")),
+					Th(Text("Standing")),
+					Th(Class("is-actions")),
 				)),
 				TBody(Map(members, func(m db.ListGuildMembersWithNamesRow) Node {
-					if _guild.MemberRole(m.Role) == _guild.RoleLeader {
-						return Tr(
-							Td(Text(m.KingdomName)),
-							Td(Text("Leader")),
-							Td(),
-						)
-					}
-					canRemove := viewerRole.CanRemoveTarget(_guild.MemberRole(m.Role))
+					role := _guild.MemberRole(m.Role)
+					canRemove := viewerRole.CanRemoveTarget(role)
 					return Tr(
-						Td(Text(m.KingdomName)),
-						Td(Text(_guild.MemberRole(m.Role).Display())),
-						Td(
-							If(isLeader && _guild.MemberRole(m.Role) == _guild.RoleMember,
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildPromotePath, slug, m.KingdomID))), Text("Promote")),
+						Td(Span(Class("table-id-name"), Text(m.KingdomName))),
+						Td(guildRoleTag(role)),
+						Td(Class("is-actions"), Div(Class("table-actions"),
+							If(isLeader && role == _guild.RoleMember,
+								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildPromotePath, slug, m.KingdomID))), Text("Promote")),
 							),
-							If(isLeader && _guild.MemberRole(m.Role) == _guild.RoleOfficer,
-								Button(Class("btn"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildDemotePath, slug, m.KingdomID))), Text("Demote")),
+							If(isLeader && role == _guild.RoleOfficer,
+								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildDemotePath, slug, m.KingdomID))), Text("Demote")),
 							),
 							If(canRemove,
-								Button(Class("btn btn--danger"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRemoveMemberPath, slug, m.KingdomID))), Text("Remove")),
+								Button(Class("btn btn--sm btn--danger"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRemoveMemberPath, slug, m.KingdomID))), Text("Remove")),
 							),
-						),
+						)),
 					)
 				})),
 			),
-		),
+		)),
 
-		// ── Invite section
-		Div(Class("guild-manage-section panel"),
-			P(Class("panel-title"), Text("Invite a Kingdom")),
+		// ── Invite a Kingdom
+		Div(Class("card"), Div(Class("card-inner"),
+			Div(Class("section-header"),
+				Div(Class("section-title"), Text("Invite a Kingdom")),
+				Div(Class("section-rule")),
+			),
 			ds.Signals(map[string]any{"invite_kingdom_name": ""}),
-			Div(Class("form-fields"),
-				Label(For("guild-invite-input"), Text("Kingdom Name")),
-				Input(ID("guild-invite-input"), Type("text"), ds.Bind("invite_kingdom_name"),
-					Placeholder("Kingdom name"),
+			Div(Class("invite-form"),
+				Div(Class("invite-row"),
+					Input(Class("field"), Type("text"), ds.Bind("invite_kingdom_name"),
+						Placeholder("Kingdom name"),
+					),
+					Button(Class("btn"),
+						ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildInvitePath, slug))),
+						Text("Send Invitation"),
+					),
 				),
 			),
-			Button(Class("btn"),
-				ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildInvitePath, slug))),
-				Text("Send Invitation"),
-			),
-		),
+		)),
 
-		// ── Pending invitations
+		// ── Pending Invitations
 		Iff(len(invitations) > 0, func() Node {
-			return Div(Class("guild-manage-section panel"),
-				P(Class("panel-title"), Text("Pending Invitations")),
-				Table(Class("guild-member-table"),
+			return Div(Class("card"), Div(Class("card-inner"),
+				Div(Class("section-header"),
+					Div(Class("section-title"), Text("Pending Invitations")),
+					Div(Class("section-rule")),
+				),
+				Table(Class("table"),
 					THead(Tr(
 						Th(Text("Kingdom")),
-						Th(Text("Actions")),
+						Th(Class("is-actions")),
 					)),
 					TBody(Map(invitations, func(inv db.ListGuildInvitationsRow) Node {
 						return Tr(
-							Td(Text(inv.KingdomName)),
-							Td(
-								Button(Class("btn btn--danger"),
+							Td(Span(Class("table-id-name"), Text(inv.KingdomName))),
+							Td(Class("is-actions"), Div(Class("table-actions"),
+								Button(Class("btn btn--sm btn--danger"),
 									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildInvitationRevokePath, slug, inv.ID))),
 									Text("Revoke"),
 								),
-							),
+							)),
 						)
 					})),
 				),
-			)
+			))
 		}),
 
-		// ── Leader-only section
+		// ── Leader-only sections
 		If(isLeader, guildLeaderActions(g, eligibleMembers)),
-		If(isLeader,
-			Div(Class("guild-manage-section panel"),
-				P(Class("panel-title"), Text("Guild Settings")),
-				A(Href(slugURL(routes.GuildSettingsPath, slug)), Class("btn"), Text("Manage Settings")),
-			),
-		),
 	)
+}
+
+func countActiveMembers(members []db.ListGuildMembersWithNamesRow) int {
+	n := 0
+	for _, m := range members {
+		if _guild.MemberRole(m.Role).IsActiveMember() {
+			n++
+		}
+	}
+	return n
 }
 
 func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNamesRow) Node {
 	slug := g.Slug
-	editDescURL := slugURL(routes.GuildEditDescriptionPath, slug)
-	transferURL := slugURL(routes.GuildTransferLeadershipPath, slug)
-	disbandURL := slugURL(routes.GuildDisbandPath, slug)
-	return Div(Class("guild-manage-section panel"),
-		P(Class("panel-title"), Text("Leader Actions")),
-
-		// Edit description
-		ds.Signals(map[string]any{
-			"guild_description": g.Description,
-		}),
-		Div(Class("form-fields"),
-			Label(For("guild-desc-edit"), Text("Description")),
-			El("textarea", ID("guild-desc-edit"), ds.Bind("guild_description"),
-				Attr("rows", "4"), MaxLength("500"),
-			),
-			Button(Class("btn"),
-				ds.On("click", datastar.PostSSE("%s", editDescURL)),
-				Text("Save Description"),
-			),
-		),
-
-		// Transfer leadership
-		Iff(len(eligibleMembers) > 0, func() Node {
-			return Div(Class("guild-transfer"),
-				ds.Signals(map[string]any{
-					"target_kingdom_id": eligibleMembers[0].KingdomID,
-				}),
-				Label(For("guild-transfer-select"), Text("Transfer Leadership to")),
-				Select(ID("guild-transfer-select"),
-					ds.Bind("target_kingdom_id"),
-					Map(eligibleMembers, func(m db.ListGuildMembersWithNamesRow) Node {
-						return Option(Value(strconv.Itoa(m.KingdomID)), Text(m.KingdomName))
-					}),
+	return Div(
+		// Charter + Transfer side-by-side
+		Div(Class("manage-leader-grid"),
+			// Edit charter
+			Div(Class("card"), Div(Class("card-inner"),
+				Div(Class("card-header"), H3(Class("card-title"), Text("The Charter"))),
+				ds.Signals(map[string]any{"guild_description": g.Description}),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("guild-desc-edit"), Text("Description")),
+					El("textarea", ID("guild-desc-edit"), Class("field"),
+						ds.Bind("guild_description"), MaxLength("500"),
+					),
 				),
 				Button(Class("btn"),
-					ds.On("click", datastar.PostSSE("%s", transferURL)),
-					Text("Transfer Leadership"),
+					ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildEditDescriptionPath, slug))),
+					Text("Save"),
 				),
-			)
-		}),
-
-		// Disband
-		Button(Class("btn btn--danger"),
-			ds.On("click", datastar.PostSSE("%s", disbandURL)),
-			Text("Disband Guild"),
+			)),
+			// Transfer leadership
+			Div(Class("card"), Div(Class("card-inner"),
+				Div(Class("card-header"), H3(Class("card-title"), Text("Transfer Leadership"))),
+				Iff(len(eligibleMembers) == 0, func() Node {
+					return Div(Class("empty-state empty-state--row"),
+						Div(Class("empty-state-hint"), Text("No eligible members to transfer to.")),
+					)
+				}),
+				Iff(len(eligibleMembers) > 0, func() Node {
+					return Div(
+						ds.Signals(map[string]any{"target_kingdom_id": eligibleMembers[0].KingdomID}),
+						Div(Class("field-group"),
+							Label(Class("field-label"), For("guild-transfer-select"), Text("New leader")),
+							El("select", ID("guild-transfer-select"), Class("field"),
+								ds.Bind("target_kingdom_id"),
+								Map(eligibleMembers, func(m db.ListGuildMembersWithNamesRow) Node {
+									return El("option", Value(strconv.Itoa(m.KingdomID)), Text(m.KingdomName))
+								}),
+							),
+						),
+						Button(Class("btn"),
+							ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildTransferLeadershipPath, slug))),
+							Text("Transfer Leadership"),
+						),
+					)
+				}),
+			)),
 		),
+
+		// Danger zone — disband + settings
+		Div(Class("card"), Div(Class("card-inner"),
+			Div(Class("section-header"),
+				Div(Class("section-title"), Text("Danger Zone")),
+				Div(Class("section-rule")),
+			),
+			P(Class("disband-note"), Text("Disbanding the guild removes all members and cannot be undone.")),
+			Div(Style("display:flex; gap:12px; flex-wrap:wrap;"),
+				Button(Class("btn btn--danger"),
+					ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildDisbandPath, slug))),
+					Text("Disband Guild"),
+				),
+				A(Href(slugURL(routes.GuildSettingsPath, slug)), Class("btn btn--quiet"),
+					Text("Guild Settings"),
+				),
+			),
+		)),
 	)
 }
