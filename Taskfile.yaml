@@ -17,12 +17,13 @@ tasks:
   # --- Development & Build (go) ---
   dev:
     desc: Start the live-reload development server
+    deps: [css:build]
     cmds:
       - '{{.AIR}} -c .air.toml'
 
   build:
     desc: Build the production binary
-    deps: [gen, test]
+    deps: [css:build, gen, test]
     cmds:
       - 'go build -o bin/{{.APP_NAME}} ./cmd/server/main.go'
 
@@ -46,6 +47,16 @@ tasks:
     cmds:
       - go mod tidy
       - go mod verify
+
+  # --- CSS Build ---
+  css:build:
+    desc: Concatenate CSS source files in web/static/css/ into web/static/styles.css
+    sources:
+      - 'web/css/*.css'
+    generates:
+      - 'web/static/styles.css'
+    cmds:
+      - 'cat web/css/*.css > web/static/styles.css'
 
   # --- Code Generation (sqlc) ---
   gen:

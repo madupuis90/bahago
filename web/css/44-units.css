@@ -1,0 +1,444 @@
+/* =============================================================================
+   Units
+   ============================================================================= */
+
+/* --- portraits --- */
+
+.unit-portrait {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  border: 2px solid var(--wood);
+  background: linear-gradient(180deg, #efe3bf, #e6d8b2);
+  box-shadow: inset 0 2px 5px rgba(60, 40, 20, 0.35);
+  flex-shrink: 0;
+}
+
+.unit-portrait--empty {
+  background:
+    repeating-linear-gradient(45deg, rgba(125, 81, 50, 0.10) 0 6px, transparent 6px 12px),
+    linear-gradient(180deg, #efe3bf, #e3d4ab);
+}
+
+.unit-portrait--lg {
+  width: 84px;
+  height: 84px;
+}
+
+.unit-portrait--sm {
+  width: 46px;
+  height: 46px;
+  border-width: 1.5px;
+  border-radius: 6px;
+}
+
+/* --- attribute chips --- */
+
+.kattr {
+  display: inline-flex;
+  font-family: var(--font-cinzel);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 3px;
+  color: var(--ink-soft);
+  background: rgb(255 250 236 / .6);
+  border: 1px solid var(--edge);
+}
+
+.kattr--offense { color: #7a1818; background: rgb(168 50 50 / .12); border-color: rgb(122 24 24 / .35); }
+.kattr--ward    { color: #2a4a6a; background: rgb(72 112 165 / .12); border-color: rgb(42 74 106 / .35); }
+.kattr--arcane  { color: #4a2e62; background: rgb(116 84 143 / .15); border-color: rgb(74 46 98 / .38); }
+.kattr--faith   { color: #7a2030; background: rgb(176 72 88 / .12); border-color: rgb(122 32 48 / .32); }
+.kattr--drawback { color: #7a521a; background: rgb(184 133 38 / .15); border-color: rgb(122 84 26 / .38); }
+
+.kattr-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* --- tick-progress meter --- */
+
+.kmeter {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.kmeter-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kmeter-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.08rem;
+  color: var(--ink);
+}
+
+.kmeter-eta {
+  font-family: var(--font-cinzel);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: #9a6f28;
+}
+
+.kmeter-track {
+  position: relative;
+  height: 13px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #4a2e18, var(--wood-dark));
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, .55);
+}
+
+.kmeter-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 99px 0 0 99px;
+  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent) 55%, #9a6f28);
+  transition: width .4s ease;
+}
+
+.kmeter-ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(255, 248, 220, .5) 0 1px,
+    transparent 1px calc(100% / var(--kmeter-steps, 6))
+  );
+}
+
+.kmeter-row {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 2px;
+}
+
+/* --- roster grid --- */
+
+.muster-roll-head,
+.unit-row,
+.muster-roll-foot {
+  display: grid;
+  grid-template-columns: 72px minmax(150px, 1fr) 88px 74px 112px 150px;
+  column-gap: 15px;
+}
+
+.muster-roll-head {
+  padding: 0 4px 10px;
+  border-bottom: 1.5px solid var(--edge);
+  font-family: var(--font-caps);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+.unit-row {
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgb(0 0 0 / .07);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.is-locked {
+    opacity: .58;
+    filter: saturate(.45);
+
+    & .unit-train {
+      filter: none;
+      opacity: 1;
+    }
+  }
+}
+
+.muster-roll-foot {
+  padding: 12px 4px 2px;
+  border-top: 1.5px solid var(--edge);
+  align-items: baseline;
+}
+
+.mf-upkeep-val {
+  font-family: var(--font-cinzel);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-negative);
+}
+
+/* --- unit token (portrait + tally badge) --- */
+
+.unit-token {
+  position: relative;
+  display: inline-flex;
+  justify-self: start;
+}
+
+.unit-tally {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 42%);
+  min-width: 26px;
+  padding: 1px 7px;
+  font-family: var(--font-cinzel);
+  font-weight: 700;
+  font-size: .76rem;
+  color: var(--ink);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-deep) 100%);
+  border: 1.5px solid var(--wood);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,248,220,.85), 0 1px 2px rgba(60,40,20,.32);
+  white-space: nowrap;
+
+  &::before, &::after { content: ''; position: absolute; top: 2px; width: 4px; height: 2px; background: var(--wood); }
+  &::before { left: -4px; }
+  &::after { right: -4px; }
+}
+
+/* --- stat pills --- */
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 99px;
+  background: rgb(125 81 50 / .08);
+  border: 1px solid var(--edge);
+  font-family: var(--font-cinzel);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.stat-pill--drain {
+  background: rgb(168 50 50 / .07);
+  border-color: rgb(122 24 24 / .20);
+}
+
+.stat-pill--short {
+  background: rgb(168 50 50 / .10);
+  border-color: rgb(122 24 24 / .30);
+}
+
+.pill-res {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pill-neg {
+  color: rgb(168 50 50 / .85);
+}
+
+/* --- host card layout --- */
+
+.host-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.unit-cost {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* --- host summary strip --- */
+
+.host-summary {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: 22px;
+  background: rgb(255 250 236 / .5);
+  border: 1.5px solid var(--edge);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.host-summary-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 20px;
+
+  & + .host-summary-stat {
+    border-left: 1px solid var(--edge);
+  }
+}
+
+.hs-label {
+  font-family: var(--font-caps);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+.hs-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.7rem;
+  color: var(--ink);
+
+  &.neg {
+    color: var(--color-negative);
+  }
+}
+
+.hs-sub {
+  font-family: var(--font-cinzel);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+}
+
+/* --- training slot panel --- */
+
+.card-h-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+
+  & .card-h {
+    margin-bottom: 0;
+  }
+}
+
+.slot-gauge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.slot-gauge-label {
+  font-family: var(--font-caps);
+  letter-spacing: .08em;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.slot-gauge-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--wood);
+  background: rgb(255 250 236 / .5);
+
+  &.is-on {
+    background: radial-gradient(circle at 38% 32%, var(--chrome-accent-light) 0%, var(--chrome-accent) 50%, #9a6f28 100%);
+    border-color: #7a5418;
+  }
+}
+
+.train-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 6px;
+}
+
+.train-slot {
+  &.is-active {
+    padding: 11px 14px;
+    border: 1px solid var(--edge);
+    background: rgb(255 250 236 / .42);
+  }
+
+  &.is-idle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 17px 16px;
+    border: 1.5px dashed var(--edge);
+    background: rgb(255 250 236 / .18);
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+  }
+}
+
+/* --- inline train control --- */
+
+.unit-train {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.train-ctl {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.train-count {
+  width: 70px;
+  text-align: right;
+  height: 30px;
+  font-family: var(--font-cinzel);
+  font-weight: 600;
+}
+
+/* --- lock note --- */
+
+.unit-lock-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.unit-upkeep--none {
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+/* --- lock banner (summons gate) --- */
+
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: rgb(116 84 143 / .10);
+  border: 1px solid rgb(74 46 98 / .30);
+
+  & .shield {
+    color: #5a3e72;
+    flex: none;
+  }
+
+  & b {
+    font-weight: 700;
+  }
+}
+

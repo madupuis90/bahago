@@ -25,21 +25,33 @@ type ForgotPasswordForm struct {
 
 func (h *handler) forgotPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		HomeLayout(r, "Forgot Password", forgotPasswordContent()).Render(w)
+		AuthLayout(r, "Recover Your Realm", forgotPasswordContent()).Render(w)
 	}
 }
 
 func forgotPasswordContent() Node {
-	return Div(Class("auth-card panel"),
-		H1(Text("Reset your password")),
-		Div(Class("form-fields"),
-			Label(Text("Email"), Input(Type("email"), ds.Bind("email"))),
+	return Div(Class("auth-wrap"),
+		authCrest(),
+		P(Class("auth-wordmark"), Text("Bahago")),
+		P(Class("auth-tagline"), Text("Recover access to your realm")),
+		Hr(Class("auth-divider")),
+		Div(Class("auth-body"),
+			P(Class("auth-instruct"), Text("Enter your email address and we'll send you a recovery scroll.")),
+			Form(Class("auth-form"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("email"), Text("Email")),
+					Input(ID("email"), Type("email"), ds.Bind("email")),
+				),
+			),
+			Button(Class("btn auth-btn"),
+				Text("Send Recovery Scroll"),
+				ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
+			),
+			authAlert(nil),
+			Div(Class("auth-foot"),
+				A(Class("auth-foot-link auth-foot-link--muted"), Href(routes.LoginPath), Text("← Return to Sign In")),
+			),
 		),
-		Button(Class("btn"),
-			Text("Send reset link"),
-			ds.On("click", datastar.PostSSE(routes.ForgotPasswordPath)),
-		),
-		authAlert(nil),
 	)
 }
 

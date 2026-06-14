@@ -35,6 +35,18 @@
 
 ---
 
+## Home & Auth  _(handoff: `design_handoff_home_auth/`)_
+
+| Component | Class(es) | Status | styles.css Section | Design Reference |
+|---|---|---|---|---|
+| Home chrome bar | `.home-chrome`, `.home-chrome-brand`, `.home-chrome-crest`, `.home-chrome-name`, `.home-chrome-sep`, `.home-chrome-nav`, `.home-chrome-right`, `.home-chrome-register`, `.home-chrome-login` | live | Home shell | Home & Auth |
+| Auth stage + card | `.auth-stage`, `.auth-wrap`, `.auth-wrap--wide`, `.auth-body`, `.auth-crest`, `.crest-lg`, `.auth-wordmark`, `.auth-tagline`, `.auth-divider`, `.auth-form`, `.auth-btn`, `.auth-quiet`, `.auth-foot`, `.auth-foot-text`, `.auth-foot-link`, `.auth-foot-link--muted`, `.auth-instruct`, `.auth-alert`, `.auth-alert--success` | live | Auth | Home & Auth |
+| Password toggle | `.password-field`, `.btn-text` | live | Shared components | Home & Auth |
+| Side nav live indicator | `.nav-live`, `.nav-live-dot`, `.nav-live-n`, `.nav-live-l` | live | Home shell | Home & Auth |
+| Home hero | `.home-hero`, `.home-hero-title`, `.home-hero-sub`, `.home-hero-cta`, `.home-rule`, `.home-cards`, `.home-card` | live | Home (flip card) | Home & Auth |
+
+---
+
 ## Campaign / Army  _(handoff: `design_handoff_campaign/`)_
 
 | Component | Class(es) | Status | styles.css Section | Design Reference |

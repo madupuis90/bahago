@@ -30,38 +30,43 @@ func (h *handler) resetPasswordPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)
 		if !isValidToken(token) {
-			HomeLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
+			AuthLayout(r, "Verification Failed", invalidTokenContent()).Render(w)
 			return
 		}
-		HomeLayout(r, "Reset Password", resetPasswordContent(token)).Render(w)
+		AuthLayout(r, "Choose a New Password", resetPasswordContent(token)).Render(w)
 	}
 }
 
 func resetPasswordContent(token string) Node {
-	return Div(Class("auth-card panel"),
+	return Div(Class("auth-wrap"),
 		ds.Signals(map[string]any{
 			"token":        token,
 			"showPassword": false,
 		}),
-		H1(Text("Choose a new password")),
-		Div(Class("form-fields"),
-			Label(
-				Text("New password"),
-				Div(Class("password-field"),
-					Input(ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
-					Button(Class("btn-text"),
-						Type("button"),
-						ds.Text("$showPassword ? 'Hide' : 'Show'"),
-						ds.On("click", "$showPassword = !$showPassword"),
+		authCrest(),
+		P(Class("auth-wordmark"), Text("Bahago")),
+		P(Class("auth-tagline"), Text("Choose a new password")),
+		Hr(Class("auth-divider")),
+		Div(Class("auth-body"),
+			Form(Class("auth-form"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("password"), Text("New password")),
+					Div(Class("password-field"),
+						Input(ID("password"), ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+						Button(Class("btn-text"),
+							Type("button"),
+							ds.Text("$showPassword ? 'Hide' : 'Show'"),
+							ds.On("click", "$showPassword = !$showPassword"),
+						),
 					),
 				),
 			),
+			Button(Class("btn auth-btn"),
+				Text("Reset Password"),
+				ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
+			),
+			authAlert(nil),
 		),
-		Button(Class("btn"),
-			Text("Reset password"),
-			ds.On("click", datastar.PostSSE(routes.ResetPasswordPath)),
-		),
-		authAlert(nil),
 	)
 }
 

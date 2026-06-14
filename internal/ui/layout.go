@@ -124,7 +124,21 @@ func HomeLayout(r *http.Request, title string, content ...Node) Node {
 			Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
 			MainContent(content...),
 		),
-		Footer(),
+		Footer(Text("✧ Bahago · All rights reserved")),
+	)
+}
+
+// AuthLayout renders an auth page with the home chrome and side nav.
+func AuthLayout(r *http.Request, title string, content ...Node) Node {
+	user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+	currentPath := r.URL.Path
+	return shell(title, nil,
+		homeTopNav(user, currentPath),
+		Div(Class("content-area"),
+			Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
+			Main(ID("main-content"), Class("auth-stage"), Group(content)),
+		),
+		Footer(Text("✧ Bahago · All rights reserved")),
 	)
 }
 
@@ -171,14 +185,33 @@ func shell(title string, layoutStream Node, body ...Node) Node {
 }
 
 func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
-	return Header(Class("top-nav panel"),
-		Div(Class("top-nav-left"),
-			A(Href(routes.HomePath), Attr("aria-current", "page"), Text("Home")),
-			A(Href(routes.KingdomPath), Text("Kingdom")),
+	var rightContent Node
+	if user == nil {
+		rightContent = Group([]Node{
+			A(Class("home-chrome-register"), Href(routes.RegisterPath), Text("Join the Realm")),
+			A(Class("home-chrome-login"), Href(routes.LoginPath), Text("Sign In")),
+		})
+	} else {
+		rightContent = A(Class("home-chrome-login"),
+			ds.On("click", datastar.PostSSE(routes.LogoutPath)),
+			Text("Leave"),
+		)
+	}
+	return Header(Class("home-chrome bar"),
+		A(Class("home-chrome-brand"), Href(routes.HomePath),
+			Raw(`<svg class="crest home-chrome-crest" width="32" height="37" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`),
+			Span(Class("home-chrome-name"), Text("Bahago")),
 		),
-		Div(Class("top-nav-right"),
-			LoginNav(user, currentPath),
+		Span(Class("home-chrome-sep vrule")),
+		Nav(Class("home-chrome-nav"),
+			A(Classes{"nav-link": true, "is-on": currentPath == routes.HomePath},
+				Href(routes.HomePath), Text("Home")),
+			A(Classes{"nav-link": true},
+				Href(routes.KingdomPath),
+				If(user == nil, Attr("aria-disabled", "true")),
+				Text("Kingdom")),
 		),
+		Div(Class("home-chrome-right"), rightContent),
 	)
 }
 
@@ -377,21 +410,13 @@ func NavGroup(name string, items ...Node) Node {
 	)
 }
 
-func LoginNav(user *contextkeys.SessionUser, currentPath string) Node {
-	if user == nil {
-		return Group([]Node{
-			NavItem(routes.LoginPath, "Login", currentPath),
-			NavItem(routes.RegisterPath, "Register", currentPath),
-		})
-	}
-	return A(ds.On("click", datastar.PostSSE(routes.LogoutPath)), Text("Logout"))
-}
-
 // URLs are placeholder for now, no need to create routes
 func HomeSideNav(currentPath string) Node {
 	return Group([]Node{
-		NavGroup("Active Players",
-			P(Text("40")),
+		Div(Class("nav-live"),
+			Span(Class("nav-live-dot")),
+			Span(Class("nav-live-n"), Text("40")),
+			Span(Class("nav-live-l"), Text("active")),
 		),
 		NavGroup("Lore",
 			NavItem("/beginning", "The beginning", ""),

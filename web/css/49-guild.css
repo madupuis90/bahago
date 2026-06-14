@@ -1,0 +1,237 @@
+/* =============================================================================
+   TABLE  ·  the ledger — one row per record (guild rolls, scores, any listing).
+   ============================================================================= */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  font-family: var(--font-cinzel); font-size: .7rem; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft);
+  text-align: left; padding: 0 12px 8px; border-bottom: 2px solid var(--edge);
+  white-space: nowrap;
+}
+.table td {
+  font-family: var(--font-heading); font-size: 1.05rem; color: var(--ink);
+  padding: 11px 12px; border-bottom: 1px dotted var(--edge); vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover td { background: rgb(255 250 236 / .55); }
+.table .is-num { text-align: right; }
+.table td.is-num { font-family: var(--font-cinzel); font-weight: 600; font-size: .92rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.num-cap { color: var(--ink-soft); font-weight: 500; font-size: .82em; }
+.table .is-actions { text-align: right; }
+.table td.is-actions { white-space: nowrap; }
+.table-actions { display: inline-flex; align-items: center; gap: 7px; }
+.table-id { display: flex; align-items: center; gap: 11px; }
+.table-id-name { font-weight: 600; line-height: 1.15; }
+.table-id-name a { color: var(--ink); text-decoration: none; border-bottom: 1px solid rgb(184 162 106 / .7); }
+.table-id-name a:hover { color: var(--highlight); border-bottom-color: currentColor; }
+.table-id-sub { font-family: var(--font-body); font-style: italic; font-size: .84rem; color: var(--ink-soft); margin-top: 1px; }
+.table-sort {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: none; border: none; padding: 0; font: inherit; color: inherit;
+  letter-spacing: inherit; text-transform: inherit;
+}
+.table-sort:hover { color: var(--brass-text); }
+.sort-diamond {
+  width: 7px; height: 7px; flex: none; rotate: 45deg; opacity: 0;
+  background: linear-gradient(135deg, var(--chrome-accent-light), var(--chrome-accent));
+  border: 1px solid #7a5418; transition: opacity .12s;
+}
+.table-sort.is-sorted .sort-diamond { opacity: 1; }
+.table-sort.is-desc .sort-diamond { background: transparent; }
+.table .is-urgent { color: #9a2a22; font-weight: 700; }
+
+/* =============================================================================
+   EMPTY STATE  ·  what a region says when it holds nothing yet.
+   ============================================================================= */
+.empty-state { display: grid; justify-items: center; gap: 7px; padding: 34px 22px; text-align: center; }
+.empty-state .gly, .empty-state .icon, .empty-state .crest { color: var(--ink-soft); opacity: .45; }
+.empty-state-title { font-family: var(--font-heading); font-weight: 600; font-size: 1.2rem; color: var(--ink-soft); }
+.empty-state-hint { font-family: var(--font-body); font-style: italic; font-size: .98rem; color: var(--ink-soft); max-width: 44ch; text-wrap: pretty; }
+.empty-state .btn { margin-top: 10px; }
+.empty-state--row { padding: 16px 18px; gap: 4px; }
+
+/* =============================================================================
+   GUILD  ·  fellowship-of-kingdoms parts: the crest slot, the support meter,
+   and role tags. Specified in the Design Reference's "Guild" section.
+   ============================================================================= */
+.guild-crest {
+  flex: none; position: relative; display: grid; place-items: center; overflow: hidden;
+  width: 56px; height: 64px; box-sizing: border-box;
+  border: 2px solid var(--wood);
+  border-radius: 8px 8px 50% 50% / 8px 8px 58% 58%;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgb(255 250 236 / .9), transparent 70%),
+    linear-gradient(180deg, var(--parchment) 0%, var(--parchment-deep) 100%);
+  box-shadow: inset 0 2px 4px rgba(60, 40, 20, .22), 0 1px 0 rgba(255, 248, 220, .5);
+}
+.guild-crest > img, .guild-crest > image-slot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.guild-crest--sm { width: 34px; height: 39px; border-width: 1.5px; border-radius: 6px 6px 50% 50% / 6px 6px 58% 58%; }
+.guild-crest--lg { width: 86px; height: 98px; }
+.guild-crest--empty::after {
+  content: ''; position: absolute; inset: 4px; pointer-events: none;
+  border: 1px dashed rgb(90 77 54 / .4); border-radius: inherit;
+}
+.guild-crest--empty .gly, .guild-crest--empty .icon { color: var(--ink-soft); opacity: .42; }
+.guild-crest-tag {
+  position: absolute; bottom: 13%; font-family: var(--font-cinzel); font-size: 8px;
+  font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); opacity: .75;
+}
+.meter--support .meter-fill, .meter-fill--support {
+  background: linear-gradient(180deg, #5a8f5e 0%, #3f6e44 55%, #2e5535 100%);
+}
+.meter--support .meter-eta { color: #2d6a3a; }
+.seal-cell { display: flex; align-items: center; gap: 10px; }
+.seal-cell .meter-track { width: 92px; flex: none; }
+.seal-count { font-family: var(--font-cinzel); font-weight: 600; font-size: .92rem; white-space: nowrap; }
+.role-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-cinzel); font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 99px; border: 1px solid var(--edge);
+  background: rgb(255 250 236 / .6); color: var(--ink-soft); white-space: nowrap; width: max-content;
+}
+.role-tag .gly { flex: none; }
+.role-tag--leader    { color: var(--brass-text, #7a5418); background: rgb(200 154 74 / .18); border-color: rgb(154 111 40 / .45); }
+.role-tag--officer   { color: #2a4a6a; background: rgb(72 112 165 / .12); border-color: rgb(42 74 106 / .35); }
+.role-tag--supporter { color: #2d6a3a; background: rgb(58 124 78 / .12); border-color: rgb(46 85 50 / .35); }
+textarea.field { height: auto; min-height: 116px; padding: 10px 12px; resize: vertical; line-height: 1.45; }
+.field-hint-row { display: flex; justify-content: space-between; gap: 12px; }
+
+/* =============================================================================
+   GUILD  ·  page layout — landing, roll, charter, view, manage.
+   ============================================================================= */
+.doors { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 24px; align-items: stretch; margin-top: 4px; }
+.door { display: flex; }
+.door-inner {
+  flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 11px; padding: 36px 30px 32px;
+}
+.door-crest { color: var(--wood); }
+.door-title { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; color: var(--red-darker); line-height: 1.1; }
+.door-text {
+  font-family: var(--font-body); font-style: italic; font-size: 1.04rem; color: var(--ink-soft);
+  max-width: 36ch; text-wrap: pretty; line-height: 1.45;
+}
+.door-meta {
+  font-family: var(--font-cinzel); font-size: .7rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+}
+.door .btn { margin-top: 10px; }
+.doors-seam { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 0; }
+.seam-rule { flex: 1; width: 1.5px; background: var(--edge); }
+.seam-or { font-family: var(--font-caps); font-size: 1rem; color: var(--ink-soft); }
+.glance-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+.glance-link {
+  font-family: var(--font-cinzel); font-size: .78rem; font-weight: 600; letter-spacing: .05em;
+  color: var(--brass-text, #7a5418); text-decoration: none; border-bottom: 1px solid rgb(154 111 40 / .5);
+}
+.glance-link:hover { color: var(--highlight); border-bottom-color: currentColor; }
+.roll-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(290px, 2fr); gap: 22px; align-items: start; }
+.charter-item { display: flex; flex-direction: column; gap: 10px; padding: 16px 2px; }
+.charter-item:first-child { padding-top: 4px; }
+.charter-item + .charter-item { border-top: 1px dotted var(--edge); }
+.charter-item-head { display: flex; align-items: center; gap: 11px; }
+.charter-item-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.charter-lapse {
+  font-family: var(--font-cinzel); font-size: .7rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft);
+}
+.charter-lapse.is-urgent { color: #9a2a22; font-weight: 700; }
+.charter-wrap { max-width: 580px; margin: 0 auto; width: 100%; }
+.charter-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(290px, 5fr); gap: 22px; align-items: start; }
+.charter-form { display: flex; flex-direction: column; gap: 18px; }
+.charter-actions { display: flex; align-items: center; gap: 16px; margin-top: 2px; }
+.charter-oath {
+  font-family: var(--font-body); font-style: italic; font-size: .98rem;
+  color: var(--ink-soft); text-wrap: pretty;
+}
+.rite-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; counter-reset: rite; }
+.rite-list li { counter-increment: rite; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: baseline; }
+.rite-list li::before {
+  content: counter(rite, upper-roman);
+  font-family: var(--font-display); font-weight: 700; font-size: 1.05rem;
+  color: var(--red-darker); text-align: center; line-height: 1;
+}
+.rite-body { display: flex; flex-direction: column; gap: 8px; }
+.rite-name { font-family: var(--font-heading); font-weight: 600; font-size: 1.1rem; color: var(--ink); }
+.rite-text { font-family: var(--font-body); font-style: italic; font-size: .95rem; color: var(--ink-soft); text-wrap: pretty; line-height: 1.45; }
+.rite-note {
+  margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--edge);
+  font-family: var(--font-body); font-style: italic; font-size: .92rem; color: var(--ink-soft); text-wrap: pretty;
+}
+.guild-head { display: grid; justify-items: center; gap: 12px; margin-bottom: 16px; }
+.guild-head .page-header { margin-bottom: 0; }
+.guild-head--row { display: flex; align-items: center; gap: 18px; text-align: left; margin-bottom: 18px; }
+.guild-head--row .page-header { text-align: left; }
+.guild-head--row .guild-meta { justify-content: flex-start; }
+.guild-meta {
+  margin-top: 10px; display: flex; justify-content: center; flex-wrap: wrap; gap: 5px 10px;
+  font-family: var(--font-cinzel); font-size: .75rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft);
+}
+.guild-meta > span { white-space: nowrap; }
+.guild-meta-sep { color: rgb(154 111 40 / .55); }
+.standing { display: flex; align-items: center; gap: 14px; }
+.standing--stacked { flex-direction: column; align-items: flex-start; gap: 12px; }
+.standing-band { padding: 15px 20px; }
+.standing-text {
+  flex: 1; font-family: var(--font-body); font-style: italic; font-size: 1.02rem;
+  color: var(--ink-soft); text-wrap: pretty; line-height: 1.45;
+}
+.standing-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; flex: none; }
+.standing-bare { display: grid; justify-items: center; gap: 9px; margin: 0 0 6px; }
+.standing-bare--foot { margin: 16px 0 0; }
+.standing-bare .standing-actions { justify-content: center; }
+.standing-note {
+  font-family: var(--font-body); font-style: italic; font-size: .98rem;
+  color: var(--ink-soft); text-align: center; max-width: 52ch; text-wrap: pretty;
+}
+.table tbody tr.is-you td { background: rgb(200 154 74 / .12); }
+.you-mark { font-family: var(--font-body); font-style: italic; font-weight: 400; font-size: .85em; color: var(--ink-soft); }
+.view-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(300px, 2fr); gap: 22px; align-items: start; }
+.view-rail { display: flex; flex-direction: column; gap: 18px; }
+.charter-text {
+  margin: 0; font-family: var(--font-body); font-style: italic; font-size: 1.02rem;
+  line-height: 1.5; color: var(--ink); text-wrap: pretty;
+}
+.sealing-meter { margin: 2px 2px 18px; }
+.manage-head {
+  display: flex; align-items: center; gap: 13px; margin-bottom: 22px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--edge);
+}
+.manage-head-body { flex: 1; min-width: 0; }
+.manage-head-guild {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.45rem;
+  color: var(--red-darker); line-height: 1.1; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.manage-head-sub {
+  font-family: var(--font-cinzel); font-size: .72rem; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px;
+}
+.manage-back {
+  flex: none; font-family: var(--font-cinzel); font-size: .75rem; font-weight: 600;
+  letter-spacing: .05em; color: var(--brass-text, #7a5418); text-decoration: none;
+  border-bottom: 1px solid rgb(154 111 40 / .5); white-space: nowrap;
+}
+.manage-back:hover { color: var(--highlight); border-bottom-color: currentColor; }
+.invite-form { margin-bottom: 18px; }
+.invite-row { display: flex; gap: 8px; align-items: stretch; }
+.invite-row .field { flex: 1; }
+.invite-row .btn { flex: none; }
+.manage-leader-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  gap: 18px; align-items: start; margin-bottom: 18px;
+}
+.disband-note {
+  margin: 0 0 16px; font-family: var(--font-body); font-style: italic;
+  font-size: 1rem; color: var(--ink-soft); text-wrap: pretty; max-width: 52ch;
+  line-height: 1.5;
+}
+.settings-fields { display: flex; flex-direction: column; gap: 18px; margin-bottom: 22px; }
+.ledger-footnote {
+  margin-top: 14px; padding-top: 11px; border-top: 1px dotted var(--edge);
+  font-family: var(--font-body); font-style: italic; font-size: .84rem;
+  color: var(--ink-soft);
+}
+

@@ -1,0 +1,100 @@
+/* =============================================================================
+   Prayers
+   ============================================================================= */
+
+.prayers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.prayer-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  & .panel-title {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+  }
+
+  & .prayer-card__description {
+    font-size: 0.875rem;
+    font-style: italic;
+    opacity: 0.8;
+    margin-bottom: 0.25rem;
+  }
+
+  & .prayer-card__effect {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  & .prayer-card__upkeep {
+    font-size: 0.875rem;
+    color: var(--panel-link-color);
+  }
+}
+
+.prayer-active-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+
+  & .panel-title {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.prayer-cast-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+
+  & label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  & select {
+    padding: 0.25rem 0.5rem;
+  }
+
+  & input[type="number"] {
+    width: 4rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+.prayer-empty {
+  color: var(--panel-link-color);
+  opacity: 0.6;
+}
+
+.prayer-active-table {
+  border-collapse: collapse;
+  width: 100%;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  th {
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+

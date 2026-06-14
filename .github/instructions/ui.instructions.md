@@ -157,46 +157,41 @@ If a component is used only within one feature package, keep it in that package.
 
 ## Styling
 
-All styles are hand-written in `web/static/styles.css`. There are no CSS frameworks (no Tailwind, Bootstrap, etc.). Classes applied via `Class("foo")` must exist in that file.
+All styles are hand-written in `web/css/` source files. There are no CSS frameworks (no Tailwind, Bootstrap, etc.). Classes applied via `Class("foo")` must exist in those files.
 
-### CSS file structure
+**`web/static/styles.css` is a generated build artifact** — never read or edit it. Edit the correct source file in `web/css/` and run `task css:build` to regenerate.
 
-`styles.css` is organized into named sections, ordered from most general to most specific. Each section is introduced by a banner comment of the form:
+### CSS source files
 
-```css
-/* =============================================================================
-   Section name
-   ============================================================================= */
-```
+CSS is split into one file per feature area. Read only the file relevant to the work being done:
 
-Always add new rules in the correct section. Current order:
+| File | Feature area |
+|------|-------------|
+| `web/css/00-reset.css` | CSS reset |
+| `web/css/01-tokens.css` | Design tokens (`:root` custom properties) |
+| `web/css/02-base.css` | Base element styles |
+| `web/css/10-home-shell.css` | Home shell: top-nav, content-area, side-nav |
+| `web/css/20-shared.css` | Shared components: `.panel`, `.btn`, `.form-fields`, `.alert-*` |
+| `web/css/30-auth.css` | Auth pages |
+| `web/css/31-home.css` | Home page content |
+| `web/css/40-kingdom-chrome.css` | Kingdom chrome: topbar, bottom-nav, parchment helpers |
+| `web/css/41-kingdom-overview.css` | Kingdom overview |
+| `web/css/42-allocation.css` | Allocation: `.allocation-*` |
+| `web/css/43-buildings.css` | Buildings |
+| `web/css/44-units.css` | Units |
+| `web/css/45-world-map.css` | World map: `.map-*` |
+| `web/css/46-army.css` | Army: `.army-*` |
+| `web/css/47-flipcard.css` | Home/about flip card |
+| `web/css/48-messages.css` | Messages |
+| `web/css/49-guild.css` | Guild |
+| `web/css/50-prayers.css` | Prayers |
+| `web/css/99-utilities.css` | Utility overrides |
 
-```
-Reset                — *, box-sizing
-Tokens               — :root custom properties
-Base                 — html, body, a, input (element selectors only)
-Home shell           — top-nav, content-area, side-nav, nav-group
-Shared components    — .panel, .btn, .btn-text, .form-fields, .password-field, .alert-*
-Auth                 — .auth-card and auth-specific styles
-Kingdom chrome       — .kingdom-page, parchment helpers (.uppr, .rubric, .marg, .italic, .rule-dbl, .shield, .sandglass), .topbar, .bottom-nav, .nav-stone — defined before any feature that uses them
-Kingdom overview     — .page-header, .overview-grid, .chronicle, .demesne, .stat-row
-Allocation           — .allocation-* (grid table + slider)
-Buildings            — .buildings-* / .building-*
-Units                — .units-* / .unit-*
-World map            — .map-*
-Army                 — .army-*
-Home (flip card)     — .flip-* (home/about page widget)
-Messages             — .messages-* / .message-*
-Guild                — .guild-* / .guilds-*
-Prayers              — .prayer-* / .prayers-*
-Utilities            — .text-positive, .text-negative (single-purpose overrides) — last
-```
+New feature files go between the last feature file and `99-utilities.css`. Styles shared across 2+ features go in `20-shared.css`. Styles shared across all kingdom pages (chrome, typography helpers, icons) go in `40-kingdom-chrome.css` so they are defined before the features that reference them.
 
-New feature modules get their own named section, placed between the existing feature sections and `Utilities`. Shared components (used by 2+ features) belong in `Shared components`. Anything shared across all kingdom pages (chrome, parchment typography helpers, icons) belongs in `Kingdom chrome` so it is defined before the features that reference it.
+**When generating new UI**, omit styles unless explicitly asked — focus on structure and correctness. When styles are needed later, they go in the appropriate `web/css/` source file. Do not suggest inline styles or CSS-in-Go approaches.
 
-**When generating new UI**, omit styles unless explicitly asked — focus on structure and correctness. When styles are needed later, they go in `web/static/styles.css`. Do not suggest inline styles or CSS-in-Go approaches.
-
-**Use CSS variables** for any value that appears more than once or is likely to be reused — especially spacing sizes, colors, dimensions, and border definitions. Define them in `:root` in `styles.css`. For example, prefer `var(--spacing-md)` over a hardcoded `1rem`, and `var(--border)` over a repeated `1px solid var(--border-color)`.
+**Use CSS variables** for any value that appears more than once or is likely to be reused — especially spacing sizes, colors, dimensions, and border definitions. Define them in `:root` in `01-tokens.css`. For example, prefer `var(--spacing-md)` over a hardcoded `1rem`, and `var(--border)` over a repeated `1px solid var(--border-color)`.
 
 **Treat each class as a component** — nest pseudo-classes (`:hover`, `:active`, `:focus`) and child element selectors inside the parent rule using native CSS nesting (`&`). Do not write them as separate top-level rules:
 ```css

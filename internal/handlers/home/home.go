@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	. "maragu.dev/gomponents"
-	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
@@ -45,23 +44,50 @@ func (h *handler) handleHomePage() http.HandlerFunc {
 
 func homeContent() Node {
 	return Group([]Node{
-		H1(Class("page-title"), Text("Home Page")),
-		flipCard(),
+		Section(Class("home-hero"),
+			P(Class("home-kicker"), Text("✧ A realm awaits your rule")),
+			H1(Class("home-title"), Text("Bahago")),
+			P(Class("home-sub"), Text("Command a kingdom. Gather ancient resources, raise mighty armies, forge alliances in guilds, and carve your name into the annals of the realm.")),
+			Div(Class("home-cta"),
+				A(Class("btn btn--primary"), Href(routes.RegisterPath), Text("Found a Kingdom")),
+			),
+			P(Class("home-signin-prompt"),
+				Text("Already of the realm? "),
+				A(Href(routes.LoginPath), Text("Sign in →")),
+			),
+		),
+		Hr(Class("home-rule")),
+		Div(Class("home-cards"),
+			realmStatusCard(),
+			dispatchesCard(),
+		),
 	})
 }
 
-func flipCard() Node {
-	return Div(Class("flip-scene"),
-		ds.Signals(map[string]any{
-			"flipped": true,
-		}),
-		Div(Class("flip-card flip-card--flipped"),
-			ds.Class("'flip-card--flipped'", "$flipped"),
-			ds.On("click", "$flipped = !$flipped"),
-			Div(Class("flip-card__face flip-card__face--front"),
-				Img(Src("/static/swordman.png"), Alt("Knight")),
+func realmStatusCard() Node {
+	return Div(Class("card is-lit"),
+		Div(Class("ci"),
+			Div(Class("c-eye"), Text("Realm Status")),
+			Div(Class("c-hed"), Text("Round I · Dawn of the Realm")),
+			P(Class("c-p"), Text("The realm stirs. New kingdoms rise from the soil. Alliances form and ancient grudges ignite.")),
+			Div(Class("stat-row"),
+				Div(Class("stat"), Div(Class("stat-n"), Text("0")), Div(Class("stat-l"), Text("Kingdoms"))),
+				Div(Class("stat"), Div(Class("stat-n"), Text("0")), Div(Class("stat-l"), Text("Guilds"))),
+				Div(Class("stat"), Div(Class("stat-n"), Text("Day 1")), Div(Class("stat-l"), Text("of the Round"))),
 			),
-			Div(Class("flip-card__face flip-card__face--back")),
+		),
+	)
+}
+
+func dispatchesCard() Node {
+	return Div(Class("card is-lit"),
+		Div(Class("ci"),
+			Div(Class("c-eye"), Text("Latest Dispatches")),
+			Div(Class("news-item"),
+				Div(Class("news-date"), Text("14 Jun 2026")),
+				Div(Class("news-head"), Text("The Realm Opens")),
+				Div(Class("news-body"), Text("New kingdoms are being founded. The realm stirs and ancient powers await.")),
+			),
 		),
 	)
 }

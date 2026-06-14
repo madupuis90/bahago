@@ -1,0 +1,102 @@
+/* =============================================================================
+   Tokens
+   ============================================================================= */
+
+:root {
+  /* Link colors (used outside panels) */
+  --link-color: #c9a84c;
+  --link-hover-color: #e8c96a;
+
+  /* Panels */
+  --panel-bg: #e8d9a0;
+  --panel-text: #1a1008;
+  --panel-link-color: #7a4a00;
+  --panel-link-hover-color: #5c3a00;
+  --panel-radius: 0.5rem;
+  --panel-border: 1px solid rgba(0, 0, 0, 0.2);
+  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  /* Value colors */
+  --color-positive: #2d7a3a;
+  --color-negative: #a02020;
+
+  /* Buttons */
+  --btn-bg: #c9a84c;
+  --btn-bg-hover: #e8c96a;
+  --btn-color: #1a1008;
+  --shadow-btn: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --shadow-btn-hover: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.15);
+
+  /* World map — --map-page-size must match game.PageSize in internal/game/world.go */
+  --map-page-size: 8;
+  --map-cell-size: 4rem;
+  --map-wall-size: 3rem;
+  --map-axis-label-size: 2rem;
+  --map-minimap-cell-size: 1rem;
+
+  /* Typography */
+  --font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-cinzel: 'Cinzel', serif;
+  --font-heading: 'Cormorant Garamond', 'Garamond', serif;
+  --font-body: 'IM Fell English', 'Garamond', serif;
+  --font-caps: 'IM Fell English SC', 'IM Fell English', serif;
+  --font-ui: system-ui, -apple-system, sans-serif;
+
+  /* Page background — sky-blue landscape gradient */
+  --page-bg:
+    radial-gradient(ellipse 90% 50% at 50% 100%, #c8d99c, transparent),
+    radial-gradient(ellipse 70% 45% at 50% 110%, #9bb979, transparent),
+    linear-gradient(180deg, #a5c8de 0%, #cbdbe6 35%, #ecdcb4 70%, #d9c285 100%);
+
+  /* Kingdom chrome — ink, surface, accent colors */
+  --red-darker: #5f1212;
+  --wood: #7d5132;
+  --wood-dark: #5a3820;
+  --parchment: #f7eed5;
+  --parchment-deep: #ebdfb6;
+  --ink: #2a2418;
+  --ink-soft: #5a4d36;
+  --accent: #2f5a3d;
+  --accent-dark: #1d3a26;
+  --highlight: #7a3018;
+  --edge: #b8a26a;
+  --c-ink-strong: #f7eed5;
+  --parchment-shadow: rgba(75, 55, 25, .18);
+
+  /* Chrome (topbar + bottom-nav) — dark wood with brass accents
+     Pattern P3: one horizontal timber seam aligned with the info/nav row break */
+  --chrome-bg:
+    linear-gradient(180deg, rgba(255, 235, 200, .18) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, .20) 100%),
+    linear-gradient(180deg,
+      transparent 0,
+      transparent calc(62% - 1px),
+      rgba(0, 0, 0, .22) calc(62% - 1px),
+      rgba(0, 0, 0, .22) 62%,
+      rgba(255, 235, 200, .07) 62%,
+      rgba(255, 235, 200, .07) calc(62% + 1px),
+      transparent calc(62% + 1px)),
+    linear-gradient(180deg, #8c5e3d 0%, #6b4226 100%);
+  --chrome-border: #4d2f1c;
+  --chrome-accent: #c89a4a;
+  --chrome-accent-light: #e8c478;
+
+  /* Card surface knobs */
+  --card-alpha: 0.55;
+  --card-blur: 0px;
+  --card-lit: 1;
+  --card-border-w: 1.5px;
+  --card-fill-flat: rgb(255 250 236 / var(--card-alpha));
+  --card-fill-lit:
+    linear-gradient(180deg,
+      rgb(255 250 236 / calc(var(--card-alpha) + 0.10)) 0%,
+      rgb(235 223 182 / calc(var(--card-alpha) - 0.05)) 100%);
+
+  --parchment-bg:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 250, 236, .9), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(220, 200, 160, .35), transparent 60%),
+    linear-gradient(180deg, #f7eed5, #efe3c0);
+  --parchment-noise:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+}
+

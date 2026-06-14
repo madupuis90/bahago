@@ -68,10 +68,19 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, ap
 
 func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 
+func authCrest() Node {
+	return Raw(`<svg class="crest crest-lg" width="54" height="62" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`)
+}
+
 func invalidTokenContent() Node {
-	return Div(Class("auth-card panel"),
-		H1(Text("Verification link invalid or expired")),
-		P(Text("Please register again to receive a new link.")),
+	return Div(Class("auth-wrap"),
+		authCrest(),
+		P(Class("auth-wordmark"), Text("Bahago")),
+		Hr(Class("auth-divider")),
+		Div(Class("auth-body"),
+			P(Class("auth-instruct"), Text("This verification link is invalid or has expired.")),
+			A(Class("auth-quiet"), Href(routes.RegisterPath), Text("← Back to Register")),
+		),
 	)
 }
 

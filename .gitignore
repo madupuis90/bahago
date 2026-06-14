@@ -42,3 +42,6 @@ Thumbs.db
 
 # handoff
 .handoff
+
+# Generated CSS (source files are in web/static/css/)
+web/static/styles.css

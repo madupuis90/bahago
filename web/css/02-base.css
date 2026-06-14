@@ -1,0 +1,65 @@
+/* =============================================================================
+   Base
+   ============================================================================= */
+
+html {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  hanging-punctuation: first allow-end last;
+}
+
+body {
+  background: var(--page-bg) fixed;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0;
+  gap: 0;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--link-hover-color);
+  }
+
+  &[aria-current="page"] {
+    color: var(--link-hover-color);
+    font-weight: bold;
+    text-decoration: underline;
+    pointer-events: none;
+  }
+}
+
+input:not([type="range"]),
+select,
+textarea {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--panel-text);
+  font-size: 0.9rem;
+  font-family: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--btn-bg);
+    outline-offset: 1px;
+  }
+}
+
+input[type="range"] {
+  accent-color: var(--btn-bg);
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+

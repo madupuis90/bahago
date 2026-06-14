@@ -30,42 +30,47 @@ type RegisterForm struct {
 
 func (h *handler) registerPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		HomeLayout(r, "Register", registerContent()).Render(w)
+		AuthLayout(r, "Join the Realm", registerContent()).Render(w)
 	}
 }
 
 func registerContent() Node {
-	return Div(Class("auth-card panel"),
-		H1(Text("Create an account")),
-		Div(Class("form-fields"),
-			ds.Signals(map[string]any{
-				"showPassword": false,
-			}),
-			Label(
-				Text("Email"),
-				Input(Type("email"), ds.Bind("email")),
-			),
-			Label(
-				Text("Password"),
-				Div(Class("password-field"),
-					Input(ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
-					Button(Class("btn-text"),
-						Type("button"),
-						ds.Text("$showPassword ? 'Hide' : 'Show'"),
-						ds.On("click", "$showPassword = !$showPassword"),
+	return Div(Class("auth-wrap"),
+		ds.Signals(map[string]any{
+			"showPassword": false,
+		}),
+		authCrest(),
+		P(Class("auth-wordmark"), Text("Bahago")),
+		P(Class("auth-tagline"), Text("Forge your kingdom. Command your realm.")),
+		Hr(Class("auth-divider")),
+		Div(Class("auth-body"),
+			Form(Class("auth-form"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("email"), Text("Email")),
+					Input(ID("email"), Type("email"), ds.Bind("email")),
+				),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("password"), Text("Password")),
+					Div(Class("password-field"),
+						Input(ID("password"), ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+						Button(Class("btn-text"),
+							Type("button"),
+							ds.Text("$showPassword ? 'Hide' : 'Show'"),
+							ds.On("click", "$showPassword = !$showPassword"),
+						),
 					),
 				),
 			),
+			Button(Class("btn auth-btn"),
+				Text("Found a Kingdom · Register"),
+				ds.On("click", datastar.PostSSE(routes.RegisterPath)),
+			),
+			authAlert(nil),
+			Div(Class("auth-foot"),
+				Span(Class("auth-foot-text"), Text("Already a ruler?")),
+				A(Class("auth-foot-link"), Href(routes.LoginPath), Text("Sign In")),
+			),
 		),
-		Button(Class("btn"),
-			Text("Register"),
-			ds.On("click", datastar.PostSSE(routes.RegisterPath)),
-		),
-		P(
-			Text("Already have an account? "),
-			A(Href(routes.LoginPath), Text("Login")),
-		),
-		authAlert(nil),
 	)
 }
 

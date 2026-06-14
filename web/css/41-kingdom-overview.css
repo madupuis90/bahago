@@ -1,0 +1,244 @@
+/* =============================================================================
+   Kingdom overview (page header, cards, combat log, stats panel)
+   ============================================================================= */
+
+/* Page header — kicker + display title + subtitle */
+.page-header {
+  margin: 0 2px 16px;
+  text-align: center;
+}
+
+.page-header-kicker {
+  font-family: var(--font-caps);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #6a3018;
+  margin-bottom: 2px;
+}
+
+.page-header-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.2rem;
+  color: var(--red-darker);
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 245, 200, .45);
+}
+
+.page-header-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  margin-top: 5px;
+}
+
+/* Overview card (parchment-toned card with a floating tab) */
+.overview-card {
+  background: linear-gradient(180deg, #fbf2d4 0%, #ecd9a6 100%);
+  border: 2px solid var(--wood);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 #fff5dc,
+    inset 0 -2px 0 rgba(120, 80, 30, .15),
+    0 2px 0 var(--wood-dark),
+    0 4px 10px rgba(60, 40, 20, .25);
+  position: relative;
+  margin-top: 14px;
+}
+
+.card-tab {
+  position: absolute;
+  top: -14px;
+  left: 18px;
+  padding: 3px 14px 4px;
+  border-radius: 6px 6px 0 0;
+  font-family: var(--font-cinzel);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #fff8dc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 0 rgba(0, 0, 0, .3);
+}
+
+.card-tab--red {
+  background: linear-gradient(180deg, #b94a3a 0%, var(--red-darker) 100%);
+}
+
+.card-tab--green {
+  background: linear-gradient(180deg, #4a7c4e 0%, #2e5532 100%);
+}
+
+.card-tab--wood {
+  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood-dark) 100%);
+}
+
+.card-inner {
+  padding: 18px 18px 16px;
+}
+
+.card-header { margin-bottom: 14px; }
+.card-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.card-title { font-family: var(--font-heading); font-weight: 600; font-size: 1.45rem; color: var(--ink); line-height: 1.1; margin: 0 0 2px; }
+.card-subtitle { font-family: var(--font-body); font-style: italic; font-size: .98rem; line-height: 1.45; color: var(--ink-soft); margin: 0; text-wrap: pretty; }
+.card-flavour { font-family: var(--font-body); font-style: italic; color: var(--ink-soft); font-size: 1rem; line-height: 1.5; }
+
+.card-h {
+  font-family: var(--font-caps);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+
+/* Page header (kept for other pages) */
+.page-header {
+  & h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--red-darker);
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.05;
+    letter-spacing: .02em;
+  }
+
+  & h1 .italic {
+    color: var(--ink);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  & .page-header-tag {
+    font-size: 10px;
+    letter-spacing: .2em;
+    margin-bottom: 6px;
+  }
+
+  & .rule-dbl {
+    margin-top: 10px;
+  }
+
+  @media (max-width: 600px) {
+    & h1 {
+      font-size: 26px;
+    }
+  }
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 22px;
+  margin-top: 20px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.combat-log {
+  position: relative;
+  padding-left: 8px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--edge);
+    opacity: .6;
+  }
+
+  @media (max-width: 600px) {
+    padding-left: 0;
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.combat-log-empty {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.combat-log-entry {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dotted var(--edge);
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 600px) {
+    gap: 8px;
+  }
+}
+
+.combat-log-entry-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.combat-log-entry-time {
+  font-family: var(--font-caps);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--highlight);
+  font-size: 0.7rem;
+  margin-bottom: 3px;
+}
+
+.combat-log-entry-head {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--ink);
+  margin-bottom: 4px;
+
+  @media (max-width: 600px) {
+    font-size: 1rem;
+  }
+}
+
+.combat-log-entry-body {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+  text-wrap: pretty;
+
+  @media (max-width: 600px) {
+    font-size: 0.8125rem;
+  }
+}
+
+.combat-log-entry-note {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+  border-left: 1px solid var(--edge);
+  padding-left: 10px;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--ink-soft);
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
