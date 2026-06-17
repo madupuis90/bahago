@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+	"strconv"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
@@ -24,8 +25,6 @@ import (
 	"bahago/internal/router"
 	"bahago/internal/routes"
 	. "bahago/internal/ui"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────
@@ -44,6 +43,8 @@ func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tic
 	r.HandleFunc("GET "+routes.KingdomBuildingsPath, h.handleBuildingsPage())
 	r.HandleFunc("GET "+routes.KingdomBuildingsRefreshPath, h.handleBuildingsRefresh())
 	r.HandleFunc("POST "+routes.KingdomConstructionStartPath, h.handleStartConstruction())
+	r.HandleFunc("GET "+routes.KingdomBuildingsDetailPath, h.handleBuildingsDetail())
+	r.HandleFunc("POST "+routes.KingdomBuildingsRaisePath, h.handleRaise())
 }
 
 type handler struct {
@@ -68,14 +69,16 @@ func (h *handler) handleBuildingsPage() http.HandlerFunc {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-
 		construction, err := loadConstruction(r.Context(), h.queries, kingdom.ID)
 		if err != nil {
 			log.Printf("buildings page: get construction: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		KingdomLayout(r, "Buildings", r.URL.Path, kingdom, buildingsContent(kingdom, buildings, construction)).Render(w)
+		counts := game.BuildingCountMap(buildings)
+		resources := resourceMap(kingdom)
+		KingdomLayout(r, "Buildings", r.URL.Path, kingdom,
+			buildingsContent(game.BuildingDefList, counts, construction, resources, "")).Render(w)
 	}
 }
 
@@ -103,7 +106,9 @@ func (h *handler) handleBuildingsRefresh() http.HandlerFunc {
 					sse.PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
 					return
 				}
-				page := buildingsContent(&k, buildings, construction)
+				counts := game.BuildingCountMap(buildings)
+				resources := resourceMap(&k)
+				page := buildingsContent(game.BuildingDefList, counts, construction, resources, "")
 				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("buildings refresh: patch: %v", err)
 					return
@@ -133,7 +138,6 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 			return
 		}
 
-		// Reload everything from DB — DeductBuildingCost changed the kingdom's resources.
 		k, err := h.queries.GetKingdomByID(r.Context(), kingdom.ID)
 		if err != nil {
 			log.Printf("start construction: reload kingdom: %v", err)
@@ -152,7 +156,9 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
 			return
 		}
-		page := buildingsContent(&k, buildings, construction)
+		counts := game.BuildingCountMap(buildings)
+		resources := resourceMap(&k)
+		page := buildingsContent(game.BuildingDefList, counts, construction, resources, btype)
 		sse := datastar.NewSSE(w, r)
 		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("start construction: patch: %v", err)
@@ -160,10 +166,87 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 	}
 }
 
+func (h *handler) handleBuildingsDetail() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+		buildingID := r.URL.Query().Get("building")
+		if _, ok := game.BuildingDefs[buildingID]; !ok {
+			http.Error(w, "unknown building", http.StatusBadRequest)
+			return
+		}
+
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("buildings detail: get buildings: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		construction, err := loadConstruction(r.Context(), h.queries, kingdom.ID)
+		if err != nil {
+			log.Printf("buildings detail: get construction: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		counts := game.BuildingCountMap(buildings)
+		resources := resourceMap(kingdom)
+
+		sse := datastar.NewSSE(w, r)
+		sse.PatchElementGostar(detailPanel(buildingID, game.BuildingDefList, counts, resources, construction))
+		sse.MarshalAndPatchSignals(map[string]any{"selected_building": buildingID})
+	}
+}
+
+func (h *handler) handleRaise() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+		btype := r.URL.Query().Get("building")
+		if err := validateBuildingType(btype); err != nil {
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(err)))
+			return
+		}
+
+		if err := h.startConstruction(r.Context(), kingdom.ID, btype); err != nil {
+			if isStartConstructionUserError(err) {
+				datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(err)))
+				return
+			}
+			log.Printf("buildings raise: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
+			return
+		}
+
+		k, err := h.queries.GetKingdomByID(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("buildings raise: reload kingdom: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
+			return
+		}
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
+		if err != nil {
+			log.Printf("buildings raise: reload buildings: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
+			return
+		}
+		construction, err := loadConstruction(r.Context(), h.queries, k.ID)
+		if err != nil {
+			log.Printf("buildings raise: get construction: %v", err)
+			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
+			return
+		}
+		counts := game.BuildingCountMap(buildings)
+		resources := resourceMap(&k)
+		page := buildingsContent(game.BuildingDefList, counts, construction, resources, btype)
+		sse := datastar.NewSSE(w, r)
+		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
+			log.Printf("buildings raise: patch: %v", err)
+		}
+	}
+}
+
 // ── Validation ────────────────────────────────────────────────────────────────
 
-// validateBuildingType checks the building type is one the game defines. The
-// prerequisite (CanBuild) check needs DB data so it lives in the orchestrator.
 func validateBuildingType(btype string) error {
 	if _, ok := game.BuildingDefs[btype]; !ok {
 		return ErrUnknownBuildingType
@@ -181,7 +264,6 @@ func validateBuildingType(btype string) error {
 func (h *handler) startConstruction(ctx context.Context, kingdomID int, btype string) error {
 	def := game.BuildingDefs[btype]
 
-	// Prerequisite check (outside tx — no concurrency concern here).
 	buildings, err := h.queries.GetKingdomBuildings(ctx, kingdomID)
 	if err != nil {
 		return fmt.Errorf("get buildings: %w", err)
@@ -198,8 +280,6 @@ func (h *handler) startConstruction(ctx context.Context, kingdomID int, btype st
 
 	txq := db.New(tx)
 
-	// One active construction at a time — enforced inside the serializable tx so
-	// concurrent requests cannot both pass the check simultaneously.
 	existing, err := loadConstruction(ctx, txq, kingdomID)
 	if err != nil {
 		return fmt.Errorf("check existing construction: %w", err)
@@ -248,14 +328,6 @@ func isStartConstructionUserError(err error) bool {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// startBuild returns the datastar @post action expression for starting construction
-// of a specific building type.
-func startBuild(btype string) string {
-	return datastar.PostSSE(routes.KingdomConstructionStartPath+"?type=%s", btype)
-}
-
-// loadConstruction fetches the active construction for a kingdom.
-// Returns (nil, nil) if no construction is active, (nil, err) on a real DB error.
 func loadConstruction(ctx context.Context, queries db.Querier, kingdomID int) (*db.KingdomConstruction, error) {
 	c, err := queries.GetKingdomConstruction(ctx, kingdomID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -267,136 +339,344 @@ func loadConstruction(ctx context.Context, queries db.Querier, kingdomID int) (*
 	return &c, nil
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+func resourceMap(k *db.Kingdom) map[string]int {
+	return map[string]int{
+		"wood":      k.Wood,
+		"stone":     k.Stone,
+		"food":      k.Food,
+		"mana":      k.Mana,
+		"devotion":  k.Devotion,
+		"knowledge": k.Knowledge,
+	}
+}
 
-func buildingsContent(kingdom *db.Kingdom, buildings []db.KingdomBuilding, construction *db.KingdomConstruction) Node {
-	counts := game.BuildingCountMap(buildings)
-	return Div(
-		H1(Class("page-title"), Text("Buildings")),
-		Div(ds.Init(GetSSENoSignals(routes.KingdomBuildingsRefreshPath))),
+func itoa(n int) string { return strconv.Itoa(n) }
+
+func buildingsAlert(inner Node) Node { return AlertContainer("buildings-alert", inner) }
+
+// ── Page content ──────────────────────────────────────────────────────────────
+
+func buildingsContent(defs []game.BuildingDef, counts map[string]int, construction *db.KingdomConstruction, resources map[string]int, selectedID string) Node {
+	tree := game.PlaceNodes(defs)
+	return Div(Class("builds"),
+		ds.Signals(map[string]any{"selected_building": selectedID}),
+		Div(Style("display:none"), ds.Init(GetSSENoSignals(routes.KingdomBuildingsRefreshPath))),
+		H1(Class("page-header"), Text("Buildings")),
 		buildingsAlert(nil),
-		Iff(construction != nil, func() Node { return activeConstructionBanner(construction) }),
-		Div(Class("buildings-grid"),
-			buildingCard(kingdom, counts, construction, game.BuildingMill),
-			buildingCard(kingdom, counts, construction, game.BuildingQuarry),
-			buildingCard(kingdom, counts, construction, game.BuildingFarm),
-			buildingCard(kingdom, counts, construction, game.BuildingFactory),
-			buildingCard(kingdom, counts, construction, game.BuildingBlacksmith),
-			buildingCard(kingdom, counts, construction, game.BuildingGrainerie),
-			buildingCard(kingdom, counts, construction, game.BuildingArmory),
+		buildingsBanner(construction),
+		Div(Class("builds-stage"),
+			Div(Class("tree-scroll"),
+				buildingsTree(tree, counts, construction),
+			),
+			detailPanel(selectedID, defs, counts, resources, construction),
 		),
 	)
 }
 
-func activeConstructionBanner(c *db.KingdomConstruction) Node {
-	def := game.BuildingDefs[c.BuildingType]
-	progress := fmt.Sprintf("%d / %d ticks remaining", c.TicksRemaining, c.TicksTotal)
-	return Div(Class("construction-banner panel"),
-		Span(Text("Building: "+def.Name)),
-		Span(Text(progress)),
+func buildingsBanner(construction *db.KingdomConstruction) Node {
+	if construction == nil {
+		return Div(Classes{"build-banner": true, "is-idle": true},
+			Div(Class("build-banner-body"),
+				P(Class("build-banner-idle-title"), Text("Workshop")),
+				P(Class("build-banner-idle-text"), Text("No construction underway — select a building to begin.")),
+			),
+		)
+	}
+	def := game.BuildingDefs[construction.BuildingType]
+	return Div(Class("build-banner"),
+		Div(Class("build-banner-gem"), buildingGlyph(def, 34)),
+		Div(Class("build-banner-body"),
+			Div(Class("meter"),
+				Span(Class("meter-name"), Text(def.Name)),
+				Span(Class("meter-eta"), Text(fmt.Sprintf("%d / %d ticks remaining", construction.TicksRemaining, construction.TicksTotal))),
+			),
+		),
 	)
 }
 
-func buildingCard(kingdom *db.Kingdom, counts map[string]int, construction *db.KingdomConstruction, btype string) Node {
-	def := game.BuildingDefs[btype]
-	count := counts[btype]
-	atMax := count >= def.MaxCount
-	canBuild := game.CanBuild(btype, counts)
-	unlocked := canBuild || atMax
-	locked := !unlocked
-	canAfford := kingdom.Wood >= def.Cost.Wood &&
-		kingdom.Stone >= def.Cost.Stone &&
-		kingdom.Food >= def.Cost.Food &&
-		kingdom.Mana >= def.Cost.Mana &&
-		kingdom.Devotion >= def.Cost.Devotion &&
-		kingdom.Knowledge >= def.Cost.Knowledge
-	busy := construction != nil
-	buildDisabled := busy || !canBuild || !canAfford
+// ── Tree ──────────────────────────────────────────────────────────────────────
 
-	var btnText string
-	switch {
-	case locked:
-		btnText = "🔒 Locked"
-	case !canAfford:
-		btnText = "✗ Build"
-	default:
-		btnText = "Build"
-	}
-
-	return Div(Classes{"building-card": true, "panel": true, "building-card--locked": locked},
-		P(Class("panel-title"), Text(def.Name)),
-		P(Text(fmt.Sprintf("%d / %d", count, def.MaxCount))),
-		If(def.BonusPctPer.HasAny(), P(Text(bonusText(def)))),
-		If(locked, P(Text(prereqText(def)))),
-		If(!atMax, Group([]Node{
-			P(Text(costText(def.Cost) + " · " + fmt.Sprintf("%d ticks", def.Ticks))),
-			Button(Classes{
-				"btn":               true,
-				"btn--locked":       locked,
-				"btn--insufficient": !locked && !canAfford,
-			},
-				If(buildDisabled, Disabled()),
-				If(!buildDisabled, ds.On("click", startBuild(btype))),
-				Text(btnText),
-			),
+func buildingsTree(tree game.PlacedTree, counts map[string]int, construction *db.KingdomConstruction) Node {
+	style := fmt.Sprintf("width:%dpx;height:%dpx", tree.Width, tree.Height)
+	return Div(Classes{"tree-wrap": true, "tree--lineage": true}, Style(style),
+		buildingConnectors(tree, counts),
+		Group(Map(tree.Nodes, func(pn game.PlacedNode) Node {
+			return buildingNode(pn, counts, construction)
 		})),
 	)
 }
 
-func buildingsAlert(inner Node) Node { return AlertContainer("buildings-alert", inner) }
-
-func bonusText(def game.BuildingDef) string {
-	b := def.BonusPctPer
-	var parts []string
-	if b.Wood != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% wood", b.Wood))
+func buildingConnectors(tree game.PlacedTree, counts map[string]int) Node {
+	var paths []Node
+	for _, pn := range tree.Nodes {
+		for _, prereq := range pn.Prereqs {
+			parent, ok := tree.NodeByID[prereq.Type]
+			if !ok {
+				continue
+			}
+			dim := counts[prereq.Type] < prereq.Min
+			a := game.Point{X: parent.CX, Y: parent.Bottom}
+			b := game.Point{X: pn.CX, Y: pn.Top}
+			d := game.ElbowPath(a, b)
+			mid := (a.Y + b.Y) / 2
+			paths = append(paths,
+				El("path", Classes{"tree-link": true, "is-dim": dim}, Attr("d", d)),
+				El("circle", Classes{"tree-joint": true, "is-dim": dim},
+					Attr("cx", itoa(b.X)), Attr("cy", itoa(mid)), Attr("r", "3")),
+			)
+		}
 	}
-	if b.Stone != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% stone", b.Stone))
-	}
-	if b.Food != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% food", b.Food))
-	}
-	if b.Mana != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% mana", b.Mana))
-	}
-	if b.Devotion != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% devotion", b.Devotion))
-	}
-	if b.Knowledge != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% knowledge", b.Knowledge))
-	}
-	return strings.Join(parts, ", ") + " per instance"
+	return El("svg", Class("tree-links"), Attr("aria-hidden", "true"),
+		Group(paths),
+	)
 }
 
-func prereqText(def game.BuildingDef) string {
-	parts := make([]string, 0, len(def.Prerequisites))
-	for _, p := range def.Prerequisites {
-		d := game.BuildingDefs[p.Type]
-		parts = append(parts, d.Name)
-	}
-	return "Requires: " + strings.Join(parts, " and ")
+func buildingNode(pn game.PlacedNode, counts map[string]int, construction *db.KingdomConstruction) Node {
+	count := counts[pn.ID]
+	maxed := count >= pn.Max
+	prereqMet := game.PrereqMet(pn.BuildingDef, counts)
+	locked := !prereqMet && !maxed
+	isBuilding := construction != nil && construction.BuildingType == pn.ID
+	return Div(
+		Classes{"node": true, "is-locked": locked, "is-unlocked": !locked && !maxed, "is-maxed": maxed, "is-building": isBuilding},
+		ds.Class("'is-selected'", fmt.Sprintf("$selected_building === '%s'", pn.ID)),
+		Style(fmt.Sprintf("left:%dpx;top:%dpx", pn.Left, pn.Top)),
+		ds.On("click", datastar.GetSSE(routes.KingdomBuildingsDetailPath+"?building=%s", pn.ID)),
+		Div(Class("node-top"),
+			buildingGlyph(pn.BuildingDef, 40),
+			Iff(locked, func() Node { return Span(Class("node-lock"), lockIcon()) }),
+		),
+		P(Class("node-name"), Text(pn.Name)),
+		nodeCount(count, pn.Max),
+		nodePips(count, pn.Max),
+		Iff(isBuilding, func() Node { return Div(Class("node-building-ring")) }),
+	)
 }
 
-func costText(cost game.ResourceValues) string {
-	parts := []string{}
-	if cost.Wood > 0 {
-		parts = append(parts, fmt.Sprintf("%d wood", cost.Wood))
+func nodePips(count, max int) Node {
+	nodes := make([]Node, max+1)
+	nodes[0] = Class("pips")
+	for i := range max {
+		nodes[i+1] = Span(Classes{"pip": true, "on": i < count})
 	}
-	if cost.Stone > 0 {
-		parts = append(parts, fmt.Sprintf("%d stone", cost.Stone))
+	return El("div", nodes...)
+}
+
+func nodeCount(count, max int) Node {
+	if count == 0 {
+		return P(Class("node-count"), Text(fmt.Sprintf("0 / %d", max)))
 	}
-	if cost.Food > 0 {
-		parts = append(parts, fmt.Sprintf("%d food", cost.Food))
+	if count >= max {
+		return P(Class("node-count"), Span(Class("at-max"), Text(itoa(count))), Text(" / "+itoa(max)))
 	}
-	if cost.Mana > 0 {
-		parts = append(parts, fmt.Sprintf("%d mana", cost.Mana))
+	return P(Class("node-count"), Span(Class("full"), Text(itoa(count))), Text(" / "+itoa(max)))
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+
+func detailPanel(selectedID string, defs []game.BuildingDef, counts map[string]int, resources map[string]int, construction *db.KingdomConstruction) Node {
+	return Div(ID("buildings-detail"), Classes{"card": true, "is-lit": true, "detail": true},
+		Div(Class("card-inner"),
+			If(selectedID == "", detailEmpty()),
+			Iff(selectedID != "", func() Node {
+				b := game.BuildingByID(defs, selectedID)
+				return detailFull(b, counts, resources, construction)
+			}),
+		),
+	)
+}
+
+func detailEmpty() Node {
+	return Div(Class("detail-empty"),
+		P(Class("detail-empty-title"), Text("Select a Building")),
+		P(Class("detail-empty-text"), Text("Click any node in the tree to view its details and construction options.")),
+	)
+}
+
+func detailFull(b game.BuildingDef, counts map[string]int, resources map[string]int, construction *db.KingdomConstruction) Node {
+	count := counts[b.ID]
+	return Group([]Node{
+		Div(Class("detail-head"),
+			buildingGlyph(b, 50),
+			Div(
+				P(Class("detail-title"), Text(b.Name)),
+				P(Class("detail-tally"), Text(fmt.Sprintf("%d / %d raised", count, b.Max))),
+			),
+		),
+		nodePips(count, b.Max),
+		P(Class("detail-flavour"), Text(b.Flavour)),
+		Div(Class("detail-rule")),
+		Div(Class("detail-spec"),
+			specRow("Yields", yieldsVal(b, count)),
+			specRow("Cost", costVal(b, resources)),
+			specRow("Time", Div(Class("spec-val"), Text(fmt.Sprintf("%d ticks", b.Ticks)))),
+			If(len(b.Prereqs) > 0, specRow("Requires", reqVal(b, counts))),
+		),
+		Div(Class("detail-foot"),
+			raiseButton(b, counts, resources, construction),
+			raiseNote(b, counts, construction),
+		),
+	})
+}
+
+func specRow(label string, val Node) Node {
+	return Div(Class("spec-row"),
+		Span(Class("spec-label"), Text(label)),
+		val,
+	)
+}
+
+func yieldsVal(b game.BuildingDef, count int) Node {
+	if !b.BonusPctPer.HasAny() {
+		return Div(Class("spec-val"), Span(Class("bonus-none"), Text("—")))
 	}
-	if cost.Devotion > 0 {
-		parts = append(parts, fmt.Sprintf("%d devotion", cost.Devotion))
+	bp := b.BonusPctPer
+	var lines []Node
+	appendBonus := func(pct int, label string) {
+		if pct == 0 {
+			return
+		}
+		line := Span(Class("bonus-val"), Text(fmt.Sprintf("+%d%% %s / instance", pct, label)))
+		if count > 0 {
+			lines = append(lines, Div(line, P(Class("bonus-total"), Text(fmt.Sprintf("+%d%% total", pct*count)))))
+		} else {
+			lines = append(lines, Div(line))
+		}
 	}
-	if cost.Knowledge > 0 {
-		parts = append(parts, fmt.Sprintf("%d knowledge", cost.Knowledge))
+	appendBonus(bp.Wood, "wood")
+	appendBonus(bp.Stone, "stone")
+	appendBonus(bp.Food, "food")
+	appendBonus(bp.Mana, "mana")
+	appendBonus(bp.Devotion, "devotion")
+	appendBonus(bp.Knowledge, "knowledge")
+	return Div(Class("spec-val"), Group(lines))
+}
+
+func costVal(b game.BuildingDef, resources map[string]int) Node {
+	type chip struct {
+		res     string
+		glyphID string
+		need    int
 	}
-	return strings.Join(parts, ", ")
+	c := b.Cost
+	var chips []chip
+	if c.Wood > 0 {
+		chips = append(chips, chip{"wood", "tree", c.Wood})
+	}
+	if c.Stone > 0 {
+		chips = append(chips, chip{"stone", "mountain", c.Stone})
+	}
+	if c.Food > 0 {
+		chips = append(chips, chip{"food", "wheat", c.Food})
+	}
+	if c.Mana > 0 {
+		chips = append(chips, chip{"mana", "mana", c.Mana})
+	}
+	if c.Devotion > 0 {
+		chips = append(chips, chip{"devotion", "devotion", c.Devotion})
+	}
+	if c.Knowledge > 0 {
+		chips = append(chips, chip{"knowledge", "knowledge", c.Knowledge})
+	}
+	nodes := Map(chips, func(ch chip) Node {
+		have := resources[ch.res]
+		return Span(Classes{"cost-chip": true, "is-short": have < ch.need},
+			Span(Classes{"gem": true, "gem-" + ch.glyphID: true}, Glyph(ch.glyphID, 22)),
+			Text(itoa(ch.need)),
+		)
+	})
+	return Div(Classes{"spec-val": true, "cost-chips": true}, Group(nodes))
+}
+
+func reqVal(b game.BuildingDef, counts map[string]int) Node {
+	items := Map(b.Prereqs, func(p game.Prerequisite) Node {
+		met := counts[p.Type] >= p.Min
+		name := game.BuildingName(p.Type)
+		label := fmt.Sprintf("%s (×%d)", name, p.Min)
+		return Div(Classes{"req-item": true, "unmet": !met},
+			Span(Classes{"req-mark": true, "met": met, "unmet": !met},
+				If(met, checkMarkIcon()),
+				If(!met, xMarkIcon()),
+			),
+			Text(label),
+		)
+	})
+	return Div(Classes{"spec-val": true, "req-list": true}, Group(items))
+}
+
+func raiseButton(b game.BuildingDef, counts map[string]int, resources map[string]int, construction *db.KingdomConstruction) Node {
+	count := counts[b.ID]
+	maxed := count >= b.Max
+	prereqMet := game.PrereqMet(b, counts)
+	canAfford := game.CanAfford(b, resources)
+	buildingThis := construction != nil && construction.BuildingType == b.ID
+	anotherInProgress := construction != nil && !buildingThis
+	switch {
+	case maxed:
+		return Button(Classes{"btn": true, "btn--locked": true}, Disabled(), Text("Fully Raised"))
+	case !prereqMet:
+		return Button(Classes{"btn": true, "btn--locked": true}, Disabled(), Text("Locked"))
+	case anotherInProgress:
+		return Button(Class("btn"), Disabled(), Text("Another work underway"))
+	case buildingThis:
+		return Button(Class("btn"), Disabled(), Text("Raising…"))
+	case !canAfford:
+		return Button(Classes{"btn": true, "btn--insufficient": true}, Disabled(), Text("Not enough resources"))
+	default:
+		return Button(Classes{"btn": true, "btn--primary": true},
+			ds.On("click", datastar.PostSSE(routes.KingdomBuildingsRaisePath+"?building=%s", b.ID)),
+			Text("Raise the "+b.Name),
+		)
+	}
+}
+
+func raiseNote(b game.BuildingDef, counts map[string]int, construction *db.KingdomConstruction) Node {
+	count := counts[b.ID]
+	if count >= b.Max {
+		return P(Class("detail-note"), Text("This building is fully raised."))
+	}
+	if construction != nil && construction.BuildingType == b.ID {
+		return P(Class("detail-note"), Text(fmt.Sprintf("%d / %d ticks remaining.", construction.TicksRemaining, construction.TicksTotal)))
+	}
+	if construction != nil {
+		return P(Classes{"detail-note": true, "is-warn": true}, Text("Another construction is already underway."))
+	}
+	return nil
+}
+
+// ── Glyphs & icons ────────────────────────────────────────────────────────────
+
+func buildingGlyph(b game.BuildingDef, size int) Node {
+	if b.Resource != "" {
+		return Span(Classes{"gem": true, "gem-" + b.Resource: true}, Glyph(b.Resource, size))
+	}
+	iconSize := size * 6 / 10
+	return El("span", Class("node-medallion"),
+		Style(fmt.Sprintf("width:%dpx;height:%dpx", size, size)),
+		Icon(b.Icon, iconSize, false),
+	)
+}
+
+func lockIcon() Node {
+	return El("svg", Attr("viewBox", "0 0 10 12"), Attr("aria-hidden", "true"),
+		El("path", Attr("fill", "currentColor"),
+			Attr("d", "M8 5V4a3 3 0 0 0-6 0v1H1v7h8V5H8zm-5-1a2 2 0 0 1 4 0v1H3V4z")),
+	)
+}
+
+func checkMarkIcon() Node {
+	return El("svg", Attr("viewBox", "0 0 9 9"), Attr("aria-hidden", "true"),
+		El("polyline", Attr("points", "1.5,4.5 3.5,6.5 7.5,2.5"),
+			Attr("fill", "none"), Attr("stroke", "currentColor"), Attr("stroke-width", "1.5"),
+			Attr("stroke-linecap", "round"), Attr("stroke-linejoin", "round")),
+	)
+}
+
+func xMarkIcon() Node {
+	return El("svg", Attr("viewBox", "0 0 9 9"), Attr("aria-hidden", "true"),
+		El("line", Attr("x1", "2"), Attr("y1", "2"), Attr("x2", "7"), Attr("y2", "7"),
+			Attr("stroke", "currentColor"), Attr("stroke-width", "1.5"), Attr("stroke-linecap", "round")),
+		El("line", Attr("x1", "7"), Attr("y1", "2"), Attr("x2", "2"), Attr("y2", "7"),
+			Attr("stroke", "currentColor"), Attr("stroke-width", "1.5"), Attr("stroke-linecap", "round")),
+	)
 }

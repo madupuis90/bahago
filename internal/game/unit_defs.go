@@ -127,7 +127,7 @@ var UnitDefs = map[string]UnitDef{
 		Ticks:         16, // 4h
 		Cost:          ResourceValues{Wood: 15, Stone: 5},
 		FoodUpkeep:    1,
-		Prerequisites: []Prerequisite{{Type: BuildingMill, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingMill, Min: 1}},
 		Attributes:    []Attribute{AttributeRaiders, AttributeMelee},
 	},
 	UnitKnight: {
@@ -136,7 +136,7 @@ var UnitDefs = map[string]UnitDef{
 		Ticks:         24, // 6h
 		Cost:          ResourceValues{Wood: 20, Stone: 20},
 		FoodUpkeep:    2,
-		Prerequisites: []Prerequisite{{Type: BuildingArmory, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingArmory, Min: 1}},
 		Attributes:    []Attribute{AttributeMelee, AttributeShields},
 	},
 	UnitCatapult: {
@@ -145,7 +145,7 @@ var UnitDefs = map[string]UnitDef{
 		Ticks:         32, // 8h
 		Cost:          ResourceValues{Stone: 40},
 		FoodUpkeep:    2,
-		Prerequisites: []Prerequisite{{Type: BuildingArmory, MinCount: 1}},
+		Prerequisites: []Prerequisite{{Type: BuildingArmory, Min: 1}},
 		Attributes:    []Attribute{AttributeSiegeEngine},
 	},
 	// Summon units
@@ -191,7 +191,7 @@ func CanTrain(utype string, buildingCounts map[string]int) bool {
 		return false
 	}
 	for _, p := range def.Prerequisites {
-		if buildingCounts[p.Type] < p.MinCount {
+		if buildingCounts[p.Type] < p.Min {
 			return false
 		}
 	}

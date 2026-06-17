@@ -98,6 +98,28 @@
 
 ---
 
+## Buildings  _(handoff: `design_handoff_buildings_v2/`)_
+
+_Replaces old `.buildings-grid` / `.building-card` flat-grid and `.construction-banner` stub — none were registered._
+
+| Component | Class(es) | Status | styles.css Section | Design Reference |
+|---|---|---|---|---|
+| Page layout | `.builds`, `.builds-stage`, `.tree-scroll`, `.tree-wrap` | live | Buildings | Page wrapper / stage |
+| Construction banner | `.build-banner`, `.build-banner.is-idle`, `.build-banner-gem`, `.build-banner-body`, `.build-banner-idle-title`, `.build-banner-idle-text` | live | Buildings | Construction banner |
+| Tree (Lineage variant) | `.tree--lineage` + node state modifiers `.is-locked`, `.is-unlocked`, `.is-maxed`, `.is-selected`, `.is-building` | live | Buildings | Lineage variant |
+| Tree node | `.node`, `.node-top`, `.node-lock`, `.node-name`, `.node-count`, `.node-building-ring`, `.node-medallion` | live | Buildings | Tree node |
+| Pip meter | `.pips`, `.pip`, `.pip.on` | live | Buildings | Pip meter |
+| Tree connectors (SVG) | `.tree-links`, `.tree-link`, `.tree-link.is-dim`, `.tree-joint`, `.tree-joint.is-dim` | live | Buildings | Tree connectors |
+| Detail panel (empty) | `.detail`, `.detail-empty`, `.detail-empty-title`, `.detail-empty-text` | live | Buildings | Detail panel — empty state |
+| Detail panel (head) | `.detail-head`, `.detail-title`, `.detail-tally`, `.detail-flavour`, `.detail-rule` | live | Buildings | Detail panel — head |
+| Detail spec rows | `.detail-spec`, `.spec-row`, `.spec-label`, `.spec-val` | live | Buildings | Detail panel — spec |
+| Cost chips | `.cost-chips`, `.cost-chip`, `.cost-chip.is-short` | live | Buildings | Detail panel — cost |
+| Production bonus | `.bonus-val`, `.bonus-total`, `.bonus-none` | live | Buildings | Detail panel — bonus |
+| Prereq list | `.req-list`, `.req-item`, `.req-mark`, `.req-mark.met`, `.req-mark.unmet` | live | Buildings | Detail panel — prereqs |
+| Detail footer | `.detail-foot`, `.detail-note`, `.detail-note.is-warn` | live | Buildings | Detail panel — footer |
+
+---
+
 ## Guild  _(handoff: `design_handoff_guild/`)_
 
 | Component | Class(es) | Status | styles.css Section | Design Reference |

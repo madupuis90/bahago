@@ -2515,49 +2515,352 @@ select.field:focus { outline: none; border-color: var(--chrome-accent); box-shad
 }
 
 /* =============================================================================
-   Buildings
+   Buildings — web/css/43-buildings.css
+   ---------------------------------------------------------------------------
+   Page-specific layout for the Buildings skill-tree screen.
+   Reuses: .card, .btn, .gem, .meter, .page-header (all live in other files).
+   Replaces the old .buildings-grid / .building-card flat-grid implementation
+   entirely — delete those old rules before adding these.
+
+   The mockup scaffold (.game-frame, .frame-body) is NOT included here — the
+   real app uses .kingdom-page + <main> from web/css/40-kingdom-chrome.css.
+
+   Variant shipped: LINEAGE (engraved parchment nodes, orthogonal connectors).
+   The skill-tree dark-board variant was explored but not shipped.
    ============================================================================= */
 
-.buildings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.building-card {
-  padding: 1.25rem;
+/* ── Page wrapper ───────────────────────────────────────────────────────────── */
+.builds {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-
-  & .panel-title {
-    font-size: 1rem;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-  }
-
-  & .btn {
-    align-self: flex-start;
-    margin-top: auto;
-    padding-top: 0.5rem;
-  }
+  min-height: 0;
 }
+.builds .page-header { margin-bottom: 12px; }
 
-.building-card--locked {
-  opacity: 0.65;
-  filter: saturate(0.5);
-}
-
-.construction-banner {
+/* ── Construction banner (above the tree) ───────────────────────────────────── */
+.build-banner {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.25rem;
-  margin-bottom: 0.5rem;
-  background: #d4c070;
+  gap: 20px;
+  padding: 11px 18px;
+  margin-bottom: 14px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #2e1808, #43240f);
+  border: 1.5px solid var(--chrome-accent, #c89a4a);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, .18), 0 6px 18px rgba(0, 0, 0, .4);
+}
+.build-banner.is-idle {
+  background: linear-gradient(180deg, rgba(255, 250, 236, .55), rgba(235, 223, 182, .5));
+  border: 1.5px dashed var(--edge, #b8a26a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4);
+}
+.build-banner-gem { flex: none; }
+.build-banner-body { flex: 1; min-width: 0; }
+.build-banner .meter { gap: 6px; }
+.build-banner .meter-name { color: #fbe9bf; }
+.build-banner .meter-name .meter-qty { color: rgba(251, 233, 191, .6); }
+.build-banner .meter-eta { color: var(--chrome-accent-light, #e8c478); }
+.build-banner.is-idle .meter-name { color: var(--ink, #2a2418); }
+.build-banner-idle-text {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--ink-soft, #5a4d36);
+  font-size: .98rem;
+}
+.build-banner-idle-title {
+  font-family: var(--font-cinzel);
+  font-weight: 700;
+  font-size: .74rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--wood-dark, #5a3820);
+  margin-bottom: 2px;
 }
 
+/* ── Stage: tree left, detail panel right ───────────────────────────────────── */
+.builds-stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 290px;
+  gap: 18px;
+}
+.tree-scroll {
+  position: relative;
+  overflow: auto;
+  padding: 4px 8px 8px 2px;
+}
+.tree-wrap {
+  position: relative;
+  margin: 0 auto;
+}
+
+/* ── Connector SVG layer (sits beneath nodes) ───────────────────────────────── */
+.tree-links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.tree-link { fill: none; }
+
+/* ── Node base styles ───────────────────────────────────────────────────────── */
+.node {
+  position: absolute;
+  width: 136px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 10px 9px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+}
+.node-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.node .gem { width: 40px; height: 40px; }
+.node-name {
+  font-family: var(--font-heading, Georgia, serif);
+  font-weight: 600;
+  font-size: .96rem;
+  color: var(--ink, #2a2418);
+  line-height: 1.05;
+}
+.node-count {
+  font-family: var(--font-cinzel), Georgia, serif;
+  font-size: .64rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-soft, #5a4d36);
+  font-variant-numeric: tabular-nums;
+}
+.node-count .full  { color: var(--accent, #2f5a3d); }
+.node-count .at-max { color: var(--accent-dark, #1d3a26); font-weight: 700; }
+
+/* Pip meter ●●●○○ */
+.pips { display: flex; gap: 4px; align-items: center; }
+.pip  { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Medallion — non-resource buildings (e.g. Armory) */
+.node-medallion {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #c4b487 0%, #8f7f53 55%, #5d4f2c 100%);
+  border: 1.5px solid var(--wood-dark, #5a3820);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -2px 3px rgba(0, 0, 0, .25);
+  color: #fff5d6;
+}
+
+/* Lock badge (top-right corner, locked nodes only) */
+.node.is-locked .node-name,
+.node.is-locked .node-count { color: var(--ink-soft, #5a4d36); }
+.node-lock {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #6b5c3c, #463a22);
+  border: 1.5px solid #2e2614;
+  color: #e9dcb6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+}
+.node-lock svg { width: 11px; height: 11px; }
+
+/* Building-in-progress pulse ring */
+.node-building-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+/* ── Lineage variant (the shipped design) ───────────────────────────────────── */
+.tree--lineage .node {
+  background: linear-gradient(180deg, var(--parchment, #f7eed5) 0%, var(--parchment-deep, #ebdfb6) 100%);
+  border: 1.5px solid var(--wood, #7d5132);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 220, .8), 0 2px 5px rgba(60, 40, 20, .22);
+}
+.tree--lineage .node:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 220, .9), 0 5px 12px rgba(60, 40, 20, .28);
+}
+.tree--lineage .node.is-locked {
+  background: linear-gradient(180deg, #e7ddc4 0%, #d8ccaa 100%);
+  border-color: #ad9d76;
+  filter: saturate(.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4);
+}
+.tree--lineage .node.is-locked .gem { filter: saturate(.35) opacity(.7); }
+.tree--lineage .node.is-selected {
+  border-color: var(--chrome-accent, #c89a4a);
+  box-shadow:
+    0 0 0 2px var(--chrome-accent, #c89a4a),
+    inset 0 1px 0 rgba(255, 248, 220, .9),
+    0 5px 14px rgba(60, 40, 20, .3);
+}
+.tree--lineage .node.is-maxed  { border-color: var(--accent-dark, #1d3a26); }
+.tree--lineage .node.is-building .node-building-ring {
+  border: 2px solid var(--chrome-accent, #c89a4a);
+  animation: lineagePulse 1.6s ease-in-out infinite;
+}
+.tree--lineage .pip    { background: #d8cba6; border: 1px solid rgba(90, 56, 32, .35); }
+.tree--lineage .pip.on { background: linear-gradient(180deg, #5a8f5e, #3f6e44); border-color: #2e5532; }
+.tree--lineage .tree-link      { stroke: #8a6a3e; stroke-width: 2; }
+.tree--lineage .tree-link.is-dim { stroke: #c3b48c; stroke-dasharray: 3 5; stroke-width: 1.5; }
+.tree--lineage .tree-joint     { fill: #8a6a3e; }
+.tree--lineage .tree-joint.is-dim { fill: #c3b48c; }
+
+@keyframes lineagePulse {
+  0%, 100% { opacity: .4; }
+  50%       { opacity: 1; }
+}
+
+/* ── Detail / build panel ───────────────────────────────────────────────────── */
+.detail { align-self: start; max-height: 100%; overflow: auto; }
+.detail .card-inner { padding: 16px 18px 18px; }
+
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 38px 22px;
+  color: var(--ink-soft, #5a4d36);
+}
+.detail-empty-title {
+  font-family: var(--font-cinzel), Georgia, serif;
+  font-weight: 700;
+  font-size: .74rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--wood-dark, #5a3820);
+}
+.detail-empty-text {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: .98rem;
+  text-wrap: pretty;
+  max-width: 24ch;
+}
+
+.detail-head { display: flex; align-items: center; gap: 13px; margin-bottom: 4px; }
+.detail-head .gem           { width: 50px; height: 50px; flex: none; }
+.detail-head .node-medallion { width: 50px; height: 50px; }
+.detail-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 700;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--red-darker, #5f1212);
+}
+.detail-tally {
+  font-family: var(--font-cinzel), Georgia, serif;
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft, #5a4d36);
+  margin-top: 4px;
+}
+.detail .pips    { margin: 12px 0 2px; }
+.detail-flavour  {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: .96rem;
+  line-height: 1.45;
+  color: var(--ink-soft, #5a4d36);
+  margin: 12px 0 0;
+  text-wrap: pretty;
+}
+
+.detail-rule {
+  height: 1px;
+  background: repeating-linear-gradient(to right, var(--edge, #b8a26a) 0 5px, transparent 5px 10px);
+  margin: 15px 0 13px;
+}
+
+.detail-spec { display: flex; flex-direction: column; gap: 12px; }
+.spec-row    { display: grid; grid-template-columns: 74px 1fr; align-items: start; gap: 12px; }
+.spec-label  {
+  font-family: var(--font-caps, var(--font-cinzel));
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--ink-soft, #5a4d36);
+  padding-top: 3px;
+}
+.spec-val { font-family: var(--font-heading, Georgia, serif); font-size: 1rem; color: var(--ink, #2a2418); }
+
+.cost-chips { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.cost-chip  {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-cinzel), Georgia, serif;
+  font-size: .9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #2a2418);
+}
+.cost-chip .gem  { width: 22px; height: 22px; }
+.cost-chip.is-short { color: var(--highlight, #7a3018); }
+
+.bonus-val   { color: var(--accent, #2f5a3d); font-weight: 600; }
+.bonus-total { font-family: var(--font-cinzel), Georgia, serif; font-size: .68rem; color: var(--ink-soft, #5a4d36); margin-top: 2px; }
+.bonus-none  { color: var(--ink-soft, #5a4d36); font-style: italic; font-size: .92rem; }
+
+.req-list { display: flex; flex-direction: column; gap: 5px; }
+.req-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-body);
+  font-size: .94rem;
+}
+.req-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: #fff;
+}
+.req-mark.met   { background: var(--accent, #2f5a3d); }
+.req-mark.unmet { background: #b08a3a; }
+.req-mark svg   { width: 9px; height: 9px; }
+.req-item.unmet { color: var(--highlight, #7a3018); }
+
+.detail-foot { margin-top: 16px; }
+.detail-foot .btn { width: 100%; }
+.detail-note {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: .86rem;
+  color: var(--ink-soft, #5a4d36);
+  text-align: center;
+  margin-top: 9px;
+  text-wrap: pretty;
+}
+.detail-note.is-warn { color: var(--highlight, #7a3018); }
 /* =============================================================================
    Units
    ============================================================================= */

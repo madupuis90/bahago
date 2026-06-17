@@ -17,6 +17,8 @@ const (
 	KingdomBuildingsPath         = "/kingdom/buildings"
 	KingdomBuildingsRefreshPath  = "/kingdom/buildings/refresh"
 	KingdomConstructionStartPath = "/kingdom/buildings/start"
+	KingdomBuildingsDetailPath   = "/kingdom/buildings/detail"
+	KingdomBuildingsRaisePath    = "/kingdom/buildings/raise"
 
 	KingdomUnitsPath        = "/kingdom/units"
 	KingdomUnitsRefreshPath = "/kingdom/units/refresh"
