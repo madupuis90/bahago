@@ -1,71 +1,107 @@
 /* =============================================================================
-   Tokens
+   Tokens — COMIC LAB re-skin (Foundation handoff, 2026-06-18)
+   ---------------------------------------------------------------------------
+   Drop-in replacement for web/css/01-tokens.css.
+   Token NAMES are preserved so no other CSS file has to change; only VALUES are
+   repointed to the Comic Lab palette, fonts are swapped to Lilita One / Nunito,
+   and a heraldic + ink-shadow block is ADDED at the top.
+   Structural tokens (map sizes, card knobs, chrome vars) are kept untouched so
+   not-yet-re-skinned screens keep working until their own handoff lands.
    ============================================================================= */
 
 :root {
-  /* Link colors (used outside panels) */
-  --link-color: #c9a84c;
-  --link-hover-color: #e8c96a;
+  /* ── Comic Lab palette (NEW) ───────────────────────────────────────────── */
+  --paper: #f3e3bd;            /* page parchment */
+  --paper-2: #efdcb0;
+  --dot: rgba(40, 28, 12, .10); /* the dotted-paper texture color */
+  --card: #fffaf0;             /* card cream */
+  --card-2: #fff4dd;           /* recessed well / secondary surface */
 
-  /* Panels */
-  --panel-bg: #e8d9a0;
-  --panel-text: #1a1008;
-  --panel-link-color: #7a4a00;
-  --panel-link-hover-color: #5c3a00;
-  --panel-radius: 0.5rem;
-  --panel-border: 1px solid rgba(0, 0, 0, 0.2);
-  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  /* heraldic — the four flat meaning-colors */
+  --red: #d63a2f;              /* realm / danger / destroy */
+  --blue: #2f6fb0;             /* defence / steel / accent */
+  --green: #3f9d51;            /* growth / commit */
+  --yellow: #f4c12e;          /* time / emphasis / warn */
+  --primary-ink: #fff6e6;      /* text on solid heraldic fills */
 
-  /* Value colors */
-  --color-positive: #2d7a3a;
-  --color-negative: #a02020;
+  /* the ink line + its hard offset shadow (the comic signature) */
+  --ink: #20180f;
+  --shadow-ink: 4px 4px 0 var(--ink);
+  --shadow-ink-sm: 3px 3px 0 var(--ink);
+  --shadow-ink-xs: 2px 2px 0 var(--ink);
 
-  /* Buttons */
-  --btn-bg: #c9a84c;
-  --btn-bg-hover: #e8c96a;
-  --btn-color: #1a1008;
-  --shadow-btn: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  --shadow-btn-hover: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  --shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  /* resource gems (kept for the Chrome handoff that re-skins .gem) */
+  --gem-tree: #2f9e57;
+  --gem-mountain: #5b7184;
+  --gem-wheat: #e0a51c;
+  --gem-flame: #2f6fb0;
+  --gem-sun: #d8456b;
+  --gem-star: #7a52c8;
 
-  /* World map — --map-page-size must match game.PageSize in internal/game/world.go */
+  /* ── Typography — TWO faces (repointed) ────────────────────────────────── */
+  /* Lilita One: every title, label, numeral, button.  Nunito: body & prose. */
+  --font-display: 'Lilita One', cursive;
+  --font-cinzel:  'Lilita One', cursive;   /* legacy name → poster face */
+  --font-heading: 'Nunito', system-ui, sans-serif;
+  --font-body:    'Nunito', system-ui, sans-serif;
+  --font-caps:    'Nunito', system-ui, sans-serif;  /* caps labels: Nunito 900 */
+  --font-ui:      'Nunito', system-ui, sans-serif;
+
+  /* ── Links & value colors (repointed) ──────────────────────────────────── */
+  --link-color: var(--blue);
+  --link-hover-color: #235a93;
+  --color-positive: var(--green);
+  --color-negative: var(--red);
+
+  /* ── Panels (kept; values nudged to the comic surface) ─────────────────── */
+  --panel-bg: var(--card);
+  --panel-text: var(--ink);
+  --panel-link-color: var(--blue);
+  --panel-link-hover-color: #235a93;
+  --panel-radius: 14px;
+  --panel-border: 3px solid var(--ink);
+  --panel-shadow: var(--shadow-ink);
+
+  /* ── Buttons (legacy token names kept; values now comic) ───────────────── */
+  --btn-bg: var(--card);
+  --btn-bg-hover: var(--card-2);
+  --btn-color: var(--ink);
+  --shadow-btn: var(--shadow-ink);
+  --shadow-btn-hover: 5px 5px 0 var(--ink);
+  --shadow-btn-active: 0 0 0 var(--ink);
+
+  /* ── World map — must match game.PageSize (unchanged) ──────────────────── */
   --map-page-size: 8;
   --map-cell-size: 4rem;
   --map-wall-size: 3rem;
   --map-axis-label-size: 2rem;
   --map-minimap-cell-size: 1rem;
 
-  /* Typography */
-  --font-display: 'Cinzel Decorative', 'Cinzel', serif;
-  --font-cinzel: 'Cinzel', serif;
-  --font-heading: 'Cormorant Garamond', 'Garamond', serif;
-  --font-body: 'IM Fell English', 'Garamond', serif;
-  --font-caps: 'IM Fell English SC', 'IM Fell English', serif;
-  --font-ui: system-ui, -apple-system, sans-serif;
-
-  /* Page background — sky-blue landscape gradient */
-  --page-bg:
-    radial-gradient(ellipse 90% 50% at 50% 100%, #c8d99c, transparent),
-    radial-gradient(ellipse 70% 45% at 50% 110%, #9bb979, transparent),
-    linear-gradient(180deg, #a5c8de 0%, #cbdbe6 35%, #ecdcb4 70%, #d9c285 100%);
-
-  /* Kingdom chrome — ink, surface, accent colors */
+  /* ── Legacy chrome / surface tokens — KEPT until their handoffs land ────── *
+   * Not-yet-re-skinned screens (chrome, pages, cards) still reference these.   *
+   * Do not delete in this handoff; later handoffs retire them.                 */
   --red-darker: #5f1212;
   --wood: #7d5132;
   --wood-dark: #5a3820;
   --parchment: #f7eed5;
   --parchment-deep: #ebdfb6;
-  --ink: #2a2418;
   --ink-soft: #5a4d36;
-  --accent: #2f5a3d;
+  --accent: var(--blue);          /* repointed: focus glow is now steel blue */
   --accent-dark: #1d3a26;
   --highlight: #7a3018;
   --edge: #b8a26a;
   --c-ink-strong: #f7eed5;
   --parchment-shadow: rgba(75, 55, 25, .18);
+  --chrome-border: #4d2f1c;
+  --chrome-accent: #c89a4a;
+  --chrome-accent-light: #e8c478;
+  --card-alpha: 0.55;
+  --card-blur: 0px;
+  --card-lit: 1;
+  --card-border-w: 1.5px;
 
-  /* Chrome (topbar + bottom-nav) — dark wood with brass accents
-     Pattern P3: one horizontal timber seam aligned with the info/nav row break */
+  /* Carried over from the parchment tokens — still referenced by not-yet-re-skinned
+     screens (chrome topbar/nav, world map, .card surface). Retire with their handoffs. */
   --chrome-bg:
     linear-gradient(180deg, rgba(255, 235, 200, .18) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, .20) 100%),
     linear-gradient(180deg,
@@ -77,26 +113,16 @@
       rgba(255, 235, 200, .07) calc(62% + 1px),
       transparent calc(62% + 1px)),
     linear-gradient(180deg, #8c5e3d 0%, #6b4226 100%);
-  --chrome-border: #4d2f1c;
-  --chrome-accent: #c89a4a;
-  --chrome-accent-light: #e8c478;
-
-  /* Card surface knobs */
-  --card-alpha: 0.55;
-  --card-blur: 0px;
-  --card-lit: 1;
-  --card-border-w: 1.5px;
   --card-fill-flat: rgb(255 250 236 / var(--card-alpha));
   --card-fill-lit:
     linear-gradient(180deg,
       rgb(255 250 236 / calc(var(--card-alpha) + 0.10)) 0%,
       rgb(235 223 182 / calc(var(--card-alpha) - 0.05)) 100%);
-
-  --parchment-bg:
-    radial-gradient(ellipse at 30% 20%, rgba(255, 250, 236, .9), transparent 55%),
-    radial-gradient(ellipse at 70% 80%, rgba(220, 200, 160, .35), transparent 60%),
-    linear-gradient(180deg, #f7eed5, #efe3c0);
   --parchment-noise:
     url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
-}
 
+  /* Page background — flat dotted parchment (replaces the sky gradient) */
+  --page-bg:
+    radial-gradient(var(--dot) 1.6px, transparent 1.7px) 0 0 / 17px 17px,
+    var(--paper);
+}

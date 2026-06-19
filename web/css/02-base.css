@@ -1,9 +1,10 @@
 /* =============================================================================
-   Base
+   Base — COMIC LAB re-skin (Foundation handoff, 2026-06-18)
+   Drop-in replacement for web/css/02-base.css.
    ============================================================================= */
 
 html {
-  font-family: var(--font-ui);
+  font-family: var(--font-ui);            /* Nunito */
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: none;
   text-size-adjust: none;
@@ -11,7 +12,10 @@ html {
 }
 
 body {
+  /* flat dotted-parchment paper (the token carries the dot pattern + fill) */
   background: var(--page-bg) fixed;
+  color: var(--ink);
+  font-weight: 600;                       /* Nunito body weight */
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -20,46 +24,64 @@ body {
 }
 
 a {
-  color: var(--link-color);
+  color: var(--link-color);               /* steel blue */
   text-decoration: none;
   cursor: pointer;
 
   &:hover {
     text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2.5px;
     color: var(--link-hover-color);
   }
 
   &[aria-current="page"] {
     color: var(--link-hover-color);
-    font-weight: bold;
+    font-weight: 800;
     text-decoration: underline;
     pointer-events: none;
   }
 }
 
+/* Bare inputs (un-classed) get the comic recessed-well look so legacy forms
+   read correctly before .field is applied. */
 input:not([type="range"]),
 select,
 textarea {
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.4rem;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--panel-text);
-  font-size: 0.9rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 11px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
   font-family: inherit;
+  box-shadow: inset 3px 3px 0 color-mix(in srgb, var(--ink) 10%, transparent);
 
   &:focus-visible {
-    outline: 2px solid var(--btn-bg);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: inset 0 0 0 2px var(--blue);
   }
 }
 
 input[type="range"] {
-  accent-color: var(--btn-bg);
+  accent-color: var(--blue);
 }
 
 h1 {
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-family: var(--font-display);       /* Lilita One */
+  font-size: 1.7rem;
+  line-height: 1;
+  font-weight: 400;                       /* Lilita is single-weight */
 }
 
+code {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: .88em;
+  background: var(--card-2);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 0 6px;
+}

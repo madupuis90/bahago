@@ -10,11 +10,12 @@
 
 | Component | Class(es) | Status | styles.css Section | Design Reference |
 |---|---|---|---|---|
-| Button | `.btn`, `.btn--sm`, `.btn--primary`, `.btn--danger`, `.btn--quiet`, `.is-disabled`, `.btn--insufficient`, `.btn--locked` | live | Shared components | Button system |
+| Button | `.btn`, `.btn--primary`, `.btn--accent`, `.btn--danger`, `.btn--lg`, `.btn--sm`, `.btn--quiet`, `.btn--step5`; states `.is-insufficient`, `.is-locked`, `.is-disabled` (legacy aliases `.btn--insufficient`, `.btn--locked` kept) | live · **reskinned** (Comic Lab) | Shared components | Button system |
 | Card | `.card`, `.card-tab--wood`, `.card-tab--red`, `.card-tab--green` | live | Shared components | Card |
-| Slider | `.slider-*`, `.v-diamond` | live | Allocation | Slider |
+| Slider | `.slider-*`, `.v-diamond` | live · **reskinned** (Comic Lab) | Allocation | Slider |
 | Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) | live | Kingdom chrome | Resource gems |
-| Alert | `.alert--error`, `.alert--success` | live | Shared components | Alert |
+| Alert | `.alert--error`, `.alert--success` | live · **reskinned** (Comic Lab) | Shared components | Alert |
+| Tokens | `--ink`, `--shadow-ink`/`-sm`/`-xs`, `--red`/`--blue`/`--green`/`--yellow`, `--card`/`--card-2`, `--paper`/`--paper-2`/`--dot`, `--page-bg`, `--accent` (→blue); fonts `--font-display` (Lilita One), `--font-body`/`--font-ui` (Nunito) | live · **reskinned** (Comic Lab) | Tokens | Foundation — design tokens |
 | CommandBar chrome | `.bar`, `.barB2`, `.barB2-info`, `.barB2-res`, `.barB2-right`, `.barB2-nav`, `.barB2-nav--ico` | live | Kingdom chrome | CommandBar (chrome redesign) |
 | Chrome field pattern | `--chrome-bg` (CSS custom property) | live | Tokens | P3: single horizontal timber seam at `62%`; replaced 95° repeating diagonal seams |
 | CommandBar identity | `.id`, `.id-crest`, `.crest`, `.crest-frame`, `.crest-shield`, `.crest-glyph`, `.id-name`, `.id-sub` | live | Kingdom chrome | CommandBar — identity block |
@@ -24,11 +25,11 @@
 | CommandBar nav link | `.nav-link`, `.is-on` | live | Kingdom chrome | CommandBar — nav link |
 | NavBadge | `.nav-link-ico`, `.nav-gly-ico`, `.nav-badge`, `badge-glow` keyframe | live | Kingdom chrome | CommandBar — unread badge |
 | SVG glyph | `.gly` | live | Kingdom chrome | Inline SVG glyph via `<use>` |
-| Form field | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Shared components | Fields (from Campaign transfer form) |
+| Form field | `.field`, `.field--num`, `.field--area`, `.select`, `.field-group`, `.field-label`, `.field-hint`, `.field-hint.is-invalid`, `.field-affix`, `.field-affix--trail`, `.field-lead`, `.field-trail`, `.check` | live · **reskinned** (Comic Lab) | Shared components | Fields (from Campaign transfer form) |
 | Textarea field | `textarea.field` · `.field-hint-row` | live | Shared components | Fields (textarea extension — guild handoff) |
-| Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live | Shared components | Section header (guild handoff) |
+| Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live · **reskinned** (Comic Lab) | Shared components | Section header (guild handoff) |
 | Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` | live | Shared components | Card header (guild handoff) |
-| Eyebrow | `.eyebrow` | live | Shared components | Eyebrow (guild handoff) |
+| Eyebrow | `.eyebrow` | live · **reskinned** (Comic Lab) | Shared components | Eyebrow (guild handoff) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |
 | Roster strip / unit token | `.roster-strip`, `.unit-token`, `.unit-medallion`, `.unit-tally`, `.roster-more`, `.roster-empty` | live | Army + Units | Roster / unit token |

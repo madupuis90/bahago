@@ -175,7 +175,7 @@ func shell(title string, layoutStream Node, body ...Node) Node {
 				Link(Rel("icon"), Href("data:,")),
 				Link(Rel("preconnect"), Href("https://fonts.googleapis.com")),
 				Link(Rel("preconnect"), Href("https://fonts.gstatic.com"), Attr("crossorigin", "")),
-				Link(Rel("stylesheet"), Href("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap")),
+				Link(Rel("stylesheet"), Href("https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,600;1,700&display=swap")),
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
 				Script(Type("module"), Src("/static/datastar.js")),
 			),
