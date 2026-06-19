@@ -29,6 +29,10 @@
   --shadow-ink: 4px 4px 0 var(--ink);
   --shadow-ink-sm: 3px 3px 0 var(--ink);
   --shadow-ink-xs: 2px 2px 0 var(--ink);
+  --shadow-ink-lg: 6px 6px 0 var(--ink);
+
+  /* arcane / summon accent (used by Units summon portraits + arcane chips) */
+  --purple: #7a52c8;
 
   /* resource gems (kept for the Chrome handoff that re-skins .gem) */
   --gem-tree: #2f9e57;

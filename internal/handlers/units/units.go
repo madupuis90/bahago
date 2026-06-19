@@ -412,7 +412,7 @@ func hostSummary(counts map[string]int, allTypes []string) Node {
 		totalFood += n * def.FoodUpkeep
 		totalMana += n * def.ManaUpkeep
 	}
-	return Div(Class("host-summary"),
+	return Div(Class("units-summary"),
 		hostStat("Standing", "units", totalUnits, false),
 		hostStat("Food Drain", "per tick", totalFood, totalFood > 0),
 		hostStat("Mana Drain", "per tick", totalMana, totalMana > 0),
@@ -420,10 +420,12 @@ func hostSummary(counts map[string]int, allTypes []string) Node {
 }
 
 func hostStat(label, sub string, num int, drain bool) Node {
-	return Div(Class("host-summary-stat"),
-		Span(Class("hs-label"), Text(label)),
-		Span(Classes{"hs-num": true, "neg": drain}, Text(strconv.Itoa(num))),
-		Span(Class("hs-sub"), Text(sub)),
+	return Div(Class("units-summary-stat"),
+		Span(Class("units-summary-label"), Text(label)),
+		Div(Class("units-summary-val"),
+			Span(Classes{"units-summary-num": true, "neg": drain}, Text(strconv.Itoa(num))),
+			Span(Class("units-summary-sub"), Text(sub)),
+		),
 	)
 }
 
@@ -438,13 +440,15 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 			Div(Class("card-header-row"),
 				P(Class("card-title"), Text("Training Grounds")),
 				Div(Class("slot-gauge"),
-					Div(Classes{"slot-gauge-dot": true, "is-on": busy}),
+					Div(Class("slot-gauge-dots"),
+						Div(Classes{"slot-gauge-dot": true, "is-on": busy}),
+					),
 					Span(Class("slot-gauge-label"), Text(fmt.Sprintf("%d/1 in use", used))),
 				),
 			),
 			Div(Class("train-slots"),
 				Iff(training != nil, func() Node {
-					return Div(Class("train-slot is-active"), kmeterRow(training))
+					return Div(Class("train-slot is-active"), meterRow(training))
 				}),
 				If(!busy, Div(Class("train-slot is-idle"),
 					Text("No training in progress"),
@@ -454,27 +458,40 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 	)
 }
 
-func kmeterRow(t *db.KingdomTraining) Node {
+func meterRow(t *db.KingdomTraining) Node {
 	def := game.UnitDefs[t.UnitType]
 	fillPct := 0.0
 	if t.TicksTotal > 0 {
 		fillPct = float64(t.TicksTotal-t.TicksRemaining) / float64(t.TicksTotal) * 100
 	}
-	return Div(Class("kmeter-row"),
-		Div(Class("unit-portrait unit-portrait--sm unit-portrait--empty")),
-		Div(Class("kmeter"),
-			Div(Class("kmeter-top"),
-				Span(Class("kmeter-name"), Text(fmt.Sprintf("%d × %s", t.Count, def.Name))),
-				Span(Class("kmeter-eta"), Text(fmt.Sprintf("%d ticks", t.TicksRemaining))),
+	notches := make([]Node, 0, int(t.TicksTotal))
+	for range int(t.TicksTotal) {
+		notches = append(notches, Span(Class("meter-notch")))
+	}
+	return Group([]Node{
+		Div(Class("unit-portrait unit-portrait--sm " + portraitMod(def))),
+		Div(Class("meter"),
+			Div(Class("meter-top"),
+				Span(Class("meter-name"),
+					Text(def.Name+" "),
+					Span(Class("meter-qty"), Text(fmt.Sprintf("× %d", t.Count))),
+				),
+				Span(Class("meter-eta"), Text(fmt.Sprintf("%d ticks", t.TicksRemaining))),
 			),
-			Div(Class("kmeter-track"),
-				Style(fmt.Sprintf("--kmeter-steps:%d", t.TicksTotal)),
-				Div(Class("kmeter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
-				Div(Class("kmeter-ticks")),
+			Div(Class("meter-track"),
+				Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
+				Div(Class("meter-notches"), Group(notches)),
 			),
 		),
 		Button(Class("btn"), ds.On("click", datastar.PostSSE(routes.KingdomUnitsCancelPath)), Text("Cancel")),
-	)
+	})
+}
+
+func portraitMod(def game.UnitDef) string {
+	if def.IsSummon {
+		return "unit-portrait--summon"
+	}
+	return "unit-portrait--unit"
 }
 
 func musterRoll(title string, order []string, counts, buildingCounts map[string]int, training *db.KingdomTraining, sectionLocked bool) Node {
@@ -484,11 +501,11 @@ func musterRoll(title string, order []string, counts, buildingCounts map[string]
 			P(Class("section-title"), Text(title)),
 			Div(Class("muster-roll-head"),
 				Div(),
-				Div(Text("Name")),
-				Div(Text("Power")),
-				Div(Text("Upkeep")),
-				Div(Text("Cost")),
-				Div(Text("Train")),
+				Div(Class("muster-roll-col"), Text("Name")),
+				Div(Class("muster-roll-col muster-roll-col--r"), Text("Power")),
+				Div(Class("muster-roll-col muster-roll-col--r"), Text("Upkeep")),
+				Div(Class("muster-roll-col muster-roll-col--r"), Text("Cost")),
+				Div(Class("muster-roll-col muster-roll-col--r"), Text("Train")),
 			),
 			Group(Map(order, func(utype string) Node {
 				def := game.UnitDefs[utype]
@@ -508,15 +525,15 @@ func unitRow(utype string, def game.UnitDef, count int, locked, manaLocked bool,
 			"cost_mana_"+utype, fmt.Sprintf("$count_%s * %d", utype, def.Cost.Mana),
 		),
 		Div(Class("unit-token"),
-			Div(Class("unit-portrait unit-portrait--sm unit-portrait--empty")),
+			Div(Class("unit-portrait unit-portrait--sm "+portraitMod(def))),
 			Span(Class("unit-tally"), Text(strconv.Itoa(count))),
 		),
 		Div(
-			Span(Text(def.Name)),
+			Span(Class("unit-name"), Text(def.Name)),
 			If(len(def.Attributes) > 0,
-				Div(Class("kattr-row"),
+				Div(Class("attribute-row"),
 					Group(Map(def.Attributes, func(a game.Attribute) Node {
-						return Span(Class("kattr "+attrClass(a)), Text(string(a)))
+						return Span(Class("attribute "+attrClass(a)), Text(string(a)))
 					})),
 				),
 			),
@@ -625,15 +642,15 @@ func attrClass(a game.Attribute) string {
 	switch a {
 	case game.AttributeMelee, game.AttributeArcher, game.AttributeRaiders,
 		game.AttributeFlying, game.AttributeSiegeEngine, game.AttributeEnrage:
-		return "kattr--offense"
+		return "attribute--offense"
 	case game.AttributeShields:
-		return "kattr--ward"
+		return "attribute--ward"
 	case game.AttributeUndead, game.AttributeDeathtouch, game.AttributeSummon:
-		return "kattr--arcane"
+		return "attribute--arcane"
 	case game.AttributeWorshipper:
-		return "kattr--faith"
+		return "attribute--faith"
 	case game.AttributeGluttony, game.AttributePacifism:
-		return "kattr--drawback"
+		return "attribute--drawback"
 	default:
 		log.Printf("attrClass: unrecognised attribute %q", a)
 		return ""

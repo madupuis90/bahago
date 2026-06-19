@@ -64,22 +64,22 @@
 
 ---
 
-## Unit system  _(handoff: `design_handoff_unit/`)_
+## Unit system  _(handoff: `design_handoff_unit/`, re-skin: `handoff/units/`)_
 
 | Component | Class(es) | Status | styles.css Section | Design Reference |
 |---|---|---|---|---|
-| Unit portrait | `.unit-portrait`, `.unit-portrait--lg`, `.unit-portrait--sm`, `.unit-portrait--empty` | pending | Units | Unit portrait |
-| Attribute chips | `.kattr`, `.kattr-row`, `.kattr--offense`, `.kattr--ward`, `.kattr--arcane`, `.kattr--faith`, `.kattr--drawback` | pending | Units | Attribute chips |
-| Roster roll | `.muster-roll`, `.muster-roll-head`, `.muster-roll-foot`, `.unit-row`, `.unit-row-id`, `.unit-name`, `.unit-flavour` | pending | Units | Roster — Roll |
+| Unit portrait | `.unit-portrait` (`--lg`/`--sm`/`--empty`/`--unit`/`--summon`) · `.unit-token` · `.unit-tally` | live · **reskinned** (Comic Lab) | Units | Unit portrait |
+| Attribute chips | `.attribute` (`--offense`/`--ward`/`--arcane`/`--faith`/`--drawback`) · `.attribute-row` | live · **reskinned** (Comic Lab) | Units | Attribute chips _(was `.kattr`)_ |
+| Roster — roll | `.muster-roll` · `.muster-roll-head` · `.muster-roll-col` (`--r`) · `.unit-row` · `.muster-roll-foot` | live · **reskinned** (Comic Lab) | Units | Roster — Roll |
 | Roster gallery | `.muster-gallery`, `.unit-card` | pending | Units | Roster — Gallery |
-| Tick meter | `.kmeter`, `.kmeter-fill` | pending | Units | Tick meter |
-| Locked state | `.is-locked`, `.unit-lock-note` | pending | Units | Locked / unavailable unit |
-| Host summary strip | `.host-summary` | pending | Units | Host summary strip |
-| Training slots | `.train-slots`, `.train-slot`, `.train-slot.is-active`, `.train-slot.is-idle`, `.slot-gauge` | pending | Units | Training grounds — slot model |
-| Stat pill | `.stat-pill`, `.stat-pill--drain`, `.stat-pill--short`, `.pill-short` | pending | Units | Stat pills |
+| Tick meter | `.meter` · `.meter-top`/`-name`/`-qty`/`-eta`/`-track`/`-fill` · `.meter-notches`/`.meter-notch` | live · **reskinned** (Comic Lab) · **moved to `20-shared.css`** | Shared components (Meter) | Tick meter _(was `.kmeter`, Units)_ |
+| Locked state | `.is-locked` · `.lock-banner` · `.unit-lock-note` | live · **reskinned** (Comic Lab) | Units | Locked / unavailable unit |
+| Standing-host summary | `.units-summary` · `.units-summary-stat` · `.units-summary-label`/`-num`/`-sub` | live · **reskinned** (Comic Lab) | Units | Host summary strip _(was `.host-summary`)_ |
+| Training slots | `.train-slots` · `.train-slot` (`.is-active`/`.is-idle`) · `.slot-gauge` · `.slot-gauge-dots` · `.slot-gauge-dot` (`.is-on`) · `.train-ctl` | live · **reskinned** (Comic Lab) | Units | Training grounds — slot model |
+| Stat pill | `.stat-pill` (`--drain`/`--short`) · `.pill-res` | live · **reskinned** (Comic Lab) | Units | Stat pills |
 | Unit token + tally | `.unit-token`, `.unit-tally`, `.unit-medallion` | live | Units + Army | Portrait token — canonical names; `.unit-medallion` is the wooden icon container used in army view |
-| Train control | `.train-ctl` | pending | Units | Inline train control |
-| Lock banner | `.lock-banner` | pending | Units | Summons — lock banner |
+| Train control | `.train-ctl` · `.train-count` | live · **reskinned** (Comic Lab) | Units | Inline train control |
+| Lock banner | `.lock-banner` | live · **reskinned** (Comic Lab) | Units | Summons — lock banner |
 | Toast | `.toast` | pending | Units | Toast notification |
 
 ---

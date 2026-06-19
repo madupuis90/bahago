@@ -41,6 +41,10 @@
   --shadow-ink: 4px 4px 0 var(--ink);
   --shadow-ink-sm: 3px 3px 0 var(--ink);
   --shadow-ink-xs: 2px 2px 0 var(--ink);
+  --shadow-ink-lg: 6px 6px 0 var(--ink);
+
+  /* arcane / summon accent (used by Units summon portraits + arcane chips) */
+  --purple: #7a52c8;
 
   /* resource gems (kept for the Chrome handoff that re-skins .gem) */
   --gem-tree: #2f9e57;
@@ -790,6 +794,59 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
   &:checked::after { content: ''; position: absolute; left: 5px; top: 1px; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(42deg); }
   &:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
+
+/* =============================================================================
+   Meter — shared tick / progress meter (Units, Buildings construction, Prayers)
+   Markup: .meter > .meter-top (.meter-name [.meter-qty], .meter-eta)
+                  > .meter-track (.meter-fill, .meter-notches > N × .meter-notch)
+   ============================================================================= */
+
+.meter { flex: 1; min-width: 0; }
+
+.meter-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.meter-name {
+  font-family: var(--font-display);            /* Lilita One */
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink);
+}
+.meter-qty { color: var(--accent); }           /* the "× N" tail on the name */
+.meter-eta {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: .68;
+  white-space: nowrap;
+}
+
+.meter-track {
+  position: relative;
+  height: 18px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.meter-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width .2s ease;
+}
+
+/* hard ink notches drawn over the fill — one flex child per step */
+.meter-notches { position: absolute; inset: 0; display: flex; pointer-events: none; }
+.meter-notch { flex: 1; border-right: 2.5px solid var(--ink); }
+.meter-notch:last-child { border-right: none; }
 
 /* =============================================================================
    Auth
@@ -2236,438 +2293,296 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 }
 .detail-note.is-warn { color: var(--highlight, #7a3018); }
 /* =============================================================================
-   Units
+   Units screen — COMIC LAB re-skin (Units handoff, 2026-06-19)
+   ---------------------------------------------------------------------------
+   Re-skins every Units component to the comic vocabulary (flat fills, 3px ink
+   outlines, hard offset shadows, Lilita/Nunito) AND applies the two
+   flavour→semantic renames:
+       .kattr*  → .attribute*
+       .kmeter* → .meter*   (extracted to 20-shared.css — see meter.css)
+
+   The tick meter is NO LONGER defined here — it ships shared via 20-shared.css.
    ============================================================================= */
 
-/* --- portraits --- */
+/* --- standing-host summary strip (the praised "summary bar" pattern) ------- */
+.units-summary {
+  display: flex;
+  margin-bottom: 22px;
+  background: var(--card);
+  border: 3.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
+  overflow: hidden;
+}
+.units-summary-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 20px 16px;
+}
+.units-summary-stat + .units-summary-stat { border-left: 3px solid var(--ink); }
+.units-summary-label {
+  font-family: var(--font-display);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--ink);
+  opacity: .62;
+}
+.units-summary-val { display: flex; align-items: center; gap: 9px; }
+.units-summary-num {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.units-summary-num.neg { color: var(--red); }
+.units-summary-sub {
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--ink);
+  opacity: .6;
+}
 
+/* --- unit portrait token (held-count badge lives on .unit-token/.unit-tally) */
+.unit-token { position: relative; display: inline-flex; flex: none; justify-self: start; }
 .unit-portrait {
   width: 64px;
   height: 64px;
-  border-radius: 8px;
-  border: 2px solid var(--wood);
-  background: linear-gradient(180deg, #efe3bf, #e6d8b2);
-  box-shadow: inset 0 2px 5px rgba(60, 40, 20, 0.35);
-  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
+  background: var(--blue);
 }
-
+.unit-portrait svg { stroke: #fff; display: block; }
+.unit-portrait--unit   { background: var(--blue); }    /* trainable troop */
+.unit-portrait--summon { background: var(--purple); }  /* arcane summon   */
 .unit-portrait--empty {
-  background:
-    repeating-linear-gradient(45deg, rgba(125, 81, 50, 0.10) 0 6px, transparent 6px 12px),
-    linear-gradient(180deg, #efe3bf, #e3d4ab);
+  background: var(--card-2);
+  background-image: repeating-linear-gradient(45deg, transparent 0 7px, color-mix(in srgb, var(--ink) 7%, transparent) 7px 14px);
 }
-
-.unit-portrait--lg {
-  width: 84px;
-  height: 84px;
-}
-
-.unit-portrait--sm {
-  width: 46px;
-  height: 46px;
-  border-width: 1.5px;
-  border-radius: 6px;
-}
-
-/* --- attribute chips --- */
-
-.kattr {
-  display: inline-flex;
-  font-family: var(--font-cinzel);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  padding: 3px 7px;
-  border-radius: 3px;
-  color: var(--ink-soft);
-  background: rgb(255 250 236 / .6);
-  border: 1px solid var(--edge);
-}
-
-.kattr--offense { color: #7a1818; background: rgb(168 50 50 / .12); border-color: rgb(122 24 24 / .35); }
-.kattr--ward    { color: #2a4a6a; background: rgb(72 112 165 / .12); border-color: rgb(42 74 106 / .35); }
-.kattr--arcane  { color: #4a2e62; background: rgb(116 84 143 / .15); border-color: rgb(74 46 98 / .38); }
-.kattr--faith   { color: #7a2030; background: rgb(176 72 88 / .12); border-color: rgb(122 32 48 / .32); }
-.kattr--drawback { color: #7a521a; background: rgb(184 133 38 / .15); border-color: rgb(122 84 26 / .38); }
-
-.kattr-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-/* --- tick-progress meter --- */
-
-.kmeter {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.kmeter-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.kmeter-name {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.08rem;
-  color: var(--ink);
-}
-
-.kmeter-eta {
-  font-family: var(--font-cinzel);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: .06em;
-  color: #9a6f28;
-}
-
-.kmeter-track {
-  position: relative;
-  height: 13px;
-  border-radius: 99px;
-  background: linear-gradient(180deg, #4a2e18, var(--wood-dark));
-  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, .55);
-}
-
-.kmeter-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 99px 0 0 99px;
-  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent) 55%, #9a6f28);
-  transition: width .4s ease;
-}
-
-.kmeter-ticks {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to right,
-    rgba(255, 248, 220, .5) 0 1px,
-    transparent 1px calc(100% / var(--kmeter-steps, 6))
-  );
-}
-
-.kmeter-row {
-  display: grid;
-  grid-template-columns: 46px 1fr auto;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 2px;
-}
-
-/* --- roster grid --- */
-
-.muster-roll-head,
-.unit-row,
-.muster-roll-foot {
-  display: grid;
-  grid-template-columns: 72px minmax(150px, 1fr) 88px 74px 112px 150px;
-  column-gap: 15px;
-}
-
-.muster-roll-head {
-  padding: 0 4px 10px;
-  border-bottom: 1.5px solid var(--edge);
-  font-family: var(--font-caps);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  color: var(--ink-soft);
-}
-
-.unit-row {
-  align-items: center;
-  padding: 12px 4px;
-  border-bottom: 1px solid rgb(0 0 0 / .07);
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &.is-locked {
-    opacity: .58;
-    filter: saturate(.45);
-
-    & .unit-train {
-      filter: none;
-      opacity: 1;
-    }
-  }
-}
-
-.muster-roll-foot {
-  padding: 12px 4px 2px;
-  border-top: 1.5px solid var(--edge);
-  align-items: baseline;
-}
-
-.mf-upkeep-val {
-  font-family: var(--font-cinzel);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--color-negative);
-}
-
-/* --- unit token (portrait + tally badge) --- */
-
-.unit-token {
-  position: relative;
-  display: inline-flex;
-  justify-self: start;
-}
+.unit-portrait--lg { width: 84px; height: 84px; }
+.unit-portrait--sm { width: 46px; height: 46px; border-width: 2.5px; border-radius: 9px; }
 
 .unit-tally {
   position: absolute;
   left: 50%;
   bottom: 0;
   transform: translate(-50%, 42%);
-  min-width: 26px;
-  padding: 1px 7px;
-  font-family: var(--font-cinzel);
-  font-weight: 700;
-  font-size: .76rem;
-  color: var(--ink);
+  min-width: 30px;
+  padding: 2px 9px 1px;
+  font-family: var(--font-display);
+  font-size: 14px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-deep) 100%);
-  border: 1.5px solid var(--wood);
-  border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255,248,220,.85), 0 1px 2px rgba(60,40,20,.32);
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2.5px solid var(--ink);
+  border-radius: 7px;
+  box-shadow: var(--shadow-ink-xs);
   white-space: nowrap;
-
-  &::before, &::after { content: ''; position: absolute; top: 2px; width: 4px; height: 2px; background: var(--wood); }
-  &::before { left: -4px; }
-  &::after { right: -4px; }
 }
 
-/* --- stat pills --- */
+/* --- attribute chips (was .kattr) ----------------------------------------- */
+.attribute-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.attribute {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 3px 8px 2px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: var(--card-2);
+}
+.attribute--offense  { background: color-mix(in srgb, var(--red) 22%, var(--card)); }
+.attribute--ward     { background: color-mix(in srgb, var(--blue) 22%, var(--card)); }
+.attribute--arcane   { background: color-mix(in srgb, var(--purple) 22%, var(--card)); }
+.attribute--faith    { background: color-mix(in srgb, var(--yellow) 38%, var(--card)); }
+.attribute--drawback { background: color-mix(in srgb, var(--ink) 12%, var(--card)); opacity: .82; }
 
+/* --- stat pills ----------------------------------------------------------- */
 .stat-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 11px;
+  padding: 5px 11px 4px;
   border-radius: 99px;
-  background: rgb(125 81 50 / .08);
-  border: 1px solid var(--edge);
-  font-family: var(--font-cinzel);
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.stat-pill--drain {
-  background: rgb(168 50 50 / .07);
-  border-color: rgb(122 24 24 / .20);
-}
-
-.stat-pill--short {
-  background: rgb(168 50 50 / .10);
-  border-color: rgb(122 24 24 / .30);
-}
-
-.pill-res {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pill-neg {
-  color: rgb(168 50 50 / .85);
-}
-
-/* --- host card layout --- */
-
-.host-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.unit-cost {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-/* --- host summary strip --- */
-
-.host-summary {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  margin-bottom: 22px;
-  background: rgb(255 250 236 / .5);
-  border: 1.5px solid var(--edge);
-  border-radius: 9px;
-  overflow: hidden;
-}
-
-.host-summary-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 20px;
-
-  & + .host-summary-stat {
-    border-left: 1px solid var(--edge);
-  }
-}
-
-.hs-label {
-  font-family: var(--font-caps);
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--ink-soft);
-}
-
-.hs-num {
+  background: var(--card-2);
+  border: 2.5px solid var(--ink);
+  box-shadow: var(--shadow-ink-xs);
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.7rem;
+  font-size: 15px;
   color: var(--ink);
-
-  &.neg {
-    color: var(--color-negative);
-  }
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
+.stat-pill svg { stroke: var(--ink); flex: none; }
+.stat-pill--drain { background: color-mix(in srgb, var(--red) 13%, var(--card)); }
+.stat-pill--drain .neg { color: var(--red); }
+.stat-pill--short { background: color-mix(in srgb, var(--red) 22%, var(--card)); }
+.pill-res { display: inline-flex; align-items: center; gap: 4px; }
+.pill-neg, .pill-short { color: var(--red); }
 
-.hs-sub {
-  font-family: var(--font-cinzel);
-  letter-spacing: .1em;
+/* --- roster roll (muster roll — domain term kept) ------------------------- */
+.muster-roll { display: flex; flex-direction: column; }
+.muster-roll-head,
+.unit-row,
+.muster-roll-foot {
+  display: grid;
+  grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 168px;
+  align-items: center;
+  column-gap: 14px;
+}
+.muster-roll-head { padding: 0 4px 10px; }
+.muster-roll-col {
+  font-family: var(--font-display);
+  letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 0.66rem;
-  color: var(--ink-soft);
+  font-size: 11px;
+  color: var(--ink);
+  opacity: .6;
+}
+.muster-roll-col--r { text-align: right; }
+.unit-row {
+  padding: 13px 4px;
+  border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);
+  min-height: 86px;
+}
+.unit-row.is-locked { opacity: .62; }
+.unit-name { font-family: var(--font-display); font-size: 19px; line-height: 1.05; color: var(--ink); }
+.unit-flavour { font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: var(--ink); opacity: .72; margin: 3px 0 0; text-wrap: pretty; }
+.unit-upkeep--none { font-style: italic; font-weight: 700; font-size: 12.5px; opacity: .7; }
+
+.muster-roll-foot {
+  padding: 13px 4px 2px;
+  border-top: 3px solid var(--ink);
+  align-items: baseline;
+}
+.muster-roll-foot-num {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--red);
 }
 
-/* --- training slot panel --- */
-
-.slot-gauge {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.slot-gauge-label {
-  font-family: var(--font-caps);
-  letter-spacing: .08em;
-  font-size: 0.72rem;
-  color: var(--ink-soft);
-}
-
-.slot-gauge-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1px solid var(--wood);
-  background: rgb(255 250 236 / .5);
-
-  &.is-on {
-    background: radial-gradient(circle at 38% 32%, var(--chrome-accent-light) 0%, var(--chrome-accent) 50%, #9a6f28 100%);
-    border-color: #7a5418;
-  }
-}
-
-.train-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  margin-top: 6px;
-}
-
-.train-slot {
-  &.is-active {
-    padding: 11px 14px;
-    border: 1px solid var(--edge);
-    background: rgb(255 250 236 / .42);
-  }
-
-  &.is-idle {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 17px 16px;
-    border: 1.5px dashed var(--edge);
-    background: rgb(255 250 236 / .18);
-    font-family: var(--font-body);
-    font-style: italic;
-    font-size: 0.86rem;
-    color: var(--ink-soft);
-  }
-}
-
-/* --- inline train control --- */
-
-.unit-train {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.train-ctl {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
+/* --- inline train control (re-skinned input; optional stepper, see README) - */
+.unit-train { display: flex; justify-content: flex-end; }
+.train-ctl { display: flex; align-items: center; gap: 8px; }
 .train-count {
-  width: 70px;
-  text-align: right;
-  height: 30px;
-  font-family: var(--font-cinzel);
-  font-weight: 600;
+  width: 56px;
+  height: 32px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 9px;
+  box-shadow: var(--shadow-ink-xs);
 }
 
-/* --- lock note --- */
-
+/* --- lock note + sealed-summons banner ------------------------------------ */
 .unit-lock-note {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  justify-self: flex-end;
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.82rem;
-  color: var(--ink-soft);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--purple);
 }
-
-.unit-upkeep--none {
-  font-style: italic;
-  font-size: 0.82rem;
-  color: var(--ink-soft);
-}
-
-/* --- lock banner (summons gate) --- */
+.unit-lock-note svg { width: 13px; height: 13px; stroke: var(--purple); }
 
 .lock-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 15px;
+  gap: 11px;
+  padding: 12px 15px;
   margin-bottom: 16px;
-  border-radius: 8px;
-  background: rgb(116 84 143 / .10);
-  border: 1px solid rgb(74 46 98 / .30);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--purple) 13%, var(--card));
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.lock-banner .gem { width: 34px; height: 34px; }
+.lock-banner b { font-style: normal; font-weight: 800; }
 
-  & .shield {
-    color: #5a3e72;
-    flex: none;
-  }
-
-  & b {
-    font-weight: 700;
-  }
+/* --- training-slot panel (slot gauge + slots) ----------------------------- */
+.slot-gauge { display: inline-flex; align-items: center; gap: 9px; }
+.slot-gauge-dots { display: flex; gap: 5px; }
+.slot-gauge-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 2.5px solid var(--ink);
+  background: var(--card-2);
+}
+.slot-gauge-dot.is-on { background: var(--yellow); box-shadow: var(--shadow-ink-xs); }
+.slot-gauge-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: .68;
+  white-space: nowrap;
 }
 
+.train-slots { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.train-slot { border-radius: 13px; }
+.train-slot.is-active {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 15px;
+  border: 3px solid var(--ink);
+  background: var(--card-2);
+  box-shadow: var(--shadow-ink);
+}
+.train-slot.is-idle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 13px;
+  background: repeating-linear-gradient(45deg, transparent 0 9px, color-mix(in srgb, var(--ink) 4%, transparent) 9px 18px);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+  opacity: .8;
+}
+.train-slot-idle-gem {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  border: 2.5px solid color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.train-slot-idle-gem svg { stroke: color-mix(in srgb, var(--ink) 60%, transparent); }
 /* =============================================================================
    World map
    ============================================================================= */

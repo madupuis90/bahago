@@ -14,8 +14,9 @@
 | `.kslider` | `.slider-*` + `.v-diamond` | live | Already in `styles.css` |
 | `.folio` | `.page-header` (or feature-specific, e.g. `.unit-folio`) | pending | Bookish name → semantic; exact name chosen per feature |
 | `.kfield`, `.kfield-group`, `.kfield-label`, `.kfield-hint` | `.field`, `.field-group`, `.field-label`, `.field-hint` | live | Campaign handoff renamed `.kfield*` → `.field*`; now in `styles.css` Shared components section |
-| `.kattr`, `.kattr-row`, `.kattr--*` | `.kattr`, `.kattr-row`, `.kattr--*` | pending | `k` prefix acceptable — domain-flavored but unambiguous; no rename planned |
-| `.kmeter`, `.kmeter-fill` | `.kmeter`, `.kmeter-fill` | pending | Same as above — keep as-is |
+| `.kattr`, `.kattr-row`, `.kattr--*` | `.attribute`, `.attribute-row`, `.attribute--*` | live · resolved | Units handoff: spelled-out semantic name (mockup's `.attr` is shorthand; code uses the full word) |
+| `.kmeter`, `.kmeter-fill`, `.kmeter-ticks` | `.meter` + `.meter-*` (`.meter-track`/`-fill`/`-notches`/`-notch`/`-top`/`-name`/`-qty`/`-eta`) | live · resolved | Units handoff: extracted as shared `.meter` to `20-shared.css`; notches are now explicit flex children (was a single repeating-gradient node) |
+| `.host-summary`, `.hs-label`/`-num`/`-sub` | `.units-summary`, `.units-summary-label`/`-num`/`-sub` (with `.units-summary-val` wrapper) | live · resolved | Units handoff: aligned with the registry's existing `.units-summary` name |
 
 ---
 

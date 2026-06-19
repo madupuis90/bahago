@@ -320,3 +320,56 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
   &:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
 
+/* =============================================================================
+   Meter — shared tick / progress meter (Units, Buildings construction, Prayers)
+   Markup: .meter > .meter-top (.meter-name [.meter-qty], .meter-eta)
+                  > .meter-track (.meter-fill, .meter-notches > N × .meter-notch)
+   ============================================================================= */
+
+.meter { flex: 1; min-width: 0; }
+
+.meter-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.meter-name {
+  font-family: var(--font-display);            /* Lilita One */
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink);
+}
+.meter-qty { color: var(--accent); }           /* the "× N" tail on the name */
+.meter-eta {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: .68;
+  white-space: nowrap;
+}
+
+.meter-track {
+  position: relative;
+  height: 18px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.meter-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width .2s ease;
+}
+
+/* hard ink notches drawn over the fill — one flex child per step */
+.meter-notches { position: absolute; inset: 0; display: flex; pointer-events: none; }
+.meter-notch { flex: 1; border-right: 2.5px solid var(--ink); }
+.meter-notch:last-child { border-right: none; }
+
