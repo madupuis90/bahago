@@ -1,0 +1,6 @@
+{
+  "theme": "dark",
+  "autoCompactEnabled": true,
+  "autoCompactWindow": 500000,
+  "autoMemoryDirectory": "/workspaces/bahago/.claude/memory"
+}

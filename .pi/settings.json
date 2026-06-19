@@ -1,0 +1,7 @@
+{
+  "sessionDir": "/workspaces/bahago/.pi/sessions",
+  "compaction": {
+    "enabled": true,
+    "keepRecentTokens": 50000
+  }
+}

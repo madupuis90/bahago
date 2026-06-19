@@ -45,3 +45,9 @@ Thumbs.db
 
 # Generated CSS (source files are in web/static/css/)
 web/static/styles.css
+
+# Pi agent — local API key (restored into ~/.pi/agent/auth.json by setup-pi.sh)
+.devcontainer/configs/pi-auth.json
+
+# Pi agent — sessions stored in the workspace so they survive container recreation
+.pi/sessions/

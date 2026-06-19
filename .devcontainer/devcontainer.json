@@ -5,11 +5,7 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
-  "containerEnv": {
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-    "DISABLE_AUTOUPDATER": "1"
-  },
-  "postCreateCommand": "mkdir -p ~/.claude && echo '{\"theme\":\"dark\",\"autoCompactEnabled\":true,\"autoCompactWindow\":100000,\"autoMemoryDirectory\":\"/workspaces/bahago/.claude/memory\"}' > ~/.claude/settings.json && npm add -g @earendil-works/pi-coding-agent && mkdir -p ~/.pi/agent && echo '{\"providers\":{\"ollama\":{\"baseUrl\":\"http://host.docker.internal:11434/v1\",\"api\":\"openai-completions\",\"apiKey\":\"ollama\",\"models\":[{\"id\":\"qwen2.5-coder:7b\"},{\"id\":\"qwen2.5-coder:14b\"}]}}}' > ~/.pi/agent/models.json",
+  "postCreateCommand": "bash .devcontainer/setup-claude.sh && bash .devcontainer/setup-pi.sh",
   "features": {
     "ghcr.io/devcontainers-extra/features/go-task:1": {},
     "ghcr.io/devcontainers/features/node:1": {},
