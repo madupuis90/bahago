@@ -84,7 +84,7 @@ func TestStartConstruction_PrereqFails(t *testing.T) {
 	// must return false for it.
 	var withPrereq string
 	for name, def := range game.BuildingDefs {
-		if len(def.Prerequisites) > 0 {
+		if len(def.Prereqs) > 0 {
 			withPrereq = name
 			break
 		}

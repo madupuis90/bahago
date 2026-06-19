@@ -14,17 +14,18 @@
 | Card (surface) | `.card` · `.card-inner` (`.is-lit`/`.is-frost`/`.is-framed` now no-op aliases) | live · **reskinned** (Comic Lab) | Shared components | Card |
 | Card tab | `.card-tab` (`--red`/`--green`/`--blue`/`--yellow`; `--wood` = alias of `--blue`) | live · **reskinned** (Comic Lab) | Shared components | Card |
 | Slider | `.slider-*`, `.v-diamond` | live · **reskinned** (Comic Lab) | Allocation | Slider |
-| Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) | live | Kingdom chrome | Resource gems |
+| Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) — flat `--gem-*`, ink ring, white glyph | live · **reskinned** (Comic Lab) | Kingdom chrome | Resource gems |
+| Sprite icon / shield | `.icon` (`--active`=red/`--dim`), `.shield` (`--active`/`--dim`), `.gly` (bare line-art) | live · **reskinned** (Comic Lab) | Kingdom chrome | Sprite icon |
 | Alert | `.alert--error`, `.alert--success` | live · **reskinned** (Comic Lab) | Shared components | Alert |
 | Tokens | `--ink`, `--shadow-ink`/`-sm`/`-xs`, `--red`/`--blue`/`--green`/`--yellow`, `--card`/`--card-2`, `--paper`/`--paper-2`/`--dot`, `--page-bg`, `--accent` (→blue); fonts `--font-display` (Lilita One), `--font-body`/`--font-ui` (Nunito) | live · **reskinned** (Comic Lab) | Tokens | Foundation — design tokens |
-| CommandBar chrome | `.bar`, `.barB2`, `.barB2-info`, `.barB2-res`, `.barB2-right`, `.barB2-nav`, `.barB2-nav--ico` | live | Kingdom chrome | CommandBar (chrome redesign) |
+| CommandBar chrome | `.bar`, `.barB2` (red bar, ink border), `.barB2-info`, `.barB2-res`, `.barB2-right`, `.barB2-nav`, `.barB2-nav--ico` | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar (chrome redesign) |
 | Chrome field pattern | `--chrome-bg` (CSS custom property) | live | Tokens | P3: single horizontal timber seam at `62%`; replaced 95° repeating diagonal seams |
-| CommandBar identity | `.id`, `.id-crest`, `.crest`, `.crest-frame`, `.crest-shield`, `.crest-glyph`, `.id-name`, `.id-sub` | live | Kingdom chrome | CommandBar — identity block |
-| CommandBar resource pill | `.pill`, `.pill-txt`, `.pill-l`, `.pill-v`, `.is-zero` | live | Kingdom chrome | CommandBar — resource pill |
-| CommandBar tick | `.tick`, `.tick-l`, `.tick-v` | live | Kingdom chrome | CommandBar — tick display |
-| CommandBar leave | `.leave`, `.leave-l` | live | Kingdom chrome | CommandBar — leave link |
-| CommandBar nav link | `.nav-link`, `.is-on` | live | Kingdom chrome | CommandBar — nav link |
-| NavBadge | `.nav-link-ico`, `.nav-gly-ico`, `.nav-badge`, `badge-glow` keyframe | live | Kingdom chrome | CommandBar — unread badge |
+| CommandBar identity | `.id`, `.id-crest`, `.crest`, `.crest-frame`, `.crest-shield`, `.crest-glyph`, `.id-name` (Lilita), `.id-sub` (Nunito caps) | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — identity block |
+| CommandBar resource pill | `.pill` (cream, ink ring), `.pill-txt`, `.pill-l`, `.pill-v`, `.is-zero`, `.pill--mini` | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — resource pill |
+| CommandBar tick | `.tick` (cream, ink hourglass), `.tick-l`, `.tick-v` | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — tick display |
+| CommandBar leave | `.leave` (gold comic), `.leave-l` | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — leave link |
+| CommandBar nav link | `.nav-link`, `.is-on` (yellow + ink, scoped under `.barB2-nav`) | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — nav link |
+| NavBadge | `.nav-link-ico`, `.nav-gly-ico`, `.nav-badge`, `badge-glow` keyframe | live · **reskinned** (Comic Lab) | Kingdom chrome | CommandBar — unread badge |
 | SVG glyph | `.gly` | live | Kingdom chrome | Inline SVG glyph via `<use>` |
 | Form field | `.field`, `.field--num`, `.field--area`, `.select`, `.field-group`, `.field-label`, `.field-hint`, `.field-hint.is-invalid`, `.field-affix`, `.field-affix--trail`, `.field-lead`, `.field-trail`, `.check` | live · **reskinned** (Comic Lab) | Shared components | Fields (from Campaign transfer form) |
 | Textarea field | `textarea.field` · `.field-hint-row` | live | Shared components | Fields (textarea extension — guild handoff) |

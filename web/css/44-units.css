@@ -316,17 +316,6 @@
 
 /* --- training slot panel --- */
 
-.card-h-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-
-  & .card-h {
-    margin-bottom: 0;
-  }
-}
-
 .slot-gauge {
   display: flex;
   align-items: center;
