@@ -48,53 +48,6 @@
   margin-top: 14px;
 }
 
-.card-tab {
-  position: absolute;
-  top: -14px;
-  left: 18px;
-  padding: 3px 14px 4px;
-  border-radius: 6px 6px 0 0;
-  font-family: var(--font-cinzel);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: #fff8dc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 0 rgba(0, 0, 0, .3);
-}
-
-.card-tab--red {
-  background: linear-gradient(180deg, #b94a3a 0%, var(--red-darker) 100%);
-}
-
-.card-tab--green {
-  background: linear-gradient(180deg, #4a7c4e 0%, #2e5532 100%);
-}
-
-.card-tab--wood {
-  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood-dark) 100%);
-}
-
-.card-inner {
-  padding: 18px 18px 16px;
-}
-
-.card-header { margin-bottom: 14px; }
-.card-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-.card-title { font-family: var(--font-heading); font-weight: 600; font-size: 1.45rem; color: var(--ink); line-height: 1.1; margin: 0 0 2px; }
-.card-subtitle { font-family: var(--font-body); font-style: italic; font-size: .98rem; line-height: 1.45; color: var(--ink-soft); margin: 0; text-wrap: pretty; }
-.card-flavour { font-family: var(--font-body); font-style: italic; color: var(--ink-soft); font-size: 1rem; line-height: 1.5; }
-
-.card-h {
-  font-family: var(--font-caps);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin: 0 0 14px;
-}
-
 /* Page header (kept for other pages) */
 .page-header {
   & h1 {

@@ -30,34 +30,81 @@
    Card surface
    ============================================================================= */
 
+/* The base surface: warm cream, a 3px ink line, generous radius, and a hard
+   offset ink shadow that lifts it off the dotted paper. Flat — no gradients. */
 .card {
   position: relative;
-  border-radius: 10px;
-  background: var(--card-fill-flat);
-  border: var(--card-border-w) solid var(--edge);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .45),
-    0 1px 0 rgba(255, 255, 255, .25),
-    0 6px 18px rgba(60, 40, 20, .22);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-ink);
   color: var(--ink);
 
-  &.is-lit {
-    background: var(--card-fill-lit);
-  }
+  /* Parchment-era modifiers are neutralized — the flat cream IS the surface now
+     (the ink border + offset shadow already give every card its "frame", and the
+     page is flat dotted paper so there is no busy art to frost over). Kept as
+     no-op aliases so current templates don't break; drop them per-screen. */
+  &.is-lit,
+  &.is-frost,
+  &.is-framed { background: var(--card); }
+}
 
-  &.is-frost {
-    backdrop-filter: blur(var(--card-blur));
-    -webkit-backdrop-filter: blur(var(--card-blur));
-  }
+/* Padding hull — card content sits inside this, clear of the inked border. */
+.card-inner { padding: 20px 22px 18px; }
 
-  &.is-framed {
-    border: 2px solid var(--wood);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 248, 220, .7),
-      inset 0 -2px 0 rgba(120, 80, 30, .12),
-      0 2px 0 var(--wood-dark),
-      0 6px 16px rgba(60, 40, 20, .28);
-  }
+/* Heraldic tab — a short, colour-coded category sticker straddling the top-left
+   edge. Use INSTEAD of a .card-title when several cards share a page; never both
+   saying the same words. Colour carries meaning, not decoration. */
+.card-tab {
+  position: absolute;
+  top: -15px;
+  left: 18px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--primary-ink);
+  background: var(--blue);
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  padding: 4px 12px 3px;
+  box-shadow: var(--shadow-ink-sm);
+}
+.card-tab--red    { background: var(--red); }
+.card-tab--green  { background: var(--green); }
+.card-tab--blue   { background: var(--blue); }
+.card-tab--yellow { background: var(--yellow); color: var(--ink); }
+/* alias — retire once templates migrate .card-tab--wood → .card-tab--blue */
+.card-tab--wood   { background: var(--blue); }
+
+/* Card title block — the in-card heading. A card is named by EITHER a
+   .card-title OR a .card-tab, never both. Use .card-header-row when a control or
+   gauge sits opposite the title. */
+.card-header { margin-bottom: 14px; }
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.card-subtitle,
+.card-flavour {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: pretty;
 }
 
 /* =============================================================================

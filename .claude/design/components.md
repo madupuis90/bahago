@@ -11,7 +11,8 @@
 | Component | Class(es) | Status | styles.css Section | Design Reference |
 |---|---|---|---|---|
 | Button | `.btn`, `.btn--primary`, `.btn--accent`, `.btn--danger`, `.btn--lg`, `.btn--sm`, `.btn--quiet`, `.btn--step5`; states `.is-insufficient`, `.is-locked`, `.is-disabled` (legacy aliases `.btn--insufficient`, `.btn--locked` kept) | live · **reskinned** (Comic Lab) | Shared components | Button system |
-| Card | `.card`, `.card-tab--wood`, `.card-tab--red`, `.card-tab--green` | live | Shared components | Card |
+| Card (surface) | `.card` · `.card-inner` (`.is-lit`/`.is-frost`/`.is-framed` now no-op aliases) | live · **reskinned** (Comic Lab) | Shared components | Card |
+| Card tab | `.card-tab` (`--red`/`--green`/`--blue`/`--yellow`; `--wood` = alias of `--blue`) | live · **reskinned** (Comic Lab) | Shared components | Card |
 | Slider | `.slider-*`, `.v-diamond` | live · **reskinned** (Comic Lab) | Allocation | Slider |
 | Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) | live | Kingdom chrome | Resource gems |
 | Alert | `.alert--error`, `.alert--success` | live · **reskinned** (Comic Lab) | Shared components | Alert |
@@ -28,7 +29,7 @@
 | Form field | `.field`, `.field--num`, `.field--area`, `.select`, `.field-group`, `.field-label`, `.field-hint`, `.field-hint.is-invalid`, `.field-affix`, `.field-affix--trail`, `.field-lead`, `.field-trail`, `.check` | live · **reskinned** (Comic Lab) | Shared components | Fields (from Campaign transfer form) |
 | Textarea field | `textarea.field` · `.field-hint-row` | live | Shared components | Fields (textarea extension — guild handoff) |
 | Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live · **reskinned** (Comic Lab) | Shared components | Section header (guild handoff) |
-| Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` | live | Shared components | Card header (guild handoff) |
+| Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` · `.card-flavour` | live · **reskinned** (Comic Lab) | Shared components | Card header |
 | Eyebrow | `.eyebrow` | live · **reskinned** (Comic Lab) | Shared components | Eyebrow (guild handoff) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |
