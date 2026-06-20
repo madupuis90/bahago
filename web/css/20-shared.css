@@ -163,10 +163,9 @@
     &:active { transform: translate(2px, 2px); box-shadow: none; }
   }
 
-  /* states — canon is .is-*; the .btn--* aliases keep current templates working
-     until they migrate (see relay note). */
-  &.is-insufficient, &.btn--insufficient { background: var(--yellow); color: var(--ink); }
-  &.is-locked, &.btn--locked,
+  /* states — canon is .is-* */
+  &.is-insufficient { background: var(--yellow); color: var(--ink); }
+  &.is-locked,
   &:disabled, &.is-disabled {
     opacity: .42; cursor: default; pointer-events: none;
     box-shadow: var(--shadow-ink-sm); transform: none;

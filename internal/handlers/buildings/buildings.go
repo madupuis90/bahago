@@ -361,7 +361,11 @@ func buildingsContent(defs []game.BuildingDef, counts map[string]int, constructi
 	return Div(Class("builds"),
 		ds.Signals(map[string]any{"selected_building": selectedID}),
 		Div(Style("display:none"), ds.Init(GetSSENoSignals(routes.KingdomBuildingsRefreshPath))),
-		H1(Class("page-header"), Text("Buildings")),
+		Div(Class("page-header"),
+			P(Class("page-header-kicker"), Text("❦ Of timber, stone & the raising of works")),
+			H1(Class("page-header-title"), Text("Buildings")),
+			P(Class("page-header-sub"), Text("Raise your works in order — each finished building lights the path to the next along its line.")),
+		),
 		buildingsAlert(nil),
 		buildingsBanner(construction),
 		Div(Class("builds-stage"),
@@ -383,12 +387,26 @@ func buildingsBanner(construction *db.KingdomConstruction) Node {
 		)
 	}
 	def := game.BuildingDefs[construction.BuildingType]
+	notches := make([]Node, 0, int(construction.TicksTotal))
+	for range int(construction.TicksTotal) {
+		notches = append(notches, Span(Class("meter-notch")))
+	}
+	fillPct := 0.0
+	if construction.TicksTotal > 0 {
+		fillPct = float64(construction.TicksTotal-construction.TicksRemaining) / float64(construction.TicksTotal) * 100
+	}
 	return Div(Class("build-banner"),
 		Div(Class("build-banner-gem"), buildingGlyph(def, 34)),
 		Div(Class("build-banner-body"),
 			Div(Class("meter"),
-				Span(Class("meter-name"), Text(def.Name)),
-				Span(Class("meter-eta"), Text(fmt.Sprintf("%d / %d ticks remaining", construction.TicksRemaining, construction.TicksTotal))),
+				Div(Class("meter-top"),
+					Span(Class("meter-name"), Text(def.Name)),
+					Span(Class("meter-eta"), Text(fmt.Sprintf("%d / %d ticks remaining", construction.TicksRemaining, construction.TicksTotal))),
+				),
+				Div(Class("meter-track"),
+					Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
+					Div(Class("meter-notches"), Group(notches)),
+				),
 			),
 		),
 	)
@@ -415,13 +433,17 @@ func buildingConnectors(tree game.PlacedTree, counts map[string]int) Node {
 				continue
 			}
 			dim := counts[prereq.Type] < prereq.Min
+			lit := !dim
 			a := game.Point{X: parent.CX, Y: parent.Bottom}
 			b := game.Point{X: pn.CX, Y: pn.Top}
 			d := game.ElbowPath(a, b)
 			mid := (a.Y + b.Y) / 2
 			paths = append(paths,
-				El("path", Classes{"tree-link": true, "is-dim": dim}, Attr("d", d)),
-				El("circle", Classes{"tree-joint": true, "is-dim": dim},
+				El("g", Classes{"tree-link": true, "is-lit": lit},
+					El("path", Class("tree-link-ink"), Attr("d", d)),
+					El("path", Class("tree-link-core"), Attr("d", d)),
+				),
+				El("circle", Classes{"tree-joint": true, "is-lit": lit},
 					Attr("cx", itoa(b.X)), Attr("cy", itoa(mid)), Attr("r", "3")),
 			)
 		}
@@ -613,15 +635,15 @@ func raiseButton(b game.BuildingDef, counts map[string]int, resources map[string
 	anotherInProgress := construction != nil && !buildingThis
 	switch {
 	case maxed:
-		return Button(Classes{"btn": true, "btn--locked": true}, Disabled(), Text("Fully Raised"))
+		return Button(Classes{"btn": true, "is-locked": true}, Disabled(), Text("Fully Raised"))
 	case !prereqMet:
-		return Button(Classes{"btn": true, "btn--locked": true}, Disabled(), Text("Locked"))
+		return Button(Classes{"btn": true, "is-locked": true}, Disabled(), Text("Locked"))
 	case anotherInProgress:
 		return Button(Class("btn"), Disabled(), Text("Another work underway"))
 	case buildingThis:
 		return Button(Class("btn"), Disabled(), Text("Raising…"))
 	case !canAfford:
-		return Button(Classes{"btn": true, "btn--insufficient": true}, Disabled(), Text("Not enough resources"))
+		return Button(Classes{"btn": true, "is-insufficient": true}, Disabled(), Text("Not enough resources"))
 	default:
 		return Button(Classes{"btn": true, "btn--primary": true},
 			ds.On("click", datastar.PostSSE(routes.KingdomBuildingsRaisePath+"?building=%s", b.ID)),

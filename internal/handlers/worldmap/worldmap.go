@@ -235,7 +235,7 @@ func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tile
 
 // flatCell renders a single tile in the flat board grid.
 func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx, ty int) Node {
-	tile, tileDeep := biomeColor(tx, ty)
+	tile := biomeColor(tx, ty)
 	selected := k != nil && k.ID == initialSelectedID
 
 	var dataAttr, onClickAttr Node
@@ -252,7 +252,7 @@ func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx,
 			"map-cell--clickable": k != nil,
 			"map-cell--selected":  selected,
 		},
-		Style(fmt.Sprintf("--tile:%s;--tile-deep:%s", tile, tileDeep)),
+		Style(fmt.Sprintf("--tile:%s", tile)),
 		dataAttr,
 		onClickAttr,
 		Div(Class("map-cell-content"),
@@ -261,41 +261,42 @@ func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx,
 	)
 }
 
-// biomeTints provides deterministic terrain colours for map tiles.
-// Each entry is [tile, tile-deep] (light face, shadow face).
-var biomeTints = [][2]string{
-	{"#a9c47e", "#7f9d5b"},
-	{"#7f9d5b", "#5c7a40"},
-	{"#c6b478", "#a08a50"},
-	{"#8fb4c4", "#6a8a9a"},
-	{"#9aaa7c", "#728a5a"},
-	{"#ab9d82", "#8a7a60"},
+// biomeTints maps each deterministic terrain slot to a heraldic biome wash
+// token (defined in 01-tokens.css). The flat fill reads as terrain "feel";
+// the ink gap-grout between tiles supplies the grid lines.
+var biomeTints = []string{
+	"var(--bio-p)", // Plains
+	"var(--bio-f)", // Woodland
+	"var(--bio-h)", // Downs
+	"var(--bio-w)", // Coast
+	"var(--bio-m)", // Fen
+	"var(--bio-r)", // Crags
 }
 
-// biomeColor returns CSS colour values for a tile at world position (x, y).
-func biomeColor(x, y int) (tile, tileDeep string) {
-	b := biomeTints[(x*3+y*5)%len(biomeTints)]
-	return b[0], b[1]
+// biomeColor returns the --tile CSS value for a tile at world position (x, y).
+func biomeColor(x, y int) string {
+	return biomeTints[(x*3+y*5)%len(biomeTints)]
 }
 
 // crestMarker renders the kingdom marker on an occupied tile.
-// The Coin at 14px degrades to a bold relation-coloured dot; the inner
-// symbol is omitted at map scale.
+// A flat crest sticker (.marker-crest) bearing a crown glyph, with a small
+// relation dot (.marker-rel-dot) whose colour is driven by the rel-* class
+// via the --rel-* tokens.
 func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
 	relClass := "rel-neutral"
-	dotColor := "#3a6390"
+	dotColor := "var(--rel-neutral)"
 	if isOwn {
 		relClass = "rel-self"
-		dotColor = "var(--chrome-accent)"
+		dotColor = "var(--rel-self)"
 	}
 	return Div(
 		Classes{
-			"map-marker":       true,
+			"map-marker":        true,
 			"map-marker--crest": true,
-			relClass:           true,
+			relClass:            true,
 		},
 		Attr("data-tip", k.Name),
-		Span(Class("marker-dot"), Style("background:"+dotColor)),
+		Div(Class("marker-crest"), Icon("crown", 18, false)),
 		Span(Class("marker-rel-dot"), Style("background:"+dotColor)),
 	)
 }
@@ -313,7 +314,7 @@ func kingdomDetail(k db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID 
 		If(!selected, Style("display:none")),
 		ds.Show(fmt.Sprintf("$selected_kingdom_id === %d", k.ID)),
 		Div(Class("kd-head"),
-			Div(Classes{"kd-crest": true, "is-self": isOwn}, Span(Class("kd-crest-dot"))),
+			Div(Classes{"kd-crest": true, "is-self": isOwn}, Icon("crown", 28, false)),
 			Div(
 				P(Class("kd-name"), Text(k.Name)),
 				P(Class("kd-sub"), Text(fmt.Sprintf("%d, %d", k.X, k.Y))),
@@ -392,7 +393,7 @@ func miniMap(pageX, pageY int) Node {
 	for row := range game.PageCount {
 		py := game.PageCount - 1 - row
 		for px := range game.PageCount {
-			tile, _ := biomeColor(px, py)
+			tile := biomeColor(px, py)
 			tileStyle := Style("--tile:" + tile)
 			if px == pageX && py == pageY {
 				cells = append(cells, Div(Class("map-minimap-cell map-minimap-cell--current"), tileStyle))

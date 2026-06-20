@@ -45,6 +45,26 @@
   --brass: #e0a51c;        /* meter brass = "time/ticks" fill (canon default) */
   --unread: #fbeec0;       /* messages: unread row wash */
 
+  /* heraldic map washes — biome fills (terrain "feel") for the World board */
+  --bio-p: #bcd089;   /* Plains   */
+  --bio-f: #7aa356;   /* Woodland */
+  --bio-h: #e8c562;   /* Downs    */
+  --bio-r: #b5a585;   /* Crags    */
+  --bio-w: #86b7d0;   /* Coast    */
+  --bio-m: #9cb079;   /* Fen      */
+
+  /* diplomacy relation accents — marker fills, own-tile ring, relation dots */
+  --rel-self:    #e8923a;
+  --rel-ally:    #3f9d51;   /* = --green */
+  --rel-neutral: #2f6fb0;   /* = --blue  */
+  --rel-war:     #d63a2f;   /* = --red   */
+
+  /* political "feel" tile tints (muted relation washes for the Political map) */
+  --pol-self:    #e8c88a;
+  --pol-ally:    #a7cdaf;
+  --pol-neutral: #a6c1d6;
+  --pol-war:     #dcaaa3;
+
   /* ── Typography — TWO faces (repointed) ────────────────────────────────── */
   /* Lilita One: every title, label, numeral, button.  Nunito: body & prose. */
   --font-display: 'Lilita One', cursive;
