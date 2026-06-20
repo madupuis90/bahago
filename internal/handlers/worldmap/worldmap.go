@@ -278,7 +278,9 @@ func biomeColor(x, y int) (tile, tileDeep string) {
 	return b[0], b[1]
 }
 
-// crestMarker renders the heraldic kingdom marker placed on an occupied tile.
+// crestMarker renders the kingdom marker on an occupied tile.
+// The Coin at 14px degrades to a bold relation-coloured dot; the inner
+// symbol is omitted at map scale.
 func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
 	relClass := "rel-neutral"
 	dotColor := "#3a6390"
@@ -288,12 +290,12 @@ func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
 	}
 	return Div(
 		Classes{
-			"map-marker":        true,
+			"map-marker":       true,
 			"map-marker--crest": true,
-			relClass:            true,
+			relClass:           true,
 		},
 		Attr("data-tip", k.Name),
-		Div(Class("marker-crest"), Glyph("shield", 13)),
+		Span(Class("marker-dot"), Style("background:"+dotColor)),
 		Span(Class("marker-rel-dot"), Style("background:"+dotColor)),
 	)
 }
@@ -311,7 +313,7 @@ func kingdomDetail(k db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID 
 		If(!selected, Style("display:none")),
 		ds.Show(fmt.Sprintf("$selected_kingdom_id === %d", k.ID)),
 		Div(Class("kd-head"),
-			Div(Classes{"kd-crest": true, "is-self": isOwn}, Glyph("shield", 18)),
+			Div(Classes{"kd-crest": true, "is-self": isOwn}, Span(Class("kd-crest-dot"))),
 			Div(
 				P(Class("kd-name"), Text(k.Name)),
 				P(Class("kd-sub"), Text(fmt.Sprintf("%d, %d", k.X, k.Y))),

@@ -101,18 +101,18 @@ func deleteURL(id int) string {
 	return strings.ReplaceAll(routes.KingdomMessagesDeletePath, "{id}", strconv.Itoa(id))
 }
 
-// classifyKind returns "guild", "decree", or "post" from the two discriminating booleans.
+// classifyKind returns "guild", "action", or "post" from the two discriminating booleans.
 func classifyKind(isGuild, hasAction bool) string {
 	if isGuild {
 		return "guild"
 	}
 	if hasAction {
-		return "decree"
+		return "action"
 	}
 	return "post"
 }
 
-// kindFromDetail returns the kind key ("post", "guild", "decree") for a detail row.
+// kindFromDetail returns the kind key ("post", "guild", "action") for a detail row.
 func kindFromDetail(m *db.GetInboxMessageByIDRow) string {
 	return classifyKind(m.IsGuildMessage, m.ActionUrl != "")
 }
@@ -122,10 +122,10 @@ func kindLabel(k string) string {
 	switch k {
 	case "guild":
 		return "Guild"
-	case "decree":
-		return "Decree"
+	case "action":
+		return "Notice"
 	default:
-		return "Letter"
+		return "Message"
 	}
 }
 
@@ -693,7 +693,7 @@ func groupByDate(msgs []db.ListInboxMessagesRow, now time.Time) []MsgGroup {
 	return groups
 }
 
-// kind returns "guild", "decree", or "post" for a message row.
+// kind returns "guild", "action", or "post" for a message row.
 func kind(m db.ListInboxMessagesRow) string {
 	return classifyKind(m.IsGuildMessage, m.HasAction)
 }
@@ -705,7 +705,7 @@ func messagesShell(groups []MsgGroup, selectedMessageID int, panel Node, gc *gui
 		Div(Class("messages-head"),
 			H1(Class("page-title"), Text("Messages")),
 			Div(Class("messages-head-actions"),
-				A(Href(routes.KingdomMessagesComposePath), Classes{"btn": true, "messages-compose-btn": true}, Text("Write a Letter")),
+				A(Href(routes.KingdomMessagesComposePath), Classes{"btn": true, "messages-compose-btn": true}, Text("Write a Message")),
 				Iff(gc.canSendAny(), func() Node {
 					return A(Href(routes.KingdomMessagesGuildComposePath), Classes{"btn": true, "messages-guild-btn": true}, Text("Guild Dispatch"))
 				}),
@@ -834,7 +834,7 @@ func messageListItem(m db.ListInboxMessagesRow, selectedMessageID int) Node {
 				ds.On("change", "$selected_count = document.querySelectorAll('.msg-check:checked').length"),
 			),
 		),
-		Span(Class("msg-seal"),
+		Span(Class("message-mark-wrap"),
 			Span(Classes{
 				"message-mark":            true,
 				"message-mark--" + k:      true,
@@ -871,9 +871,9 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 					),
 					P(Class("message-detail-date"), Text("Received "+m.CreatedAt.Format("2 Jan 2006, 15:04"))),
 				),
-				Div(Class("letter-sheet"),
+				Div(Class("message-detail"),
 					Iff(m.IsGuildMessage || hasAction, func() Node {
-						return Span(Class("letter-corner-mark"),
+						return Span(Class("message-detail-badge"),
 							Span(Classes{
 								"message-mark":           true,
 								"message-mark--" + k:     true,
@@ -881,13 +881,13 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 							}),
 						)
 					}),
-					H2(Class("letter-subject"), Text(m.Subject)),
-					Hr(Class("letter-rule")),
-					P(Class("letter-body"), Text(m.Body)),
+					H2(Class("message-detail-title"), Text(m.Subject)),
+					Hr(Class("message-detail-divider")),
+					P(Class("message-detail-body"), Text(m.Body)),
 					Iff(hasAction, func() Node {
-						return Div(Class("letter-action"),
+						return Div(Class("message-detail-action"),
 							A(Href(m.ActionUrl), Classes{"btn": true, "btn--primary": true}, Text(m.ActionText)),
-							P(Class("letter-action-note"), Text("The seal below carries you to the matter at hand.")),
+							P(Class("message-detail-action-note"), Text("The link below opens the matter at hand.")),
 						)
 					}),
 				),
@@ -918,7 +918,7 @@ func composePanel(to, subject string) Node {
 			}),
 			Div(Class("card-inner"),
 				Div(Class("card-header-row"),
-					H2(Class("card-title"), Text("Write a Letter")),
+					H2(Class("card-title"), Text("Write a Message")),
 					Span(Classes{"message-mark": true, "message-mark--post": true, "message-mark--lg": true}),
 				),
 				Div(Class("compose-fields"),
@@ -997,7 +997,7 @@ func guildMessagePanel(targets []guildMsgTarget) Node {
 								return Option(Value(t.Value), Text(t.Label))
 							})),
 						),
-						Span(Class("field-hint"), Text("One sealed copy goes to every member of the chosen rank.")),
+						Span(Class("field-hint"), Text("One copy goes to every member of the chosen rank.")),
 					),
 					Div(Class("field-group"),
 						Label(Class("field-label"), For("msg-subject"), Text("Subject")),

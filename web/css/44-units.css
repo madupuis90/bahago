@@ -110,7 +110,7 @@
   background: var(--card-2);
 }
 .attribute--offense  { background: color-mix(in srgb, var(--red) 22%, var(--card)); }
-.attribute--ward     { background: color-mix(in srgb, var(--blue) 22%, var(--card)); }
+.attribute--defense { background: color-mix(in srgb, var(--blue) 22%, var(--card)); }
 .attribute--arcane   { background: color-mix(in srgb, var(--purple) 22%, var(--card)); }
 .attribute--faith    { background: color-mix(in srgb, var(--yellow) 38%, var(--card)); }
 .attribute--drawback { background: color-mix(in srgb, var(--ink) 12%, var(--card)); opacity: .82; }
@@ -196,7 +196,7 @@
   text-transform: uppercase;
   color: var(--purple);
 }
-.unit-lock-note svg { width: 13px; height: 13px; stroke: var(--purple); }
+.unit-lock-note .gem { width: 16px; height: 16px; border-width: 1.5px; }
 
 .lock-banner {
   display: flex;

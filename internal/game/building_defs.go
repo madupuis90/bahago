@@ -38,8 +38,8 @@ type BuildingDef struct {
 	// Empty for buildings with no resource affinity (e.g. Armory).
 	Resource string
 
-	// Icon is the icon ID for buildings without a resource gem (e.g. "swords" for Armory).
-	// Empty when Resource is set.
+	// Icon is an optional icon ID for buildings without a resource gem.
+	// Empty for buildings that render an initial-medallion placeholder instead.
 	Icon string
 
 	// Flavour is the one-line flavour text shown in the detail panel.
@@ -132,7 +132,7 @@ var BuildingDefs = map[string]BuildingDef{
 		ID:      BuildingArmory,
 		Name:    "Armory",
 		Max:     1,
-		Icon:    "swords",
+		Icon:    "",
 		Flavour: "Where timber and stone become war. The crown of your works — it asks both forge and factory first.",
 		Cost:    ResourceValues{Wood: 80, Stone: 80},
 		Ticks:   10,

@@ -12,6 +12,7 @@ import (
 	"bahago/internal/handlers/guild"
 	"bahago/internal/handlers/home"
 	"bahago/internal/handlers/iconpreview"
+	"bahago/internal/handlers/identitypreview"
 	"bahago/internal/handlers/kingdom"
 	"bahago/internal/handlers/kingdomsetup"
 	"bahago/internal/handlers/layoutrefresh"
@@ -66,6 +67,7 @@ func (s *Server) registerRoutes() {
 
 	// public pages
 	iconpreview.RegisterRoutes(globalRouter)
+	identitypreview.RegisterRoutes(globalRouter)
 	home.RegisterRoutes(globalRouter)
 	auth.RegisterRoutes(globalRouter, s.queries, s.pool, s.sender, s.appURL)
 	chat.RegisterRoutes(globalRouter) // Experiment

@@ -539,7 +539,6 @@ func unitRow(utype string, def game.UnitDef, count int, locked, manaLocked bool,
 			),
 		),
 		Span(Class("stat-pill"),
-			Shield("swords", 14, false),
 			Text(strconv.Itoa(def.Power)),
 		),
 		upkeepPill(def),
@@ -575,7 +574,7 @@ func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTra
 	if manaLocked {
 		return Div(Class("unit-train"),
 			Span(Class("unit-lock-note"),
-				Shield("flame", 12, false),
+				ResourceGem("flame", 16),
 				Text("Needs mana"),
 			),
 		)
@@ -611,7 +610,7 @@ func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTra
 
 func lockBanner() Node {
 	return Div(Class("lock-banner"),
-		Shield("flame", 16, false),
+		ResourceGem("flame", 34),
 		P(Text("Summoning is sealed — establish "),
 			El("b", Text("mana production")),
 			Text(" to channel the aether."),
@@ -647,7 +646,7 @@ func attrClass(a game.Attribute) string {
 		game.AttributeFlying, game.AttributeSiegeEngine, game.AttributeEnrage:
 		return "attribute--offense"
 	case game.AttributeShields:
-		return "attribute--ward"
+		return "attribute--defense"
 	case game.AttributeUndead, game.AttributeDeathtouch, game.AttributeSummon:
 		return "attribute--arcane"
 	case game.AttributeWorshipper:

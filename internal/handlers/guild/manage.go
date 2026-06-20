@@ -692,9 +692,7 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	return Div(
 		// Compact manage head — crest + guild name + back link
 		Div(Class("manage-head"),
-			El("span", Class("guild-crest guild-crest--sm guild-crest--empty"),
-				Icon("star", 15, false),
-			),
+			El("span", Class("guild-crest guild-crest--sm guild-crest--empty")),
 			Div(Class("manage-head-body"),
 				Div(Class("manage-head-guild"), Text(g.Name)),
 				Div(Class("manage-head-sub"), Text("Manage")),
@@ -715,7 +713,6 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 			),
 			Iff(len(pending) == 0, func() Node {
 				return Div(Class("empty-state empty-state--row"),
-					Icon("person", 22, false),
 					Div(Class("empty-state-title"), Text("No requests await")),
 				)
 			}),
@@ -842,7 +839,7 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 		Div(Class("manage-leader-grid"),
 			// Edit charter
 			Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("card-header"), H3(Class("card-title"), Text("The Charter"))),
+				Div(Class("card-header"), H3(Class("card-title"), Text("The Description"))),
 				ds.Signals(map[string]any{"guild_description": g.Description}),
 				Div(Class("field-group"),
 					Label(Class("field-label"), For("guild-desc-edit"), Text("Description")),

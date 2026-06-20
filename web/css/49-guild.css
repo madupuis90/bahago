@@ -1,5 +1,5 @@
 /* =============================================================================
-   TABLE  ·  the ledger — one row per record (guild rolls, scores, any listing).
+   TABLE  ·  one row per record (guild rolls, scores, any listing).
    ============================================================================= */
 .table { width: 100%; border-collapse: collapse; }
 .table th {
@@ -80,9 +80,6 @@
   background: linear-gradient(180deg, #5a8f5e 0%, #3f6e44 55%, #2e5535 100%);
 }
 .meter--support .meter-eta { color: #2d6a3a; }
-.seal-cell { display: flex; align-items: center; gap: 10px; }
-.seal-cell .meter-track { width: 92px; flex: none; }
-.seal-count { font-family: var(--font-cinzel); font-weight: 600; font-size: .92rem; white-space: nowrap; }
 .role-tag {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--font-cinzel); font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
@@ -97,26 +94,21 @@ textarea.field { height: auto; min-height: 116px; padding: 10px 12px; resize: ve
 .field-hint-row { display: flex; justify-content: space-between; gap: 12px; }
 
 /* =============================================================================
-   GUILD  ·  page layout — landing, roll, charter, view, manage.
+   GUILD  ·  page layout — landing, roll, founding, view, manage.
    ============================================================================= */
-.doors { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 24px; align-items: stretch; margin-top: 4px; }
-.door { display: flex; }
-.door-inner {
+.choices { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 24px; align-items: stretch; margin-top: 4px; }
+.choice { display: flex; }
+.choice-inner {
   flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center;
   gap: 11px; padding: 36px 30px 32px;
 }
-.door-crest { color: var(--wood); }
-.door-title { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; color: var(--red-darker); line-height: 1.1; }
-.door-text {
+.choice-title { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; color: var(--red-darker); line-height: 1.1; }
+.choice-text {
   font-family: var(--font-body); font-style: italic; font-size: 1.04rem; color: var(--ink-soft);
   max-width: 36ch; text-wrap: pretty; line-height: 1.45;
 }
-.door-meta {
-  font-family: var(--font-cinzel); font-size: .7rem; font-weight: 600;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
-}
-.door .btn { margin-top: 10px; }
-.doors-seam { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 0; }
+.choice .btn { margin-top: 10px; }
+.choices-divider { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 0; }
 .seam-rule { flex: 1; width: 1.5px; background: var(--edge); }
 .seam-or { font-family: var(--font-caps); font-size: 1rem; color: var(--ink-soft); }
 .glance-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
@@ -126,35 +118,24 @@ textarea.field { height: auto; min-height: 116px; padding: 10px 12px; resize: ve
 }
 .glance-link:hover { color: var(--highlight); border-bottom-color: currentColor; }
 .roll-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(290px, 2fr); gap: 22px; align-items: start; }
-.charter-item { display: flex; flex-direction: column; gap: 10px; padding: 16px 2px; }
-.charter-item:first-child { padding-top: 4px; }
-.charter-item + .charter-item { border-top: 1px dotted var(--edge); }
-.charter-item-head { display: flex; align-items: center; gap: 11px; }
-.charter-item-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.charter-lapse {
-  font-family: var(--font-cinzel); font-size: .7rem; font-weight: 600;
-  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft);
-}
-.charter-lapse.is-urgent { color: #9a2a22; font-weight: 700; }
-.charter-wrap { max-width: 580px; margin: 0 auto; width: 100%; }
-.charter-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(290px, 5fr); gap: 22px; align-items: start; }
-.charter-form { display: flex; flex-direction: column; gap: 18px; }
-.charter-actions { display: flex; align-items: center; gap: 16px; margin-top: 2px; }
-.charter-oath {
+.found-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(290px, 5fr); gap: 22px; align-items: start; }
+.found-form { display: flex; flex-direction: column; gap: 18px; }
+.found-actions { display: flex; align-items: center; gap: 16px; margin-top: 2px; }
+.found-preamble {
   font-family: var(--font-body); font-style: italic; font-size: .98rem;
   color: var(--ink-soft); text-wrap: pretty;
 }
-.rite-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; counter-reset: rite; }
-.rite-list li { counter-increment: rite; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: baseline; }
-.rite-list li::before {
-  content: counter(rite, upper-roman);
+.steps-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; counter-reset: step; }
+.steps-list li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: baseline; }
+.steps-list li::before {
+  content: counter(step, upper-roman);
   font-family: var(--font-display); font-weight: 700; font-size: 1.05rem;
   color: var(--red-darker); text-align: center; line-height: 1;
 }
-.rite-body { display: flex; flex-direction: column; gap: 8px; }
-.rite-name { font-family: var(--font-heading); font-weight: 600; font-size: 1.1rem; color: var(--ink); }
-.rite-text { font-family: var(--font-body); font-style: italic; font-size: .95rem; color: var(--ink-soft); text-wrap: pretty; line-height: 1.45; }
-.rite-note {
+.steps-body { display: flex; flex-direction: column; gap: 8px; }
+.steps-name { font-family: var(--font-heading); font-weight: 600; font-size: 1.1rem; color: var(--ink); }
+.steps-text { font-family: var(--font-body); font-style: italic; font-size: .95rem; color: var(--ink-soft); text-wrap: pretty; line-height: 1.45; }
+.steps-note {
   margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--edge);
   font-family: var(--font-body); font-style: italic; font-size: .92rem; color: var(--ink-soft); text-wrap: pretty;
 }
@@ -189,11 +170,6 @@ textarea.field { height: auto; min-height: 116px; padding: 10px 12px; resize: ve
 .you-mark { font-family: var(--font-body); font-style: italic; font-weight: 400; font-size: .85em; color: var(--ink-soft); }
 .view-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(300px, 2fr); gap: 22px; align-items: start; }
 .view-rail { display: flex; flex-direction: column; gap: 18px; }
-.charter-text {
-  margin: 0; font-family: var(--font-body); font-style: italic; font-size: 1.02rem;
-  line-height: 1.5; color: var(--ink); text-wrap: pretty;
-}
-.sealing-meter { margin: 2px 2px 18px; }
 .manage-head {
   display: flex; align-items: center; gap: 13px; margin-bottom: 22px;
   padding-bottom: 16px; border-bottom: 1px solid var(--edge);
@@ -229,9 +205,3 @@ textarea.field { height: auto; min-height: 116px; padding: 10px 12px; resize: ve
   line-height: 1.5;
 }
 .settings-fields { display: flex; flex-direction: column; gap: 18px; margin-bottom: 22px; }
-.ledger-footnote {
-  margin-top: 14px; padding-top: 11px; border-top: 1px dotted var(--edge);
-  font-family: var(--font-body); font-style: italic; font-size: .84rem;
-  color: var(--ink-soft);
-}
-

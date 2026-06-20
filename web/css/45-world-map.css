@@ -33,7 +33,6 @@
   font-family: var(--font-cinzel); font-weight: 700; font-size: .72rem;
   letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft);
 }
-.board-region .shield { color: var(--wood-dark); }
 .board-stage {
   flex: 1; min-height: 0; overflow: hidden;
   position: relative; cursor: default;
@@ -123,17 +122,14 @@
   border-radius: 50%; border: 1.5px solid #fff8e6; box-shadow: 0 1px 2px rgba(0,0,0,.4); z-index: 2;
 }
 
-.map-marker--crest .marker-crest {
-  width: 22px; height: 25px; display: grid; place-items: center;
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
-  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 48%, var(--wood-dark) 100%);
-  box-shadow: 0 1px 3px rgba(40,24,10,.5);
+/* Kingdom marker — The Coin at map size (14px). Thick ink ring, flat fill.
+   The inner symbol is omitted at this scale; the coin degrades gracefully
+   to a bold relation-coloured dot. */
+.marker-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2.5px solid var(--ink);
+  box-shadow: var(--shadow-ink-xs);
 }
-.map-marker--crest .marker-crest .shield { color: #fbeec6; }
-.rel-self .marker-crest {
-  background: linear-gradient(180deg, var(--chrome-accent-light) 0%, var(--chrome-accent) 55%, #9a6f28 100%);
-}
-.rel-self .marker-crest .shield { color: #4a2e08; }
 .map-marker[data-tip] { position: relative; }
 .map-marker[data-tip]::after {
   content: attr(data-tip);
@@ -294,16 +290,13 @@
    ============================================================================= */
 .kd-panel { display: flex; flex-direction: column; }
 .kd-head  { display: flex; align-items: flex-start; gap: 11px; }
-.kd-crest {
-  flex: none; width: 36px; height: 41px; display: grid; place-items: center;
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
-  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 48%, var(--wood-dark) 100%);
+.kd-crest { flex: none; width: 18px; height: 18px; display: grid; place-items: center; }
+.kd-crest-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2.5px solid var(--ink);
+  background: #3a6390;
 }
-.kd-crest .shield { color: #fbeec6; }
-.kd-crest.is-self {
-  background: linear-gradient(180deg, var(--chrome-accent-light), var(--chrome-accent) 55%, #9a6f28);
-}
-.kd-crest.is-self .shield { color: #4a2e08; }
+.kd-crest.is-self .kd-crest-dot { background: var(--chrome-accent); }
 .kd-name {
   font-family: var(--font-display); font-weight: 700; font-size: 1.28rem;
   line-height: 1.05; color: var(--red-darker);

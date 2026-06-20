@@ -282,7 +282,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 							ds.Text("$alloc_total+'%'"),
 						),
 					),
-					Div(Class("alloc-decree"),
+					Div(Class("alloc-section"),
 						Div(Class("alloc-error"),
 							ds.Show("$alloc_total > 100"),
 							Span(Class("alloc-alarm"), Text("⚠ Too many hands!")),
@@ -406,7 +406,7 @@ func idleRow(net int) Node {
 		rateLabel = "pop / tick"
 	}
 	return Div(Class("alloc-row idle"),
-		Div(Class("idle-gem"), Icon("shield-zzz", 36, false)),
+		Div(Class("idle-gem"), Icon("idle", 36, false)),
 		Div(
 			Div(Class("alloc-role-name"), Text("Idle")),
 		),

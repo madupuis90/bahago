@@ -667,26 +667,6 @@ func romanNumeral(n int) string {
 	return strconv.Itoa(n)
 }
 
-func unitIcon(utype string) string {
-	switch utype {
-	case game.UnitRecruit:
-		return "spear"
-	case game.UnitArcher:
-		return "soldiers"
-	case game.UnitRaider:
-		return "flag"
-	case game.UnitKnight:
-		return "swords"
-	case game.UnitCatapult:
-		return "helmet"
-	case game.UnitShade:
-		return "flame"
-	case game.UnitDreadKnight:
-		return "flame"
-	}
-	return "spear"
-}
-
 func statusPill(campaign *db.GetCampaignsForKingdomRow) Node {
 	var tone, label string
 	if campaign == nil {
@@ -712,14 +692,13 @@ func statusPill(campaign *db.GetCampaignsForKingdomRow) Node {
 }
 
 func actionTag(action string) Node {
-	var tone, icon, label string
+	var tone, label string
 	if action == "attack" {
-		tone, icon, label = "attack", "swords", "Attack"
+		tone, label = "attack", "Attack"
 	} else {
-		tone, icon, label = "defend", "chevron", "Defend"
+		tone, label = "defend", "Defend"
 	}
 	return Span(Classes{"action-tag": true, "action-tag--" + tone: true},
-		Icon("shield-"+icon, 13, false),
 		Text(label),
 	)
 }
@@ -727,11 +706,15 @@ func actionTag(action string) Node {
 func unitToken(utype string, count, size int) Node {
 	unit := game.UnitDefs[utype]
 	sz := strconv.Itoa(size)
+	initial := ""
+	if len(unit.Name) > 0 {
+		initial = string(unit.Name[0])
+	}
 	return Div(Class("unit-token"),
 		Div(Class("unit-medallion"),
 			Style(fmt.Sprintf("width:%spx;height:%spx", sz, sz)),
 			Title(unit.Name),
-			Icon("shield-"+unitIcon(utype), size/2, false),
+			Span(Class("unit-medallion__initial"), Text(initial)),
 		),
 		Span(Class("unit-tally"), Text(strconv.Itoa(count))),
 	)
@@ -793,7 +776,7 @@ func rosterStripCampaign(units []db.KingdomCampaignUnit, max, size int) Node {
 
 func renderStrengthLine(power, total int) Node {
 	return Div(Class("strength-line"),
-		Span(Class("sl-item"), Icon("shield-swords", 14, false), B(Text(strconv.Itoa(power))), Text(" power")),
+		Span(Class("sl-item"), B(Text(strconv.Itoa(power))), Text(" power")),
 		Span(Class("sl-sep"), Text("·")),
 		Span(Class("sl-item"), B(Text(strconv.Itoa(total))), Text(" units")),
 	)
@@ -985,14 +968,12 @@ func legionDispatch(l db.ListLegionsForKingdomRow, hasUnits bool) Node {
 					Classes{"seg": true, "seg--attack": true},
 					ds.Class("'is-on'", "$send_action === 'attack'"),
 					ds.On("click", "$send_action = 'attack'; $send_ticks = 4"),
-					Icon("shield-swords", 13, false),
 					Text("Attack"),
 				),
 				Button(Type("button"),
 					Classes{"seg": true, "seg--defend": true},
 					ds.Class("'is-on'", "$send_action === 'defend'"),
 					ds.On("click", "$send_action = 'defend'; $send_ticks = 12"),
-					Icon("shield-chevron", 13, false),
 					Text("Defend"),
 				),
 			),
@@ -1016,7 +997,6 @@ func legionDispatch(l db.ListLegionsForKingdomRow, hasUnits bool) Node {
 		),
 		Button(Class("btn btn--primary dispatch-go"),
 			ds.On("click", marchExpr),
-			Icon("shield-flag", 14, false),
 			Span(ds.Text("$send_action === 'attack' ? 'March to war' : 'Send to defend'")),
 		),
 	)

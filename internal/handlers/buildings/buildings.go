@@ -650,10 +650,13 @@ func buildingGlyph(b game.BuildingDef, size int) Node {
 	if b.Resource != "" {
 		return ResourceGem(b.Resource, size)
 	}
-	iconSize := size * 6 / 10
+	initial := ""
+	if len(b.Name) > 0 {
+		initial = string(b.Name[0])
+	}
 	return El("span", Class("node-medallion"),
 		Style(fmt.Sprintf("width:%dpx;height:%dpx", size, size)),
-		Icon(b.Icon, iconSize, false),
+		Span(Class("node-medallion__initial"), Text(initial)),
 	)
 }
 

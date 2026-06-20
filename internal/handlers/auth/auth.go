@@ -69,7 +69,7 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, ap
 func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 
 func authCrest() Node {
-	return Raw(`<svg class="crest crest-lg" width="54" height="62" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`)
+	return Crest("", 54, "crest-lg")
 }
 
 func invalidTokenContent() Node {

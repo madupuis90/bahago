@@ -705,23 +705,21 @@ func guildLandingContent(invitations []db.ListKingdomInvitationsRow) Node {
 				),
 			))
 		}),
-		Div(Class("doors"),
-			Div(Class("door"), Div(Class("card"), Div(Class("card-inner door-inner"),
-				Span(Class("door-crest"), Icon("star", 32, false)),
-				Div(Class("door-title"), Text("Find a Fellowship")),
-				P(Class("door-text"), Text("Browse active guilds and petition to join one.")),
+		Div(Class("choices"),
+			Div(Class("choice"), Div(Class("card"), Div(Class("card-inner choice-inner"),
+				Div(Class("choice-title"), Text("Find a Fellowship")),
+				P(Class("choice-text"), Text("Browse active guilds and petition to join one.")),
 				A(Href(routes.GuildListPath), Class("btn"), Text("Browse Guilds")),
 			))),
-			Div(Class("doors-seam"),
+			Div(Class("choices-divider"),
 				Div(Class("seam-rule")),
 				Span(Class("seam-or"), Text("or")),
 				Div(Class("seam-rule")),
 			),
-			Div(Class("door"), Div(Class("card"), Div(Class("card-inner door-inner"),
-				Span(Class("door-crest"), Icon("star", 32, false)),
-				Div(Class("door-title"), Text("Found a Guild")),
-				P(Class("door-text"), Text("Submit a founding charter and gather four seals of support.")),
-				A(Href(routes.GuildNewPath), Class("btn"), Text("Draft a Charter")),
+			Div(Class("choice"), Div(Class("card"), Div(Class("card-inner choice-inner"),
+				Div(Class("choice-title"), Text("Found a Guild")),
+				P(Class("choice-text"), Text("Found a guild and gather four kingdoms to back it.")),
+				A(Href(routes.GuildNewPath), Class("btn"), Text("Found a Guild")),
 			))),
 		),
 		guildAlert(nil),
@@ -744,10 +742,9 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 			),
 			Iff(len(activeGuilds) == 0, func() Node {
 				return Div(Class("empty-state"),
-					Icon("star", 30, false),
 					Div(Class("empty-state-title"), Text("The roll is empty")),
 					Div(Class("empty-state-hint"), Text("No fellowship has yet been founded in the realm. Yours could be the first.")),
-					A(Href(routes.GuildNewPath), Class("btn"), Text("Draft a Founding Charter")),
+					A(Href(routes.GuildNewPath), Class("btn"), Text("Found a Guild")),
 				)
 			}),
 			Iff(len(activeGuilds) > 0, func() Node {
@@ -781,14 +778,14 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 		Iff(len(pendingGuilds) > 0, func() Node {
 			return Div(Class("card"), Div(Class("card-inner"),
 				Div(Class("section-header"),
-					Div(Class("section-title"), Text("Founding Charters")),
+					Div(Class("section-title"), Text("Pending Guilds")),
 					Div(Class("section-rule")),
 				),
 				Table(Class("table"),
 					THead(Tr(
-						Th(Text("Charter")),
+						Th(Text("Guild")),
 						Th(Text("Founder")),
-						Th(Class("is-num"), Text("Seals")),
+						Th(Class("is-num"), Text("Support")),
 						Th(Text("Lapses")),
 					)),
 					TBody(Map(pendingGuilds, func(g db.ListPendingGuildsRow) Node {
@@ -821,19 +818,17 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 }
 
 func guildCrestSm() Node {
-	return El("span", Class("guild-crest guild-crest--sm guild-crest--empty"),
-		Icon("star", 15, false),
-	)
+	return El("span", Class("guild-crest guild-crest--sm guild-crest--empty"))
 }
 
 func guildNewContent() Node {
 	return Div(
 		Div(Class("page-header"),
 			Div(Class("page-header-kicker"), Text("Fellowship")),
-			H1(Class("page-header-title"), Text("Founding Charter")),
+			H1(Class("page-header-title"), Text("Found a Guild")),
 		),
-		Div(Class("charter-grid"),
-			Div(Class("card"), Div(Class("card-inner charter-form"),
+		Div(Class("found-grid"),
+			Div(Class("card"), Div(Class("card-inner found-form"),
 				Div(Class("field-group"),
 					Label(Class("field-label"), For("guild-name-input"), Text("Name of the Fellowship")),
 					Input(ID("guild-name-input"), Class("field"), Type("text"),
@@ -843,40 +838,40 @@ func guildNewContent() Node {
 					),
 				),
 				Div(Class("field-group"),
-					Label(Class("field-label"), For("guild-desc-input"), Text("The Charter")),
+					Label(Class("field-label"), For("guild-desc-input"), Text("The Description")),
 					Div(Class("field-hint"), Text("Describe the fellowship's purpose. Up to 500 characters.")),
 					El("textarea", ID("guild-desc-input"), Class("field"),
 						ds.Bind("guild_description"),
-						Placeholder("Inscribe the charter of the fellowship…"),
+						Placeholder("Describe the guild you want to find…"),
 						MaxLength("500"),
 					),
 				),
-				Div(Class("charter-actions"),
+				Div(Class("found-actions"),
 					Button(Class("btn"),
 						ds.On("click", datastar.PostSSE(routes.GuildCreatePath)),
-						Text("Submit Charter"),
+						Text("Submit Guild"),
 					),
-					P(Class("charter-oath"), Text("Four kingdoms must affix their seal before the guild is founded.")),
+					P(Class("found-preamble"), Text("Four kingdoms must back it before the guild is founded.")),
 				),
 				guildAlert(nil),
 			)),
 			Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("card-header"), H2(Class("card-title"), Text("The Founding Rite"))),
-				El("ol", Class("rite-list"),
-					El("li", Div(Class("rite-body"),
-						Div(Class("rite-name"), Text("Draft the Charter")),
-						P(Class("rite-text"), Text("Set down the fellowship's name and purpose. The name must be unique across the realm.")),
+				Div(Class("card-header"), H2(Class("card-title"), Text("How founding works"))),
+				El("ol", Class("steps-list"),
+					El("li", Div(Class("steps-body"),
+						Div(Class("steps-name"), Text("Found the guild")),
+						P(Class("steps-text"), Text("Set down the fellowship's name and purpose. The name must be unique across the realm.")),
 					)),
-					El("li", Div(Class("rite-body"),
-						Div(Class("rite-name"), Text("Gather the Seals")),
-						P(Class("rite-text"), Text("Four other kingdoms must pledge their seal. The charter then appears on the Guild Roll for others to find.")),
+					El("li", Div(Class("steps-body"),
+						Div(Class("steps-name"), Text("Gather support")),
+						P(Class("steps-text"), Text("Four other kingdoms must back it. The guild then appears on the Guild Roll for others to find.")),
 					)),
-					El("li", Div(Class("rite-body"),
-						Div(Class("rite-name"), Text("Founding")),
-						P(Class("rite-text"), Text("At the fifth seal the guild is brought into being and you become its first leader.")),
+					El("li", Div(Class("steps-body"),
+						Div(Class("steps-name"), Text("Go live")),
+						P(Class("steps-text"), Text("At the fifth supporter the guild is brought into being and you become its first leader.")),
 					)),
 				),
-				P(Class("rite-note"), Text("An unfounded charter lapses after 30 days if it does not gather five seals.")),
+				P(Class("steps-note"), Text("A pending guild lapses after 30 days if it does not reach five supporters.")),
 			)),
 		),
 	)
@@ -910,13 +905,11 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 func guildHead(g db.Guild, isPending bool, activeCount int) Node {
 	kicker := "Fellowship"
 	if isPending {
-		kicker = "Founding Charter"
+		kicker = "Pending Guild"
 	}
 	sub := g.Description
 	return Div(Class("guild-head"),
-		El("span", Class("guild-crest guild-crest--lg guild-crest--empty"),
-			Icon("star", 30, false),
-		),
+		El("span", Class("guild-crest guild-crest--lg guild-crest--empty")),
 		Div(Class("page-header"),
 			Div(Class("page-header-kicker"), Text(kicker)),
 			H1(Class("page-header-title"), Text(g.Name)),
@@ -935,7 +928,6 @@ func guildMemberSection(members []db.ListGuildMembersWithNamesRow, activeCount i
 		Div(Class("card"), Div(Class("card-inner"),
 			If(len(members) == 0,
 				Div(Class("empty-state"),
-					Icon("star", 30, false),
 					Div(Class("empty-state-title"), Text("No members yet")),
 				),
 			),
@@ -961,7 +953,7 @@ func guildSealSection(members []db.ListGuildMembersWithNamesRow, supportCount in
 	return Div(
 		Div(Class("meter meter--support"), Style("margin: 0 2px 18px"),
 			Div(Class("meter-top"),
-				El("span", Class("meter-name"), Text("Seals of support")),
+				El("span", Class("meter-name"), Text("Supporters")),
 				El("span", Class("meter-eta"), Text(fmt.Sprintf("%d of 5 pledged", supportCount))),
 			),
 			Div(Class("meter-track"), Attr("style", fmt.Sprintf("--meter-steps:5")),
@@ -970,13 +962,13 @@ func guildSealSection(members []db.ListGuildMembersWithNamesRow, supportCount in
 			),
 		),
 		Div(Class("section-header"),
-			Div(Class("section-title"), Text("Seals upon the Charter")),
+			Div(Class("section-title"), Text("Supporters")),
 			Div(Class("section-rule")),
 		),
 		Div(Class("card"), Div(Class("card-inner"),
 			If(len(members) == 0,
 				Div(Class("empty-state"),
-					Div(Class("empty-state-title"), Text("No seals yet")),
+					Div(Class("empty-state-title"), Text("No supporters yet")),
 					Div(Class("empty-state-hint"), Text("Be the first kingdom to lend your support.")),
 				),
 			),
@@ -991,7 +983,7 @@ func guildSealSection(members []db.ListGuildMembersWithNamesRow, supportCount in
 						var roleNode Node
 						if role == _guild.RoleApplicant {
 							roleNode = El("span", Class("role-tag role-tag--supporter"),
-								Icon("star", 12, false), Text("Founder"),
+								Text("Founder"),
 							)
 						} else {
 							roleNode = guildRoleTag(role)
@@ -1064,18 +1056,18 @@ func guildViewerStanding(g db.Guild, viewerRole _guild.MemberRole, invitationID 
 			word = "One seal is wanting — yours would found the guild."
 		}
 		return guildStanding{cls: cls, note: word, buttons: []guildBtn{
-			{label: "Pledge Your Seal", action: datastar.PostSSE("%s", slugURL(routes.GuildSupportPath, slug))},
+			{label: "Back this Guild", action: datastar.PostSSE("%s", slugURL(routes.GuildSupportPath, slug))},
 		}}
 	case isPending && viewerRole == _guild.RoleSupporter:
-		return guildStanding{cls: cls, note: "Your seal is upon this charter.", buttons: []guildBtn{
-			{label: "Withdraw Your Seal", mod: " btn--danger", action: datastar.PostSSE("%s", slugURL(routes.GuildWithdrawSupportPath, slug))},
+		return guildStanding{cls: cls, note: "You are backing this guild.", buttons: []guildBtn{
+			{label: "Withdraw Support", mod: " btn--danger", action: datastar.PostSSE("%s", slugURL(routes.GuildWithdrawSupportPath, slug))},
 		}}
 	case isPending && viewerRole == _guild.RoleApplicant:
-		return guildStanding{cls: cls, note: "At the fifth seal the guild is founded, with you as its leader.", buttons: []guildBtn{
-			{label: "Withdraw the Charter", mod: " btn--danger", action: datastar.PostSSE("%s", slugURL(routes.GuildCancelProposalPath, slug))},
+		return guildStanding{cls: cls, note: "At the fifth supporter the guild is founded, with you as its leader.", buttons: []guildBtn{
+			{label: "Withdraw Support", mod: " btn--danger", action: datastar.PostSSE("%s", slugURL(routes.GuildCancelProposalPath, slug))},
 		}}
 	case isPending && viewerRole == _guild.RoleInOtherGuild:
-		return guildStanding{cls: cls, note: "Your banner is already pledged to another fellowship; you may lend no seal."}
+		return guildStanding{cls: cls, note: "Your banner is already pledged to another fellowship; you may not back this one."}
 	case isActive && viewerRole == _guild.RoleNone && invitationID == 0:
 		return guildStanding{cls: cls, note: "The officers will weigh your request.", buttons: []guildBtn{
 			{label: "Request to Join", action: datastar.PostSSE("%s", slugURL(routes.GuildRequestJoinPath, slug))},

@@ -440,7 +440,7 @@
     inset 0 -2px 3px rgba(0,0,0,.35),
     0 1px 2px rgba(60,15,15,.4);
 }
-.message-mark--decree {
+.message-mark--action {
   border-color: #8a6030; color: #4a2e08;
   background: linear-gradient(180deg, #e3bc6c 0%, #c89a4a 60%, #a87c34 100%);
   box-shadow: inset 0 1px 0 rgba(255,248,220,.6), 0 1px 2px rgba(90,60,15,.3);
@@ -518,8 +518,8 @@
   padding: 14px 0 4px; border-top: 1px dotted var(--edge);
 }
 
-/* ── Letter flavor — the message as a parchment sheet ────────────────────── */
-.letter-sheet {
+/* ── Message detail — the single message read view ───────────────────────── */
+.message-detail {
   position: relative;
   background:
     radial-gradient(ellipse 120% 60% at 50% -10%, rgba(255,255,255,.5), transparent 60%),
@@ -541,17 +541,17 @@
     z-index: -1;
   }
 }
-.letter-subject {
+.message-detail-title {
   margin: 0 0 4px;
   font-family: var(--font-heading); font-weight: 600; font-size: 1.5rem;
   line-height: 1.15; color: var(--ink); text-wrap: pretty;
-  padding-right: 44px; /* clear the corner seal */
+  padding-right: 44px; /* clear the corner mark */
 }
-.letter-rule {
+.message-detail-divider {
   height: 0; border: none; border-top: 1px solid var(--edge);
   margin: 10px 0 14px; opacity: .7;
 }
-.letter-body {
+.message-detail-body {
   margin: 0;
   font-family: var(--font-body); font-size: 1.05rem; line-height: 1.68;
   color: var(--ink); white-space: pre-wrap; overflow-wrap: break-word;
@@ -563,15 +563,15 @@
   }
 }
 /* the kind mark, stamped on the sheet's corner */
-.letter-corner-mark { position: absolute; top: 16px; right: 18px; }
-.letter-corner-mark .message-mark--guild { transform: rotate(-8deg); }
-/* an action carried by the letter (decrees) */
-.letter-action {
+.message-detail-badge { position: absolute; top: 16px; right: 18px; }
+.message-detail-badge .message-mark--guild { transform: rotate(-8deg); }
+/* an action carried by the message */
+.message-detail-action {
   display: flex; align-items: center; gap: 12px;
   margin-top: 18px; padding-top: 14px;
   border-top: 1px dotted var(--edge);
 }
-.letter-action-note {
+.message-detail-action-note {
   margin: 0; font-family: var(--font-body); font-style: italic;
   font-size: .88rem; color: var(--ink-soft);
 }
@@ -668,9 +668,9 @@
   }
 }
 
-/* the kind mark — unread gets a sealed wax dot */
-.msg-seal { position: relative; flex: none; }
-.msg-seal::after {
+/* the kind mark — unread gets a wax dot */
+.message-mark-wrap { position: relative; flex: none; }
+.message-mark-wrap::after {
   content: '';
   position: absolute; top: -1px; right: -2px;
   width: 8px; height: 8px; border-radius: 50%;
@@ -679,9 +679,9 @@
   opacity: 0;
   transition: opacity .15s ease;
 }
-.msg-row--unread .msg-seal::after { opacity: 1; }
+.msg-row--unread .message-mark-wrap::after { opacity: 1; }
 /* active row: wax dot becomes gold (it's been opened) */
-.msg-row--active .msg-seal::after {
+.msg-row--active .message-mark-wrap::after {
   background: #c89a4a; border-color: var(--parchment-deep); opacity: 1;
 }
 
@@ -768,7 +768,7 @@
   background: rgb(255 248 220 / .92);
   border-color: rgba(60,40,20,.35);
 }
-.msg-list-v3 .msg-row--active .msg-seal::after {
+.msg-list-v3 .msg-row--active .message-mark-wrap::after {
   background: #c89a4a; border-color: var(--wood); opacity: 1;
 }
 

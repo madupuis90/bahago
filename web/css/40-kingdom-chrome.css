@@ -62,8 +62,6 @@
 .icon {
   display: block;
   color: var(--ink);
-  --_shield-bg: transparent;
-  --_shield-stroke: transparent;
 
   &.icon--active {
     color: var(--red);
@@ -74,35 +72,33 @@
   }
 }
 
-.shield {
-  display: block;
-  color: var(--ink);
-
-  &.shield--active {
-    color: var(--red);
-  }
-
-  &.shield--dim {
-    opacity: .5;
-  }
-}
-
-/* a bare glyph — just the line-art, no shield, no frame */
+/* a bare glyph — just the line-art, no frame */
 .gly { display: block; color: inherit; }
 
 /* crest composition tokens — declared at root so they register as DS tokens */
 :root {
-  --crest-fill: rgba(255, 250, 236, .5); /* @kind other */
+  --crest-ring:  var(--ink);                  /* @kind color */
+  --crest-fill:  rgba(255, 250, 236, .5);     /* @kind other */
+  --crest-glyph: var(--ink);                  /* @kind color */
   --c-ink:        #e6cf94;                     /* @kind color */
   --c-ink-strong: #fff8dc;                     /* @kind color */
   --c-sub:        #c2a468;                     /* @kind color */
   --c-divider:    1px solid rgba(0,0,0,.4);    /* @kind other */
 }
 
-/* a glyph composed INSIDE the shield frame — shield path is inlined in markup */
-.crest { display: block; overflow: visible; }
-.crest .crest-shield { fill: var(--crest-fill); }
-.crest--ghost .crest-shield { fill: transparent; }
+/* The kingdom identity mark — The Coin.
+   A bold BD medallion: thick ink ring, flat fill, optionally bearing a glyph.
+   No shield frame (see docs/design-system/icons.md). Per-skin classes override
+   the --crest-* tokens below. The inner symbol is currently empty (TBD). */
+.crest {
+  display: inline-grid; place-items: center; flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--crest-ring);
+  background: var(--crest-fill);
+  box-shadow: var(--shadow-ink-xs);
+}
+.crest .icon { color: var(--crest-glyph); }
+.crest--ghost { --crest-fill: transparent; }
 
 /* ── Resource gems — flat heraldic discs, ink ring, white glyph ───────────── */
 .gem {
@@ -162,10 +158,7 @@
 
 /* identity — crest + name + population */
 .id { display: flex; align-items: center; gap: 11px; flex: none; }
-.id-crest { flex: none; }
-.id-crest .crest-frame  { color: var(--primary-ink); }
-.id-crest .crest-shield { fill: rgba(255, 246, 230, .18); }
-.id-crest .crest-glyph  { color: var(--primary-ink); }
+.id-crest { flex: none; --crest-ring: var(--primary-ink); --crest-fill: rgba(255, 246, 230, .18); --crest-glyph: var(--primary-ink); }
 .id-name {
   font-family: var(--font-display); font-size: 20px; line-height: 1.05;
   color: var(--primary-ink); -webkit-text-stroke: .4px var(--ink);
@@ -217,6 +210,7 @@
 
 /* nav link base — shared structure with the home shell nav */
 .nav-link {
+  position: relative;
   display: inline-flex; align-items: center; gap: 7px;
   padding: 6px 11px; border-radius: 9px; text-decoration: none; white-space: nowrap;
   border: 2px solid transparent; color: var(--c-ink); cursor: pointer;
@@ -234,10 +228,6 @@
 }
 .barB2-nav .nav-link-l { font-family: var(--font-body); font-weight: 800; letter-spacing: .06em; }
 
-.nav-link-ico, .nav-gly-ico {
-  position: relative; display: inline-flex;
-  align-items: center; justify-content: center;
-}
 .nav-badge {
   position: absolute; top: -5px; right: -7px;
   min-width: 16px; height: 16px; padding: 0 4px;

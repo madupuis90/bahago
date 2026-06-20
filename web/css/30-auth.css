@@ -35,10 +35,9 @@
 
 .crest-lg {
   filter: drop-shadow(0 3px 6px rgba(60,40,20,.32));
-
-  .crest-frame { color: var(--chrome-accent); }
-  .crest-shield { fill: rgba(247,238,213,.72); }
-  .crest-glyph { color: var(--highlight); }
+  --crest-ring:  var(--chrome-accent);
+  --crest-fill:  rgba(247,238,213,.72);
+  --crest-glyph: var(--highlight);
 }
 
 .auth-wordmark {

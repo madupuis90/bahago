@@ -25,93 +25,6 @@ func GetSSENoSignals(urlFormat string, args ...any) string {
 	return fmt.Sprintf(`@get('%s', {openWhenHidden: true, filterSignals: {include: /^$/}})`, fmt.Sprintf(urlFormat, args...))
 }
 
-// svgDefs is the inline SVG symbol library. Prepended to <body> so all glyph
-// symbols are defined before any element references them.
-const svgDefs = `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"
-     style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="sandglass" viewBox="0 0 10 14">
-      <path d="M1 1 H9 L5 6 L9 11 V13 H1 V11 L5 6 Z"
-            fill="none" stroke="currentColor" stroke-width="0.8"/>
-      <path d="M3 11 L7 11 L5 8 Z" fill="currentColor"/>
-    </symbol>
-    <g id="g-crown"><path d="M5 14.5 L5 10 L7.5 12 L10 8 L12.5 12 L15 10 L15 14.5 Z"
-      fill="none" stroke="currentColor" stroke-width="0.9"
-      stroke-linecap="square" stroke-linejoin="round"/></g>
-    <g id="g-cross"><g fill="none" stroke="currentColor" stroke-width="1.1"
-      stroke-linecap="square" stroke-linejoin="round">
-      <line x1="10" y1="6" x2="10" y2="15"/>
-      <line x1="6.5" y1="10" x2="13.5" y2="10"/></g></g>
-    <g id="g-swords"><g fill="none" stroke="currentColor" stroke-width="0.85"
-      stroke-linecap="round" stroke-linejoin="round">
-      <line x1="7.5" y1="7.5" x2="12.5" y2="16"/>
-      <line x1="7.9" y1="11.1" x2="10.5" y2="9.6"/>
-      <line x1="12.5" y1="7.5" x2="7.5" y2="16"/>
-      <line x1="9.5" y1="9.6" x2="12.1" y2="11.1"/></g></g>
-    <g id="g-sliders"><g stroke="currentColor" stroke-linecap="round">
-      <line x1="5" y1="9.5" x2="15" y2="9.5" fill="none" stroke-width="0.8"/>
-      <circle cx="8.5" cy="9.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/>
-      <line x1="5" y1="12.5" x2="15" y2="12.5" fill="none" stroke-width="0.8"/>
-      <circle cx="11.5" cy="12.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/>
-      <line x1="5" y1="15.5" x2="15" y2="15.5" fill="none" stroke-width="0.8"/>
-      <circle cx="9.5" cy="15.5" r="1.5" fill="rgba(255,250,236,0.8)" stroke-width="0.9"/></g></g>
-    <g id="g-house"><g fill="none" stroke="currentColor" stroke-width="0.95"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 13.5 L10 8.5 L15 13.5"/>
-      <path d="M6 13.5 L6 17 L14 17 L14 13.5"/>
-      <path d="M8.5 17 L8.5 14.5 L11.5 14.5 L11.5 17"/></g></g>
-    <g id="g-person"><g fill="none" stroke="currentColor" stroke-width="0.95"
-      stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="10" cy="9" r="2.2"/>
-      <path d="M6.5 17.5 C6.5 14 8 12.5 10 12.5 C12 12.5 13.5 14 13.5 17.5"/></g></g>
-    <g id="g-globe"><g fill="none" stroke="currentColor" stroke-linecap="round"
-      stroke-linejoin="round">
-      <circle cx="10" cy="12" r="4.5" stroke-width="0.9"/>
-      <line x1="5.5" y1="12" x2="14.5" y2="12" stroke-width="0.65"/>
-      <path d="M10 7.5 C8 9.5 8 14.5 10 16.5" stroke-width="0.65"/>
-      <path d="M10 7.5 C12 9.5 12 14.5 10 16.5" stroke-width="0.65"/></g></g>
-    <g id="g-envelope"><g fill="none" stroke="currentColor" stroke-width="0.95"
-      stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="8.5" width="10" height="7" rx="0.3"/>
-      <path d="M5 8.5 L10 13 L15 8.5"/></g></g>
-    <g id="g-tree"><g fill="none" stroke="currentColor"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 8 L14.5 15 L5.5 15 Z" stroke-width="0.95"/>
-      <line x1="10" y1="15" x2="10" y2="17.5" stroke-width="1.2"/></g></g>
-    <g id="g-mountain"><path d="M4.5 15.5 L8 11 L10.5 13 L13.5 9 L15.5 15.5 Z"
-      fill="none" stroke="currentColor" stroke-width="1.1"
-      stroke-linecap="square" stroke-linejoin="round"/></g>
-    <g id="g-wheat"><g fill="none" stroke="currentColor" stroke-width="0.9"
-      stroke-linecap="round" stroke-linejoin="round">
-      <line x1="10" y1="6.5" x2="10" y2="15.5"/>
-      <line x1="10" y1="9.5" x2="7.5" y2="11"/>
-      <line x1="10" y1="9.5" x2="12.5" y2="11"/>
-      <line x1="10" y1="12" x2="7.5" y2="13.5"/>
-      <line x1="10" y1="12" x2="12.5" y2="13.5"/></g></g>
-    <g id="g-flame"><path d="M10 8 C11 10 12.5 11.5 12.5 13.5 C12.5 15.8 11.4 17 10 17
-      C8.6 17 7.5 15.8 7.5 13.5 C7.5 11.5 9 10 10 8 Z"
-      fill="none" stroke="currentColor" stroke-width="0.9"
-      stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M10 16 C9.5 14.5 9.5 12.5 10.5 11"
-      fill="none" stroke="currentColor" stroke-width="0.65" stroke-linecap="round"/></g>
-    <g id="g-sun"><g fill="none" stroke="currentColor" stroke-width="0.9"
-      stroke-linecap="square" stroke-linejoin="round">
-      <circle cx="10" cy="11.5" r="2.4"/>
-      <g stroke-linecap="round">
-        <line x1="10" y1="6.5" x2="10" y2="8"/>
-        <line x1="10" y1="15" x2="10" y2="16.5"/>
-        <line x1="5.5" y1="11.5" x2="7" y2="11.5"/>
-        <line x1="13" y1="11.5" x2="14.5" y2="11.5"/>
-        <line x1="7" y1="8.5" x2="8" y2="9.5"/>
-        <line x1="12" y1="13.5" x2="13" y2="14.5"/>
-        <line x1="7" y1="14.5" x2="8" y2="13.5"/>
-        <line x1="12" y1="9.5" x2="13" y2="8.5"/></g></g></g>
-    <g id="g-star"><path d="M10,7 L11,10.1 L14.2,10.1 L11.6,12 L12.6,15.1
-      L10,13.2 L7.4,15.1 L8.4,12 L5.8,10.1 L9,10.1 Z"
-      fill="none" stroke="currentColor" stroke-width="0.85" stroke-linejoin="round"/></g>
-  </defs>
-</svg>`
-
 // ── Layout functions ──────────────────────────────────────────────────────────
 
 // HomeLayout renders a full page with the home top-nav active and home side-nav.
@@ -160,10 +73,11 @@ func MainContent(content ...Node) Node {
 	return Main(ID("main-content"), Group(content))
 }
 
-// shell is the shared HTML document structure. The SVG defs block is prepended to <body>
-// so all glyph symbols are available before any element references them.
+// shell is the shared HTML document structure. Glyph symbols live in the
+// external sprite at /static/sprite.svg (referenced via <use href>), so no
+// inline <defs> block is needed on each page.
 func shell(title string, layoutStream Node, body ...Node) Node {
-	bodyChildren := append([]Node{Raw(svgDefs)}, body...)
+	bodyChildren := body
 	if layoutStream != nil {
 		bodyChildren = append(bodyChildren, layoutStream)
 	}
@@ -199,7 +113,7 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 	}
 	return Header(Class("home-chrome bar"),
 		A(Class("home-chrome-brand"), Href(routes.HomePath),
-			Raw(`<svg class="crest home-chrome-crest" width="32" height="37" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`),
+			Crest("", 32, "home-chrome-crest"),
 			Span(Class("home-chrome-name"), Text("Bahago")),
 		),
 		Span(Class("home-chrome-sep vrule")),
@@ -242,22 +156,9 @@ func KingdomTopbar(kingdom *db.Kingdom, currentPath string, msgCount int) Node {
 	)
 }
 
-// Glyph renders a bare SVG glyph from the inline symbol library.
-func Glyph(id string, sizePx int) Node {
-	sz := strconv.Itoa(sizePx)
-	return El("svg",
-		Class("gly"),
-		Attr("width", sz),
-		Attr("height", sz),
-		Attr("viewBox", "4 6 12 12"),
-		Attr("aria-hidden", "true"),
-		El("use", Attr("href", "#g-"+id)),
-	)
-}
-
 func commandBarIdentity(kingdom *db.Kingdom) Node {
 	return Div(Class("id"),
-		Raw(`<svg class="crest id-crest" width="40" height="46" viewBox="0 0 20 23" aria-hidden="true"><g class="crest-frame"><path class="crest-shield" d="M2 2 L18 2 L18 11 C18 17 14 21 10 22 C6 21 2 17 2 11 Z" stroke="currentColor" stroke-width="0.9" stroke-linejoin="round"/><path d="M3.5 3.5 L16.5 3.5 L16.5 10.8 C16.5 16 13 19.5 10 20.4 C7 19.5 3.5 16 3.5 10.8 Z" fill="none" stroke="currentColor" stroke-width="0.35" stroke-linejoin="round" opacity="0.5"/></g><use class="crest-glyph" href="#g-crown"/></svg>`),
+		Crest("", 40, "id-crest"),
 		Div(
 			Div(Class("id-name"), Text(kingdom.Name)),
 			Div(Class("id-sub"), Text(formatPopulation(kingdom.Population))),
@@ -267,7 +168,7 @@ func commandBarIdentity(kingdom *db.Kingdom) Node {
 
 func commandBarTick() Node {
 	return Span(Class("tick"),
-		Raw(`<svg width="9" height="13" viewBox="0 0 10 14" aria-hidden="true"><use href="#sandglass"/></svg>`),
+		Icon("sandglass", 9, false),
 		Span(Class("tick-l"), Text("Tick")),
 		Span(Class("tick-v"), Text("--:--")),
 	)
@@ -292,20 +193,19 @@ func resourcePill(id, label string, value int) Node {
 
 type navItem struct {
 	label string
-	glyph string
 	href  string
 }
 
 var kingdomNavItems = []navItem{
-	{"Kingdom", "crown", routes.KingdomPath},
-	{"Allocate", "sliders", routes.KingdomAllocationPath},
-	{"Builds", "house", routes.KingdomBuildingsPath},
-	{"Units", "person", routes.KingdomUnitsPath},
-	{"Campaign", "swords", routes.KingdomArmyPath},
-	{"World", "globe", routes.KingdomMapPath},
-	{"Prayers", "cross", routes.KingdomPrayersPath},
-	{"Messages", "envelope", routes.KingdomMessagesPath},
-	{"Guild", "star", routes.GuildPath},
+	{"Kingdom", routes.KingdomPath},
+	{"Allocate", routes.KingdomAllocationPath},
+	{"Builds", routes.KingdomBuildingsPath},
+	{"Units", routes.KingdomUnitsPath},
+	{"Campaign", routes.KingdomArmyPath},
+	{"World", routes.KingdomMapPath},
+	{"Prayers", routes.KingdomPrayersPath},
+	{"Messages", routes.KingdomMessagesPath},
+	{"Guild", routes.GuildPath},
 }
 
 func commandBarNav(currentPath string, msgCount int) Node {
@@ -322,7 +222,7 @@ func commandBarNav(currentPath string, msgCount int) Node {
 		links[i] = A(
 			Classes{"nav-link": true, "is-on": currentPath == item.href, "is-alert": isMessages && msgCount > 0},
 			Href(item.href),
-			Span(Class("nav-link-ico"), Glyph(item.glyph, 16), badgeNode),
+			If(badgeNode != nil, badgeNode),
 			Span(Class("nav-link-l"), Text(item.label)),
 		)
 	}
