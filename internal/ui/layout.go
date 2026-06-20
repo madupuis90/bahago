@@ -228,7 +228,7 @@ func KingdomTopbar(kingdom *db.Kingdom, currentPath string, msgCount int) Node {
 			Div(Class("barB2-res"),
 				resourcePill("tree", "Wood", kingdom.Wood),
 				resourcePill("mountain", "Stone", kingdom.Stone),
-				resourcePill("wheat", "Grain", kingdom.Food),
+				resourcePill("wheat", "Food", kingdom.Food),
 				resourcePill("flame", "Mana", kingdom.Mana),
 				resourcePill("sun", "Devotion", kingdom.Devotion),
 				resourcePill("star", "Lore", kingdom.Knowledge),
@@ -282,11 +282,7 @@ func commandBarLeave() Node {
 
 func resourcePill(id, label string, value int) Node {
 	return Span(Class("pill"),
-		Span(
-			Classes{"gem": true, "gem-" + id: true},
-			Style("width:30px;height:30px"),
-			Glyph(id, 19),
-		),
+		ResourceGem(id, 30),
 		Span(Class("pill-txt"),
 			Span(Class("pill-l"), Text(label)),
 			Span(Classes{"pill-v": true, "is-zero": value == 0}, Text(FormatThousands(value))),

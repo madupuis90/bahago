@@ -594,10 +594,17 @@ func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTra
 	}
 	trainExpr := fmt.Sprintf("$unit_type='%s';$train_count=$count_%s;%s",
 		utype, utype, datastar.PostSSE(routes.KingdomUnitsTrainPath))
+	countKey := "count_" + utype
+	decExpr := fmt.Sprintf("$%s = Math.max(1, ($%s || 1) - 1)", countKey, countKey)
+	incExpr := fmt.Sprintf("$%s = ($%s || 1) + 1", countKey, countKey)
 	return Div(Class("unit-train"),
 		Div(Class("train-ctl"),
-			Input(Type("number"), Min("1"), Class("train-count"), ds.Bind("count_"+utype)),
-			Button(Class("btn"), ds.On("click", trainExpr), Text("Train")),
+			Div(Class("stepper"),
+				Span(Class("step-btn step-btn--l"), Role("button"), ds.On("click", decExpr), Text("−")),
+				Input(Class("count-box"), Attr("inputmode", "numeric"), Type("text"), ds.Bind(countKey)),
+				Span(Class("step-btn step-btn--r"), Role("button"), ds.On("click", incExpr), Text("+")),
+			),
+			Button(Class("btn btn--sm btn--primary"), ds.On("click", trainExpr), Text("Train")),
 		),
 	)
 }
@@ -613,11 +620,7 @@ func lockBanner() Node {
 }
 
 func gemNode(id string, sizePx int) Node {
-	return Div(
-		Classes{"gem": true, "gem-" + id: true},
-		Style(fmt.Sprintf("width:%dpx;height:%dpx;min-width:%dpx", sizePx, sizePx, sizePx)),
-		Icon("shield-"+id, sizePx*58/100, false),
-	)
+	return ResourceGem(id, sizePx)
 }
 
 func upkeepPill(def game.UnitDef) Node {

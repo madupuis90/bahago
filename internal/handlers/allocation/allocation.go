@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
@@ -266,7 +267,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					allocationHead(),
 					allocationRow("tree", "Woodcutter", "wood_pct", "wood_saved", "Wood", kingdom.WoodPct, rates.WoodProduction-rates.WoodUpkeep),
 					allocationRow("mountain", "Miner", "stone_pct", "stone_saved", "Stone", kingdom.StonePct, rates.StoneProduction-rates.StoneUpkeep),
-					allocationRow("wheat", "Farmer", "food_pct", "food_saved", "Grain", kingdom.FoodPct, rates.FoodProduction-rates.FoodUpkeep),
+					allocationRow("wheat", "Farmer", "food_pct", "food_saved", "Food", kingdom.FoodPct, rates.FoodProduction-rates.FoodUpkeep),
 					allocationRow("flame", "Disciple", "mana_pct", "mana_saved", "Mana", kingdom.ManaPct, rates.ManaProduction-rates.ManaUpkeep),
 					allocationRow("sun", "Clergy", "devotion_pct", "devotion_saved", "Devotion", kingdom.DevotionPct, rates.DevotionProduction-rates.DevotionUpkeep),
 					allocationRow("star", "Scholar", "knowledge_pct", "knowledge_saved", "Lore", kingdom.KnowledgePct, rates.KnowledgeProduction-rates.KnowledgeUpkeep),
@@ -284,7 +285,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					Div(Class("alloc-decree"),
 						Div(Class("alloc-error"),
 							ds.Show("$alloc_total > 100"),
-							Text("You have promised more hands than you have."),
+							Span(Class("alloc-alarm"), Text("⚠ Too many hands!")),
 						),
 						allocationAlert(nil),
 						Button(
@@ -353,9 +354,13 @@ func allocationRow(gemID, roleName, key, savedKey, resourceLabel string, initial
 	} else if net == 0 {
 		netClass += " zero"
 	}
-	return Div(Class("alloc-row"),
-		Div(Class("gem gem-"+gemID), Icon("shield-"+gemID, 36, false)),
-		Div(Class("alloc-role-name"), Text(roleName)),
+	rowClass := "alloc-row alloc-row--" + strings.TrimSuffix(key, "_pct")
+	return Div(Class(rowClass),
+		ResourceGem(gemID, 36),
+		Div(
+			Div(Class("alloc-role-name"), Text(roleName)),
+			Div(Class("alloc-role-res"), Text(resourceLabel)),
+		),
 		Div(Class("slider-controls v-diamond"),
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 5)", key, key)), Text("−5")),
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 1)", key, key)), Text("−")),

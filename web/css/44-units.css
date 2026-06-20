@@ -181,20 +181,7 @@
 
 /* --- inline train control (re-skinned input; optional stepper, see README) - */
 .unit-train { display: flex; justify-content: flex-end; }
-.train-ctl { display: flex; align-items: center; gap: 8px; }
-.train-count {
-  width: 56px;
-  height: 32px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  background: var(--card);
-  border: 2.5px solid var(--ink);
-  border-radius: 9px;
-  box-shadow: var(--shadow-ink-xs);
-}
+/* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
 
 /* --- lock note + sealed-summons banner ------------------------------------ */
 .unit-lock-note {

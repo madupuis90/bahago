@@ -192,7 +192,7 @@
 
 .slider-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
-  background: var(--green); border-right: 2.5px solid var(--ink);
+  background: var(--slider-fill, var(--green)); border-right: 2.5px solid var(--ink);
   transition: width .12s ease;
 }
 
@@ -364,8 +364,17 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 }
 .meter-fill {
   height: 100%;
-  background: var(--green);
+  background: var(--gem-wheat);          /* brass — time / ticks (default) */
   transition: width .2s ease;
+}
+.meter-fill--support {
+  background: var(--green);              /* pledges / positive accrual (Guild support) */
+}
+.meter-fill--foreign {
+  background: var(--gem-mountain);       /* steel — another kingdom's effect (incoming rites) */
+}
+.meter-fill--danger {
+  background: var(--red);               /* shortfall / overdue / over-cap */
 }
 
 /* hard ink notches drawn over the fill — one flex child per step */
@@ -373,3 +382,69 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 .meter-notch { flex: 1; border-right: 2.5px solid var(--ink); }
 .meter-notch:last-child { border-right: none; }
 
+
+/* =============================================================================
+   Stepper — − [count] + control (Units training count, etc.)
+   Markup: .train-ctl > .stepper (.step-btn--l, .count-box, .step-btn--r) [.btn]
+   The count-box stays an editable field, so direct entry AND tap targets work.
+   ============================================================================= */
+.train-ctl {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+}
+.step-btn {
+  width: 30px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1;
+  padding-bottom: 2px;
+  background: var(--card-2);
+  color: var(--ink);
+  border: 2.5px solid var(--ink);
+  box-shadow: var(--shadow-ink-xs);
+  transition: transform .07s, box-shadow .07s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.step-btn:hover {
+  background: var(--yellow);
+}
+.step-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+.step-btn--l {
+  border-radius: 9px 0 0 9px;
+}
+.step-btn--r {
+  border-radius: 0 9px 9px 0;
+  border-left: none;
+}
+.count-box {
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  text-align: center;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-left: none;
+  box-shadow: var(--shadow-ink-xs);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.count-box:focus {
+  outline: none;
+  background: var(--yellow);
+}

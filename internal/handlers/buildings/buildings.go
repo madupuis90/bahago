@@ -570,18 +570,18 @@ func costVal(b game.BuildingDef, resources map[string]int) Node {
 		chips = append(chips, chip{"food", "wheat", c.Food})
 	}
 	if c.Mana > 0 {
-		chips = append(chips, chip{"mana", "mana", c.Mana})
+		chips = append(chips, chip{"mana", "flame", c.Mana})
 	}
 	if c.Devotion > 0 {
-		chips = append(chips, chip{"devotion", "devotion", c.Devotion})
+		chips = append(chips, chip{"devotion", "sun", c.Devotion})
 	}
 	if c.Knowledge > 0 {
-		chips = append(chips, chip{"knowledge", "knowledge", c.Knowledge})
+		chips = append(chips, chip{"knowledge", "star", c.Knowledge})
 	}
 	nodes := Map(chips, func(ch chip) Node {
 		have := resources[ch.res]
 		return Span(Classes{"cost-chip": true, "is-short": have < ch.need},
-			Span(Classes{"gem": true, "gem-" + ch.glyphID: true}, Glyph(ch.glyphID, 22)),
+			ResourceGem(ch.glyphID, 22),
 			Text(itoa(ch.need)),
 		)
 	})
@@ -648,7 +648,7 @@ func raiseNote(b game.BuildingDef, counts map[string]int, construction *db.Kingd
 
 func buildingGlyph(b game.BuildingDef, size int) Node {
 	if b.Resource != "" {
-		return Span(Classes{"gem": true, "gem-" + b.Resource: true}, Glyph(b.Resource, size))
+		return ResourceGem(b.Resource, size)
 	}
 	iconSize := size * 6 / 10
 	return El("span", Class("node-medallion"),

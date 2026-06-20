@@ -2,36 +2,58 @@
    Kingdom overview (page header, cards, combat log, stats panel)
    ============================================================================= */
 
-/* Page header — kicker + display title + subtitle */
+/* Page header — COMIC LAB title plate (kicker chip + rotated red plate + sub).
+   Left-aligned: the plate sits at the start, not centred. One loud title
+   treatment across the app (Design Reference §3). */
 .page-header {
-  margin: 0 2px 16px;
-  text-align: center;
+  margin: 0 2px 22px;
+  /* left-aligned: the plate + kicker sit at the start, not centred */
 }
 
 .page-header-kicker {
-  font-family: var(--font-caps);
-  letter-spacing: .14em;
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  font-size: 11px;
-  color: #6a3018;
-  margin-bottom: 2px;
+  color: var(--ink);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  padding: 4px 12px 3px;
+  box-shadow: var(--shadow-ink-sm);
+  white-space: nowrap;
+  margin-bottom: 0;
 }
 
 .page-header-title {
+  display: inline-block;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 2.2rem;
-  color: var(--red-darker);
+  font-weight: 400;
+  font-size: clamp(34px, 5.5vw, 56px);
   line-height: 1;
-  text-shadow: 0 1px 0 rgba(255, 245, 200, .45);
+  margin: 12px 0 8px;
+  color: #fff;
+  -webkit-text-stroke: 2.6px var(--ink);
+  paint-order: stroke fill;
+  background: var(--red);
+  border: 3.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
+  padding: 5px 22px 14px;
+  transform: rotate(-1.5deg);
+  text-shadow: none;
 }
 
 .page-header-sub {
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 1.05rem;
-  color: var(--ink-soft);
-  margin-top: 5px;
+  font-weight: 700;
+  font-style: normal;
+  font-size: 1rem;
+  color: var(--ink);
+  margin: 6px 0 0;
+  max-width: 52ch;
+  text-wrap: pretty;
 }
 
 /* Overview card (parchment-toned card with a floating tab) */
@@ -48,39 +70,32 @@
   margin-top: 14px;
 }
 
-/* Page header (kept for other pages) */
-.page-header {
-  & h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    color: var(--red-darker);
-    margin: 0;
-    font-size: 36px;
-    line-height: 1.05;
-    letter-spacing: .02em;
-  }
+/* Page header — legacy <h1> markup (kept for pages not yet migrated to
+   -kicker/-title/-sub). The title plate covers the <h1> via the element
+   selector below; inert if unused. Prefer migrating to the plate markup. */
+.page-header h1 {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(34px, 5.5vw, 56px);
+  line-height: 1;
+  margin: 12px 0 8px;
+  color: #fff;
+  -webkit-text-stroke: 2.6px var(--ink);
+  paint-order: stroke fill;
+  background: var(--red);
+  border: 3.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
+  padding: 5px 22px 14px;
+  transform: rotate(-1.5deg);
+  letter-spacing: 0;
+}
 
-  & h1 .italic {
-    color: var(--ink);
-    font-style: italic;
-    font-weight: 400;
-  }
-
-  & .page-header-tag {
-    font-size: 10px;
-    letter-spacing: .2em;
-    margin-bottom: 6px;
-  }
-
-  & .rule-dbl {
-    margin-top: 10px;
-  }
-
-  @media (max-width: 600px) {
-    & h1 {
-      font-size: 26px;
-    }
-  }
+.page-header h1 .italic {
+  color: #fff;
+  font-style: normal;
+  font-weight: 400;
 }
 
 .overview-grid {

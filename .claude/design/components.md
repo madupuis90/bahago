@@ -13,7 +13,7 @@
 | Button | `.btn`, `.btn--primary`, `.btn--accent`, `.btn--danger`, `.btn--lg`, `.btn--sm`, `.btn--quiet`, `.btn--step5`; states `.is-insufficient`, `.is-locked`, `.is-disabled` (legacy aliases `.btn--insufficient`, `.btn--locked` kept) | live · **reskinned** (Comic Lab) | Shared components | Button system |
 | Card (surface) | `.card` · `.card-inner` (`.is-lit`/`.is-frost`/`.is-framed` now no-op aliases) | live · **reskinned** (Comic Lab) | Shared components | Card |
 | Card tab | `.card-tab` (`--red`/`--green`/`--blue`/`--yellow`; `--wood` = alias of `--blue`) | live · **reskinned** (Comic Lab) | Shared components | Card |
-| Slider | `.slider-*`, `.v-diamond` | live · **reskinned** (Comic Lab) | Allocation | Slider |
+| Slider | `.slider-*`, `.v-diamond`; `.slider-fill` reads `--slider-fill` (default `--green`) — tintable per use-site | live · **reskinned** (Comic Lab) | Allocation | Slider |
 | Gem / resource icon | `.gem`, `.gem-<id>` (tree, mountain, wheat, flame, sun, star) — flat `--gem-*`, ink ring, white glyph | live · **reskinned** (Comic Lab) | Kingdom chrome | Resource gems |
 | Sprite icon / shield | `.icon` (`--active`=red/`--dim`), `.shield` (`--active`/`--dim`), `.gly` (bare line-art) | live · **reskinned** (Comic Lab) | Kingdom chrome | Sprite icon |
 | Alert | `.alert--error`, `.alert--success` | live · **reskinned** (Comic Lab) | Shared components | Alert |
@@ -32,6 +32,7 @@
 | Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live · **reskinned** (Comic Lab) | Shared components | Section header (guild handoff) |
 | Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` · `.card-flavour` | live · **reskinned** (Comic Lab) | Shared components | Card header |
 | Eyebrow | `.eyebrow` | live · **reskinned** (Comic Lab) | Shared components | Eyebrow (guild handoff) |
+| Page header | `.page-header` · `.page-header-kicker` · `.page-header-title` · `.page-header-sub` (left-aligned chunky red plate, rotated; legacy `.page-header h1` covered) | live · **reskinned** (Comic Lab) | Page composition (`41-kingdom-overview.css`) | Page title (Design Reference §3) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |
 | Roster strip / unit token | `.roster-strip`, `.unit-token`, `.unit-medallion`, `.unit-tally`, `.roster-more`, `.roster-empty` | live | Army + Units | Roster / unit token |
@@ -72,13 +73,13 @@
 | Attribute chips | `.attribute` (`--offense`/`--ward`/`--arcane`/`--faith`/`--drawback`) · `.attribute-row` | live · **reskinned** (Comic Lab) | Units | Attribute chips _(was `.kattr`)_ |
 | Roster — roll | `.muster-roll` · `.muster-roll-head` · `.muster-roll-col` (`--r`) · `.unit-row` · `.muster-roll-foot` | live · **reskinned** (Comic Lab) | Units | Roster — Roll |
 | Roster gallery | `.muster-gallery`, `.unit-card` | pending | Units | Roster — Gallery |
-| Tick meter | `.meter` · `.meter-top`/`-name`/`-qty`/`-eta`/`-track`/`-fill` · `.meter-notches`/`.meter-notch` | live · **reskinned** (Comic Lab) · **moved to `20-shared.css`** | Shared components (Meter) | Tick meter _(was `.kmeter`, Units)_ |
+| Tick meter | `.meter` · `.meter-top`/`-name`/`-qty`/`-eta`/`-track`/`-fill` · `.meter-notches`/`.meter-notch`; `.meter-fill` **brass default** + `.meter-fill--support` (green) / `--foreign` (steel) / `--danger` (red) | live · **reskinned** (Comic Lab) · **moved to `20-shared.css`** | Shared components (Meter) | Tick meter _(was `.kmeter`, Units)_ |
 | Locked state | `.is-locked` · `.lock-banner` · `.unit-lock-note` | live · **reskinned** (Comic Lab) | Units | Locked / unavailable unit |
 | Standing-host summary | `.units-summary` · `.units-summary-stat` · `.units-summary-label`/`-num`/`-sub` | live · **reskinned** (Comic Lab) | Units | Host summary strip _(was `.host-summary`)_ |
 | Training slots | `.train-slots` · `.train-slot` (`.is-active`/`.is-idle`) · `.slot-gauge` · `.slot-gauge-dots` · `.slot-gauge-dot` (`.is-on`) · `.train-ctl` | live · **reskinned** (Comic Lab) | Units | Training grounds — slot model |
 | Stat pill | `.stat-pill` (`--drain`/`--short`) · `.pill-res` | live · **reskinned** (Comic Lab) | Units | Stat pills |
 | Unit token + tally | `.unit-token`, `.unit-tally`, `.unit-medallion` | live | Units + Army | Portrait token — canonical names; `.unit-medallion` is the wooden icon container used in army view |
-| Train control | `.train-ctl` · `.train-count` | live · **reskinned** (Comic Lab) | Units | Inline train control |
+| Train control | `.train-ctl` · `.stepper` · `.step-btn` (`--l`/`--r`) · `.count-box` (replaces `.train-count`) | live · **reskinned** (Comic Lab) | `20-shared.css` (Units page markup) | Inline train control |
 | Lock banner | `.lock-banner` | live · **reskinned** (Comic Lab) | Units | Summons — lock banner |
 | Toast | `.toast` | pending | Units | Toast notification |
 
@@ -146,3 +147,16 @@ _Replaces old `.buildings-grid` / `.building-card` flat-grid and `.construction-
 | Roll grid | `.roll-grid` · `.charter-item` · `.charter-item-head` · `.charter-item-foot` · `.charter-lapse` | live | Guild | Roll grid |
 | Viewer row | `.is-you` · `.you-mark` | live | Guild | Viewer row |
 | Ledger footnote | `.ledger-footnote` | live | Guild | Ledger footnote |
+
+---
+
+## Allocation  _(re-skin: `handoff/allocation/`)_
+
+| Component | Class(es) | Status | styles.css Section | Design Reference |
+|---|---|---|---|---|
+| Muster summary bar | `.allocation-bar` · `.allocation-legend` · `.allocation-key` · `.allocation-dot` · `.allocation-{wood,stone,food,mana,devotion,knowledge,idle}` | live · **reskinned** (Comic Lab) | Allocation | Muster summary bar |
+| Roster table | `.alloc-grid` · `.alloc-head` · `.alloc-row` (+ resource modifier `--{wood,stone,food,mana,devotion,knowledge}`) · `.alloc-col-header` (`--right`) · `.alloc-role-name` · `.alloc-role-res` · `.alloc-share` | live · **reskinned** (Comic Lab) | Allocation | Roster table |
+| Net cell | `.alloc-net-cell` (`.is-pending`) · `.alloc-net` (`.neg`/`.zero`) · `.alloc-rate` (`.is-pending`) | live · **reskinned** (Comic Lab) | Allocation | Net cell |
+| Idle row | `.idle-gem` · `.alloc-row.idle .alloc-assign-note` | live · **reskinned** (Comic Lab) | Allocation | Idle row |
+| Footer / decree | `.alloc-foot` · `.alloc-total*` (`.over`) · `.alloc-decree` · `.alloc-error` · `.alloc-alarm` *(opt)* | live · **reskinned** (Comic Lab) | Allocation | Footer / decree |
+| Resource glyphs | `#res-wood`/`-stone`/`-food`/`-mana`/`-devotion`/`-knowledge` (redrawn ligne-claire: tree · mountain · **carrot** · **drop** · sun · star); rendered on all resource gems via `ui.ResourceGem` / `ui.ResourceGlyph` (gem-id `tree/mountain/wheat/flame/sun/star` → res-key `wood/stone/food/mana/devotion/knowledge`). Chrome pills, allocation roster, units stat pills, and building cost chips / banner all use `#res-*` now (legacy `g-*` inline + `shield-*` heraldic resource art no longer used for gems). | live · **reskinned** (Comic Lab) | `sprite.svg` + `internal/ui/icons.go` | Resource glyphs |

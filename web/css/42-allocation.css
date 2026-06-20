@@ -1,86 +1,103 @@
 /* =============================================================================
-   Allocation
+   Allocation — COMIC LAB re-skin
+   ---------------------------------------------------------------------------
+   Drop-in replacement for web/css/42-allocation.css.
+   Semantic class names are UNCHANGED — only values move to the Comic Lab
+   vocabulary (thick ink outlines, flat fills, hard offset shadows, Lilita One
+   numerals/titles). Reads Foundation tokens (--ink, --card, --gem-*, --shadow-ink*).
+
+   Companion changes shipped with this handoff (separate files):
+     · shared-patch.css  → .slider-fill colour override + meter variants + stepper
+     · page-title.css    → .page-header* comic plate (41-kingdom-overview.css)
+     · sprite-resources.svg → the 6 redrawn resource glyphs
    ============================================================================= */
 
-/* Allocation summary bar */
+/* Allocation summary bar — the muster, a single ink-outlined band of segments */
 .allocation-bar {
   display: flex;
-  height: 22px;
-  border-radius: 6px;
+  height: 26px;
+  border-radius: 9px;
   overflow: hidden;
-  border: 1.5px solid var(--wood-dark);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .4), inset 0 -1px 0 rgba(255, 220, 160, .12);
-  background: var(--wood-dark);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
+  background: var(--card-2);
 
   &>span {
     display: block;
     height: 100%;
     transition: width .18s ease;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset -1px 0 0 rgba(0, 0, 0, .18);
+    border-right: 2px solid var(--ink);
+  }
+
+  &>span:last-child {
+    border-right: none;
   }
 }
 
 .allocation-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 11px 0 2px;
+  gap: 7px 14px;
+  margin: 14px 0 2px;
 }
 
 .allocation-key {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-cinzel);
-  font-size: .72rem;
-  color: var(--ink-soft);
+  font-weight: 800;
+  font-size: 11px;
   letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 
 .allocation-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  border: 1px solid rgba(0, 0, 0, .25);
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 2px solid var(--ink);
 }
 
+/* resource colours — the gem palette (also drive the per-row slider fill below) */
 .allocation-wood {
-  background: #8b5630;
+  background: var(--gem-tree);
 }
 
 .allocation-stone {
-  background: #6b6f74;
+  background: var(--gem-mountain);
 }
 
 .allocation-food {
-  background: #b88526;
+  background: var(--gem-wheat);
 }
 
 .allocation-mana {
-  background: #4870a5;
+  background: var(--gem-flame);
 }
 
 .allocation-devotion {
-  background: #b04858;
+  background: var(--gem-sun);
 }
 
 .allocation-knowledge {
-  background: #74548f;
+  background: var(--gem-star);
 }
 
 .allocation-idle {
-  background: repeating-linear-gradient(45deg, #8f7f53 0 4px, #6f6240 4px 8px);
+  background: repeating-linear-gradient(45deg, var(--ink) 0 3px, transparent 3px 9px);
 }
 
 /* Roster grid */
 .alloc-rule {
-  height: 1px;
-  background: repeating-linear-gradient(to right, var(--edge) 0 5px, transparent 5px 10px);
-  margin: 18px 0 6px;
+  height: 4px;
+  margin: 18px 0 4px;
+  border-radius: 4px;
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 13px, transparent 13px 21px);
 }
 
 .alloc-grid {
-  --cols: 60px minmax(150px, 1.1fr) minmax(230px, 2fr) 56px 110px;
+  --cols: 60px minmax(150px, 1.1fr) minmax(230px, 2fr) 56px 116px;
 }
 
 .alloc-head,
@@ -92,15 +109,16 @@
 }
 
 .alloc-head {
-  padding: 4px 4px 8px;
+  padding: 4px 4px 10px;
 }
 
 .alloc-col-header {
-  font-family: var(--font-caps);
-  letter-spacing: .12em;
+  font-family: var(--font-display);
+  letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 10px;
-  color: var(--ink-soft);
+  font-size: 11px;
+  color: var(--ink);
+  opacity: .65;
 
   &.alloc-col-header--right {
     text-align: right;
@@ -108,23 +126,45 @@
 }
 
 .alloc-row {
-  padding: 9px 4px;
-  border-top: 1px dotted var(--edge);
-  min-height: 54px;
+  padding: 11px 4px;
+  border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);
+  min-height: 58px;
 }
 
+/* per-resource slider fill — set on the row, read by shared .slider-fill.
+   Requires a resource modifier on .alloc-row (e.g. .alloc-row--wood). If the
+   template can't add it, set --slider-fill inline instead. */
+.alloc-row--wood      { --slider-fill: var(--gem-tree); }
+.alloc-row--stone     { --slider-fill: var(--gem-mountain); }
+.alloc-row--food      { --slider-fill: var(--gem-wheat); }
+.alloc-row--mana      { --slider-fill: var(--gem-flame); }
+.alloc-row--devotion  { --slider-fill: var(--gem-sun); }
+.alloc-row--knowledge { --slider-fill: var(--gem-star); }
+
 .alloc-role-name {
-  font-family: var(--font-heading);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 400;
   font-size: 1.18rem;
   color: var(--ink);
   line-height: 1.05;
 }
 
+/* optional — the resource the craft yields, beneath the role name (new; needs a
+   <div class="alloc-role-res"> in the template). Harmless if unused. */
+.alloc-role-res {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: .6;
+  margin-top: 3px;
+}
+
 .alloc-share {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.45rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.4rem;
   color: var(--ink);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -138,14 +178,14 @@
   }
 
   &.is-pending .alloc-net {
-    opacity: .38;
+    opacity: .4;
   }
 }
 
 .alloc-net {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.32rem;
   line-height: 1;
   color: var(--color-positive);
   font-variant-numeric: tabular-nums;
@@ -155,41 +195,50 @@
   }
 
   &.zero {
-    color: var(--ink-soft);
+    color: color-mix(in srgb, var(--ink) 45%, transparent);
   }
 }
 
 .alloc-rate {
-  font-family: var(--font-cinzel);
-  font-size: .62rem;
-  letter-spacing: .03em;
-  color: var(--ink-soft);
-  margin-top: 3px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .02em;
+  color: var(--ink);
+  opacity: .65;
+  margin-top: 4px;
 
   &.is-pending {
-    color: #9a6f28;
+    color: var(--accent);
     font-style: italic;
+    opacity: 1;
   }
 }
 
+/* idle row — a recessed disc with the zzz glyph */
 .idle-gem {
   width: 52px;
   height: 52px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #c4b487 0%, #8f7f53 60%, #5d4f2c 100%);
-  border: 1.5px solid var(--wood-dark);
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: #fff5d6;
+  background: var(--card-2);
+  border: 2.5px solid var(--ink);
+  box-shadow: var(--shadow-ink-xs);
+  color: var(--ink);
+}
+
+.idle-gem svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--ink);
 }
 
 .alloc-row.idle .alloc-assign-note {
-  font-family: var(--font-body);
+  font-weight: 700;
   font-style: italic;
   font-size: .92rem;
-  color: var(--ink-soft);
+  color: var(--ink);
+  opacity: .75;
   text-wrap: pretty;
 }
 
@@ -198,44 +247,47 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1.5px solid var(--edge);
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 3px solid var(--ink);
   flex-wrap: wrap;
 }
 
 .alloc-total {
   display: flex;
   align-items: baseline;
-  gap: 9px;
+  gap: 10px;
 }
 
 .alloc-total-label {
-  font-family: var(--font-caps);
-  letter-spacing: .12em;
+  font-family: var(--font-display);
+  letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 11px;
-  color: var(--ink-soft);
+  font-size: 13px;
+  color: var(--ink);
+  opacity: .7;
 }
 
 .alloc-total-val {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.7rem;
-  color: var(--accent-dark);
+  font-weight: 400;
+  font-size: 1.85rem;
+  color: var(--accent);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 
   &.over {
-    color: var(--red-darker);
+    color: var(--red);
   }
 }
 
 .alloc-total-note {
-  font-family: var(--font-body);
+  font-weight: 700;
   font-style: italic;
   font-size: .92rem;
-  color: var(--ink-soft);
+  color: var(--ink);
+  opacity: .7;
 }
 
 .alloc-decree {
@@ -245,22 +297,41 @@
 }
 
 .alloc-error {
-  font-family: var(--font-body);
+  font-weight: 700;
   font-style: italic;
-  font-size: .92rem;
-  color: var(--red-darker);
+  font-size: 13px;
+  color: var(--red);
   min-height: 1.2em;
   max-width: 22rem;
   text-align: right;
   text-wrap: pretty;
 }
 
-/* Slider sizing in allocation row */
+/* optional — wrap an over-allocation warning in a tilted red badge instead of
+   plain text (the mockup's `.alloc-alarm`; needs a <span class="alloc-alarm">). */
+.alloc-alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--red);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: var(--shadow-ink-sm);
+  padding: 7px 13px 6px;
+  transform: rotate(-2deg);
+  white-space: nowrap;
+}
+
+/* Slider sizing in allocation row (the slider itself is the shared component) */
 .alloc-row .slider-controls {
-  gap: 8px;
+  gap: 9px;
 }
 
 .alloc-row .slider-wrap {
   min-width: 110px;
 }
-
