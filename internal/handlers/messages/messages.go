@@ -101,13 +101,14 @@ func deleteURL(id int) string {
 	return strings.ReplaceAll(routes.KingdomMessagesDeletePath, "{id}", strconv.Itoa(id))
 }
 
-// classifyKind returns "guild", "action", or "post" from the two discriminating booleans.
+// classifyKind returns "guild", "decree", or "post" from the two discriminating
+// booleans. "decree" is an actionable royal notice (carries a link).
 func classifyKind(isGuild, hasAction bool) string {
 	if isGuild {
 		return "guild"
 	}
 	if hasAction {
-		return "action"
+		return "decree"
 	}
 	return "post"
 }
@@ -122,8 +123,8 @@ func kindLabel(k string) string {
 	switch k {
 	case "guild":
 		return "Guild"
-	case "action":
-		return "Notice"
+	case "decree":
+		return "Decree"
 	default:
 		return "Message"
 	}
@@ -693,25 +694,48 @@ func groupByDate(msgs []db.ListInboxMessagesRow, now time.Time) []MsgGroup {
 	return groups
 }
 
-// kind returns "guild", "action", or "post" for a message row.
+// kind returns "guild", "decree", or "post" for a message row.
 func kind(m db.ListInboxMessagesRow) string {
 	return classifyKind(m.IsGuildMessage, m.HasAction)
+}
+
+// messageMark renders a kind seal: a coloured shape (blue square for post, red
+// disc for guild, brass square for decree) with a crown glyph on decrees. lg
+// selects the larger size used in the reading pane + compose headers.
+func messageMark(k string, lg bool) Node {
+	cls := "message-mark message-mark--" + k
+	if lg {
+		cls += " message-mark--lg"
+	}
+	children := []Node{Class(cls), Title(kindLabel(k)), Attr("aria-label", kindLabel(k))}
+	if k == "decree" {
+		children = append(children, Icon("crown", 20, false))
+	}
+	return Span(children...)
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
 
 func messagesShell(groups []MsgGroup, selectedMessageID int, panel Node, gc *guildMsgCtx) Node {
+	actions := []Node{
+		A(Href(routes.KingdomMessagesComposePath), Class("btn"), Text("Write a Letter")),
+	}
+	if gc.canSendAny() {
+		actions = append(actions,
+			A(Href(routes.KingdomMessagesGuildComposePath), Class("btn btn--accent"), Text("Guild Dispatch")))
+	}
+
 	return Group([]Node{
-		Div(Class("messages-head"),
-			H1(Class("page-title"), Text("Messages")),
-			Div(Class("messages-head-actions"),
-				A(Href(routes.KingdomMessagesComposePath), Classes{"btn": true, "messages-compose-btn": true}, Text("Write a Message")),
-				Iff(gc.canSendAny(), func() Node {
-					return A(Href(routes.KingdomMessagesGuildComposePath), Classes{"btn": true, "messages-guild-btn": true}, Text("Guild Dispatch"))
-				}),
+		Div(Class("page-header"),
+			Div(Class("page-header-text"),
+				P(Class("page-header-kicker"), Text("❦ Of the Quiet Desk")),
+				P(Class("page-header-title"), Text("Messages")),
+				P(Class("page-header-sub"),
+					Text("Correspondence arriving at your kingdom's gate.")),
 			),
+			Div(Class("page-header-actions"), Group(actions)),
 		),
-		Div(Classes{"messages-panel": true, "messages-panel--v3": true},
+		Div(Class("messages-panel"),
 			Div(Class("messages-left"),
 				messagesList(groups, selectedMessageID),
 			),
@@ -719,8 +743,10 @@ func messagesShell(groups []MsgGroup, selectedMessageID int, panel Node, gc *gui
 				Iff(panel == nil, func() Node {
 					return Div(Class("card"),
 						Div(Class("card-inner"),
-							Div(Class("messages-empty-state"),
-								P(Text("No Message")),
+							Div(Class("empty-state"),
+								Crest("", 58, ""),
+								P(Class("empty-state-title"), Text("No letter in hand")),
+								P(Text("Choose a message from the pile, or write a new one.")),
 							),
 						),
 					)
@@ -744,10 +770,11 @@ func messagesList(groups []MsgGroup, selectedMessageID int) Node {
 		}),
 		Div(
 			ID("messages-list"),
-			Classes{"card": true, "msg-list-v3": true},
+			Classes{"card": true, "messages-list": true},
 			ds.Class("'is-managing'", "$managing"),
 			Div(Class("messages-list-toolbar"),
 				filterTabs(groups),
+				Span(Class("messages-list-spacer")),
 				Button(
 					Type("button"),
 					Class("btn-text"),
@@ -756,7 +783,8 @@ func messagesList(groups []MsgGroup, selectedMessageID int) Node {
 				),
 			),
 			Div(Class("msg-list-scroll"),
-				If(len(groups) == 0, P(Class("messages-empty-state"), Text("No messages"))),
+				If(len(groups) == 0, Div(Class("messages-list-empty"),
+					P(Text("No messages have arrived yet.")))),
 				Group(Map(groups, func(grp MsgGroup) Node {
 					return Group([]Node{
 						Div(Class("date-divider"),
@@ -772,7 +800,7 @@ func messagesList(groups []MsgGroup, selectedMessageID int) Node {
 			Div(Class("msg-list-foot"),
 				Button(
 					Type("submit"),
-					Classes{"btn": true, "btn-text": true, "btn--danger": true},
+					Classes{"btn": true, "btn--sm": true, "btn--danger": true},
 					ds.Attr("disabled", "$selected_count === 0"),
 					ds.Show("$managing"),
 					Text("Delete selected"),
@@ -820,9 +848,9 @@ func messageListItem(m db.ListInboxMessagesRow, selectedMessageID int) Node {
 		!m.ReadAt.Valid, m.IsGuildMessage)
 	return Div(
 		Classes{
-			"msg-row":         true,
-			"msg-row--unread": !m.ReadAt.Valid,
-			"msg-row--active": m.ID == selectedMessageID,
+			"message-item":         true,
+			"message-item--unread": !m.ReadAt.Valid,
+			"message-item--active": m.ID == selectedMessageID,
 		},
 		ds.Show(showExpr),
 		Label(Class("message-item-check"),
@@ -834,21 +862,17 @@ func messageListItem(m db.ListInboxMessagesRow, selectedMessageID int) Node {
 				ds.On("change", "$selected_count = document.querySelectorAll('.msg-check:checked').length"),
 			),
 		),
-		Span(Class("message-mark-wrap"),
-			Span(Classes{
-				"message-mark":            true,
-				"message-mark--" + k:      true,
-			}),
-		),
+		messageMark(k, false),
 		A(
 			Href(fmt.Sprintf("%s?id=%d", routes.KingdomMessagesViewPath, m.ID)),
-			Class("message-item-link"),
+			Class("message-item-body"),
 			P(Class("message-item-subject"), Text(m.Subject)),
 			P(Class("message-item-meta"),
 				Span(Class("message-item-from"), Text(m.FromKingdomName)),
 				Span(Class("message-item-date"), Text(m.CreatedAt.Format("Jan 2, 15:04"))),
 			),
 		),
+		Span(Class("unread-dot"), Attr("aria-hidden", "true")),
 	)
 }
 
@@ -862,45 +886,40 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 	hasAction := m.ActionUrl != ""
 	return Div(
 		messagesAlert(nil),
-		Div(Classes{"card": true, "is-lit": true, "messages-detail": true},
-			Div(Class("card-inner"),
-				Div(Class("message-detail-meta"),
-					Div(Class("message-detail-fromblock"),
-						P(Class("message-detail-from"), Text("From "+m.FromKingdomName)),
-						P(Class("message-detail-kind"), Text(kindLabel(k))),
+		Div(Classes{"card": true, "messages-detail": true},
+			Div(Class("detail-meta"),
+				Div(Class("detail-from"),
+					messageMark(k, true),
+					Div(Class("detail-fromblock"),
+						P(Class("detail-from-name"), Text(m.FromKingdomName)),
+						P(Class("detail-kind"), Text(kindLabel(k))),
 					),
-					P(Class("message-detail-date"), Text("Received "+m.CreatedAt.Format("2 Jan 2006, 15:04"))),
 				),
-				Div(Class("message-detail"),
-					Iff(m.IsGuildMessage || hasAction, func() Node {
-						return Span(Class("message-detail-badge"),
-							Span(Classes{
-								"message-mark":           true,
-								"message-mark--" + k:     true,
-								"message-mark--lg":        true,
-							}),
-						)
-					}),
-					H2(Class("message-detail-title"), Text(m.Subject)),
-					Hr(Class("message-detail-divider")),
-					P(Class("message-detail-body"), Text(m.Body)),
-					Iff(hasAction, func() Node {
-						return Div(Class("message-detail-action"),
-							A(Href(m.ActionUrl), Classes{"btn": true, "btn--primary": true}, Text(m.ActionText)),
-							P(Class("message-detail-action-note"), Text("The link below opens the matter at hand.")),
-						)
-					}),
+				P(Class("detail-date"), Text("Received "+m.CreatedAt.Format("2 Jan 2006, 15:04"))),
+			),
+			Div(Class("letter-sheet"),
+				Iff(m.IsGuildMessage || hasAction, func() Node {
+					return Span(Class("letter-corner"), messageMark(k, false))
+				}),
+				H2(Class("letter-subject"), Text(m.Subject)),
+				Hr(Class("letter-rule")),
+				P(Class("letter-body"), Text(m.Body)),
+				Iff(hasAction, func() Node {
+					return Div(Class("letter-action"),
+						A(Href(m.ActionUrl), Class("btn btn--primary"), Text(m.ActionText)),
+						P(Class("letter-action-note"), Text("The seal carries you to the matter at hand.")),
+					)
+				}),
+			),
+			Div(Class("detail-footer"),
+				Div(Class("footer-group"),
+					A(Href(replyURL), Class("btn"), Text("Reply")),
 				),
-				Div(Class("message-detail-footer"),
-					Div(Class("footer-group"),
-						A(Href(replyURL), Class("btn"), Text("Reply")),
-					),
-					Div(Class("footer-group"),
-						Button(
-							Classes{"btn": true, "btn--quiet": true, "is-danger": true},
-							ds.On("click", datastar.PostSSE("%s", deleteURL(m.ID))),
-							Text("Delete"),
-						),
+				Div(Class("footer-group"),
+					Button(
+						Classes{"btn": true, "btn--quiet": true, "is-danger": true},
+						ds.On("click", datastar.PostSSE("%s", deleteURL(m.ID))),
+						Text("Delete"),
 					),
 				),
 			),
@@ -911,59 +930,57 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 func composePanel(to, subject string) Node {
 	return Div(
 		messagesAlert(nil),
-		Div(Classes{"card": true, "is-lit": true, "compose-form": true},
+		Div(Class("card compose-form"),
 			ds.Signals(map[string]any{
 				"msg_to":      to,
 				"msg_subject": subject,
 			}),
-			Div(Class("card-inner"),
-				Div(Class("card-header-row"),
-					H2(Class("card-title"), Text("Write a Message")),
-					Span(Classes{"message-mark": true, "message-mark--post": true, "message-mark--lg": true}),
+			Div(Class("compose-head"),
+				H2(Class("card-title"), Text("Write a Letter")),
+				messageMark("post", true),
+			),
+			Div(Class("compose-fields"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("msg-to"), Text("To")),
+					Input(
+						ID("msg-to"),
+						Type("text"),
+						Class("field"),
+						Placeholder("Kingdom name"),
+						ds.Bind("msg_to"),
+					),
+					Span(Class("field-hint"), Text("Separate several kingdoms with , or ; — twenty at most.")),
 				),
-				Div(Class("compose-fields"),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("msg-to"), Text("To")),
-						Input(
-							ID("msg-to"),
-							Type("text"),
-							Class("field"),
-							Placeholder("Kingdom name"),
-							ds.Bind("msg_to"),
-						),
-						Span(Class("field-hint"), Text("Separate several kingdoms with , or ; — twenty at most.")),
-					),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("msg-subject"), Text("Subject")),
-						Input(
-							ID("msg-subject"),
-							Type("text"),
-							Class("field"),
-							Placeholder("Subject"),
-							ds.Bind("msg_subject"),
-						),
-					),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("msg-body"), Text("Message")),
-						Textarea(
-							ID("msg-body"),
-							Classes{"field": true, "field--area": true},
-							Rows("8"),
-							Placeholder("Write your message here…"),
-							ds.Bind("msg_body"),
-						),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("msg-subject"), Text("Subject")),
+					Input(
+						ID("msg-subject"),
+						Type("text"),
+						Class("field"),
+						Placeholder("Subject"),
+						ds.Bind("msg_subject"),
 					),
 				),
-				Div(Class("compose-actions"),
-					Button(
-						Classes{"btn": true, "btn--primary": true},
-						ds.On("click", datastar.PostSSE(routes.KingdomMessagesSendPath)),
-						Text("Send"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("msg-body"), Text("Message")),
+					Textarea(
+						ID("msg-body"),
+						Classes{"field": true, "field--area": true},
+						Rows("8"),
+						Placeholder("Write your message here…"),
+						ds.Bind("msg_body"),
 					),
-					A(Href(routes.KingdomMessagesPath), Classes{"btn": true, "btn--quiet": true}, Text("Cancel")),
-					Span(Class("compose-count"),
-						ds.Text("(5000 - $msg_body.length).toLocaleString() + ' characters remain'"),
-					),
+				),
+			),
+			Div(Class("compose-actions"),
+				Button(
+					Classes{"btn": true, "btn--primary": true},
+					ds.On("click", datastar.PostSSE(routes.KingdomMessagesSendPath)),
+					Text("Send"),
+				),
+				A(Href(routes.KingdomMessagesPath), Class("btn btn--quiet"), Text("Cancel")),
+				Span(Class("compose-count"),
+					ds.Text("(5000 - $msg_body.length).toLocaleString() + ' characters remain'"),
 				),
 			),
 		),
@@ -977,59 +994,57 @@ func guildMessagePanel(targets []guildMsgTarget) Node {
 	}
 	return Div(
 		messagesAlert(nil),
-		Div(Classes{"card": true, "is-lit": true, "compose-form": true},
+		Div(Class("card compose-form"),
 			ds.Signals(map[string]any{
 				"guild_msg_target": defaultTarget,
 			}),
-			Div(Class("card-inner"),
-				Div(Class("card-header-row"),
-					H2(Class("card-title"), Text("Guild Dispatch")),
-					Span(Classes{"message-mark": true, "message-mark--guild": true, "message-mark--lg": true}),
+			Div(Class("compose-head"),
+				H2(Class("card-title"), Text("Guild Dispatch")),
+				messageMark("guild", true),
+			),
+			Div(Class("compose-fields"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("guild-msg-target"), Text("To")),
+					Select(
+						ID("guild-msg-target"),
+						Class("select"),
+						ds.Bind("guild_msg_target"),
+						Group(Map(targets, func(t guildMsgTarget) Node {
+							return Option(Value(t.Value), Text(t.Label))
+						})),
+					),
+					Span(Class("field-hint"), Text("One copy goes to every member of the chosen rank.")),
 				),
-				Div(Class("compose-fields"),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("guild-msg-target"), Text("To")),
-						Select(
-							ID("guild-msg-target"),
-							Class("select"),
-							ds.Bind("guild_msg_target"),
-							Group(Map(targets, func(t guildMsgTarget) Node {
-								return Option(Value(t.Value), Text(t.Label))
-							})),
-						),
-						Span(Class("field-hint"), Text("One copy goes to every member of the chosen rank.")),
-					),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("msg-subject"), Text("Subject")),
-						Input(
-							ID("msg-subject"),
-							Type("text"),
-							Class("field"),
-							Placeholder("Subject"),
-							ds.Bind("msg_subject"),
-						),
-					),
-					Div(Class("field-group"),
-						Label(Class("field-label"), For("msg-body"), Text("Message")),
-						Textarea(
-							ID("msg-body"),
-							Classes{"field": true, "field--area": true},
-							Rows("8"),
-							Placeholder("Write your dispatch here…"),
-							ds.Bind("msg_body"),
-						),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("msg-subject"), Text("Subject")),
+					Input(
+						ID("msg-subject"),
+						Type("text"),
+						Class("field"),
+						Placeholder("Subject"),
+						ds.Bind("msg_subject"),
 					),
 				),
-				Div(Class("compose-actions"),
-					Button(
-						Classes{"btn": true, "btn--primary": true},
-						ds.On("click", datastar.PostSSE(routes.KingdomMessagesGuildMessageSendPath)),
-						Text("Send to the Guild"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("msg-body"), Text("Message")),
+					Textarea(
+						ID("msg-body"),
+						Classes{"field": true, "field--area": true},
+						Rows("8"),
+						Placeholder("Write your dispatch here…"),
+						ds.Bind("msg_body"),
 					),
-					A(Href(routes.KingdomMessagesPath), Classes{"btn": true, "btn--quiet": true}, Text("Cancel")),
-					Span(Class("compose-count"),
-						ds.Text("(5000 - $msg_body.length).toLocaleString() + ' characters remain'"),
-					),
+				),
+			),
+			Div(Class("compose-actions"),
+				Button(
+					Classes{"btn": true, "btn--primary": true},
+					ds.On("click", datastar.PostSSE(routes.KingdomMessagesGuildMessageSendPath)),
+					Text("Send to the Guild"),
+				),
+				A(Href(routes.KingdomMessagesPath), Class("btn btn--quiet"), Text("Cancel")),
+				Span(Class("compose-count"),
+					ds.Text("(5000 - $msg_body.length).toLocaleString() + ' characters remain'"),
 				),
 			),
 		),

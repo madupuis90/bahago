@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
+	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
@@ -689,63 +690,104 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 		}
 	}
 
-	return Div(
-		// Compact manage head — crest + guild name + back link
-		Div(Class("manage-head"),
-			El("span", Class("guild-crest guild-crest--sm guild-crest--empty")),
-			Div(Class("manage-head-body"),
-				Div(Class("manage-head-guild"), Text(g.Name)),
-				Div(Class("manage-head-sub"), Text("Manage")),
-			),
-			A(Href(slugURL(routes.GuildViewPath, slug)), Class("manage-back"), Text("← Guild page")),
-		),
+	requestsMeta := ""
+	if len(pending) > 0 {
+		requestsMeta = fmt.Sprintf("%d waiting", len(pending))
+	}
+	invitesMeta := ""
+	if len(invitations) > 0 {
+		invitesMeta = fmt.Sprintf("%d pending", len(invitations))
+	}
+
+	return Div(Class("guild"),
+		Breadcrumb("← "+g.Name, slugURL(routes.GuildViewPath, slug)),
+		PageHeader("❦ The guild's desk", "Manage Guild",
+			"Admit kingdoms, send invitations, and keep the charter.", nil),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
 		guildAlert(nil),
 
-		// ── Join Requests
-		Div(Class("card"), Div(Class("card-inner"),
-			Div(Class("section-header"),
-				Div(Class("section-title"), Text("Join Requests")),
-				Div(Class("section-rule")),
-				Iff(len(pending) > 0, func() Node {
-					return Span(Class("section-meta"), Text(fmt.Sprintf("%d pending", len(pending))))
+		// ── Requests + Invitations side by side
+		Div(Class("manage-grid"),
+			Div(Class("card"), Div(Class("card-inner"),
+				SectionHeader("Requests to Join", requestsMeta),
+				Iff(len(pending) == 0, func() Node {
+					return Div(Class("empty-state empty-state--row"),
+						Div(Class("empty-state-title"), Text("No requests waiting")),
+						Div(Class("empty-state-hint"), Text("When a kingdom asks to join, it appears here for your decision.")),
+					)
 				}),
-			),
-			Iff(len(pending) == 0, func() Node {
-				return Div(Class("empty-state empty-state--row"),
-					Div(Class("empty-state-title"), Text("No requests await")),
-				)
-			}),
-			Iff(len(pending) > 0, func() Node {
-				return Table(Class("table"),
-					THead(Tr(
-						Th(Text("Kingdom")),
-						Th(Class("is-actions")),
-					)),
-					TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
-						return Tr(
-							Td(Span(Class("table-id-name"), Text(p.KingdomName))),
-							Td(Class("is-actions"), Div(Class("table-actions"),
-								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))), Text("Approve")),
-								Button(Class("btn btn--sm btn--danger"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))), Text("Reject")),
-							)),
-						)
-					})),
-				)
-			}),
-		)),
+				Iff(len(pending) > 0, func() Node {
+					return Table(Class("table"),
+						THead(Tr(
+							Th(Text("Kingdom")),
+							Th(Class("is-actions")),
+						)),
+						TBody(Map(pending, func(p db.ListPendingRequestsRow) Node {
+							return Tr(
+								Td(Div(
+									Span(Class("table-id-name"), Text(p.KingdomName)),
+									Span(Class("table-id-sub"),
+										Text("requested "+p.CreatedAt.Format("Jan 2"))),
+								)),
+								Td(Class("is-actions"), Div(Class("table-actions"),
+									Button(Class("btn btn--sm btn--primary"),
+										ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildApproveMemberPath, slug, p.ID))),
+										Text("Admit")),
+									Button(Class("btn btn--sm btn--danger"),
+										ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRejectMemberPath, slug, p.ID))),
+										Text("Decline")),
+								)),
+							)
+						})),
+					)
+				}),
+			)),
 
-		// ── Members
-		Div(Class("card"), Div(Class("card-inner"),
-			Div(Class("section-header"),
-				Div(Class("section-title"), Text("Members")),
-				Div(Class("section-rule")),
-				Span(Class("section-meta"), Text(fmt.Sprintf("%d of 20", countActiveMembers(members)))),
-			),
+			Div(Class("card"), Div(Class("card-inner"),
+				SectionHeader("Invitations Sent", invitesMeta),
+				ds.Signals(map[string]any{"invite_kingdom_name": ""}),
+				Div(Class("invite-row"),
+					Input(Class("field"), Type("text"), ds.Bind("invite_kingdom_name"),
+						Placeholder("Invite a kingdom by name")),
+					Button(Class("btn btn--primary"),
+						ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildInvitePath, slug))),
+						Text("Invite")),
+				),
+				Iff(len(invitations) == 0, func() Node {
+					return Div(Class("empty-state empty-state--row"),
+						Div(Class("empty-state-title"), Text("No invitations out")),
+						Div(Class("empty-state-hint"), Text("Kingdoms you invite will wait here until they answer.")),
+					)
+				}),
+				Iff(len(invitations) > 0, func() Node {
+					return Table(Class("table"),
+						TBody(Map(invitations, func(inv db.ListGuildInvitationsRow) Node {
+							return Tr(
+								Td(Div(
+									Span(Class("table-id-name"), Text(inv.KingdomName)),
+									Span(Class("table-id-sub"),
+										Text("invited "+inv.CreatedAt.Format("Jan 2"))),
+								)),
+								Td(Class("is-actions"), Div(Class("table-actions"),
+									Button(Class("btn btn--sm btn--quiet is-danger"),
+										ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildInvitationRevokePath, slug, inv.ID))),
+										Text("Revoke")),
+								)),
+							)
+						})),
+					)
+				}),
+			)),
+		),
+
+		// ── Members (full width)
+		Div(Class("card"), Div(Class("card-inner"), Style("padding: 8px 12px"),
+			SectionHeader("Members", fmt.Sprintf("%d of 20", countActiveMembers(members))),
 			Table(Class("table"),
 				THead(Tr(
 					Th(Text("Kingdom")),
 					Th(Text("Standing")),
+					Th(Class("is-num"), Text("Sworn")),
 					Th(Class("is-actions")),
 				)),
 				TBody(Map(members, func(m db.ListGuildMembersWithNamesRow) Node {
@@ -754,70 +796,27 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 					return Tr(
 						Td(Span(Class("table-id-name"), Text(m.KingdomName))),
 						Td(guildRoleTag(role)),
+						Td(Class("is-num"), swornDays(m.JoinedAt.Valid, m.JoinedAt.Time)),
 						Td(Class("is-actions"), Div(Class("table-actions"),
 							If(isLeader && role == _guild.RoleMember,
-								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildPromotePath, slug, m.KingdomID))), Text("Promote")),
-							),
+								Button(Class("btn btn--sm"),
+									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildPromotePath, slug, m.KingdomID))),
+									Text("Promote"))),
 							If(isLeader && role == _guild.RoleOfficer,
-								Button(Class("btn btn--sm"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildDemotePath, slug, m.KingdomID))), Text("Demote")),
-							),
+								Button(Class("btn btn--sm"),
+									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildDemotePath, slug, m.KingdomID))),
+									Text("Demote"))),
 							If(canRemove,
-								Button(Class("btn btn--sm btn--danger"), ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRemoveMemberPath, slug, m.KingdomID))), Text("Remove")),
-							),
+								Button(Class("btn btn--sm btn--danger"),
+									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildRemoveMemberPath, slug, m.KingdomID))),
+									Text("Remove"))),
 						)),
 					)
 				})),
 			),
 		)),
 
-		// ── Invite a Kingdom
-		Div(Class("card"), Div(Class("card-inner"),
-			Div(Class("section-header"),
-				Div(Class("section-title"), Text("Invite a Kingdom")),
-				Div(Class("section-rule")),
-			),
-			ds.Signals(map[string]any{"invite_kingdom_name": ""}),
-			Div(Class("invite-form"),
-				Div(Class("invite-row"),
-					Input(Class("field"), Type("text"), ds.Bind("invite_kingdom_name"),
-						Placeholder("Kingdom name"),
-					),
-					Button(Class("btn"),
-						ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildInvitePath, slug))),
-						Text("Send Invitation"),
-					),
-				),
-			),
-		)),
-
-		// ── Pending Invitations
-		Iff(len(invitations) > 0, func() Node {
-			return Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("section-header"),
-					Div(Class("section-title"), Text("Pending Invitations")),
-					Div(Class("section-rule")),
-				),
-				Table(Class("table"),
-					THead(Tr(
-						Th(Text("Kingdom")),
-						Th(Class("is-actions")),
-					)),
-					TBody(Map(invitations, func(inv db.ListGuildInvitationsRow) Node {
-						return Tr(
-							Td(Span(Class("table-id-name"), Text(inv.KingdomName))),
-							Td(Class("is-actions"), Div(Class("table-actions"),
-								Button(Class("btn btn--sm btn--danger"),
-									ds.On("click", datastar.PostSSE("%s", memberActionURL(routes.GuildInvitationRevokePath, slug, inv.ID))),
-									Text("Revoke"),
-								),
-							)),
-						)
-					})),
-				),
-			))
-		}),
-
-		// ── Leader-only sections
+		// ── Leader-only: charter + transfer, then danger zone
 		If(isLeader, guildLeaderActions(g, eligibleMembers)),
 	)
 }
@@ -835,22 +834,21 @@ func countActiveMembers(members []db.ListGuildMembersWithNamesRow) int {
 func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNamesRow) Node {
 	slug := g.Slug
 	return Div(
-		// Charter + Transfer side-by-side
 		Div(Class("manage-leader-grid"),
 			// Edit charter
 			Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("card-header"), H3(Class("card-title"), Text("The Description"))),
+				Div(Class("card-header"), H3(Class("card-title"), Text("The Charter"))),
 				ds.Signals(map[string]any{"guild_description": g.Description}),
 				Div(Class("field-group"),
 					Label(Class("field-label"), For("guild-desc-edit"), Text("Description")),
-					El("textarea", ID("guild-desc-edit"), Class("field"),
-						ds.Bind("guild_description"), MaxLength("500"),
-					),
+					El("textarea", ID("guild-desc-edit"),
+						Classes{"field": true, "field--area": true},
+						ds.Bind("guild_description"), MaxLength("500")),
+					Span(Class("field-hint"), Text("The cause and code other kingdoms read before they join.")),
 				),
-				Button(Class("btn"),
+				Button(Class("btn btn--primary"),
 					ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildEditDescriptionPath, slug))),
-					Text("Save"),
-				),
+					Text("Save Changes")),
 			)),
 			// Transfer leadership
 			Div(Class("card"), Div(Class("card-inner"),
@@ -865,7 +863,7 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 						ds.Signals(map[string]any{"target_kingdom_id": eligibleMembers[0].KingdomID}),
 						Div(Class("field-group"),
 							Label(Class("field-label"), For("guild-transfer-select"), Text("New leader")),
-							El("select", ID("guild-transfer-select"), Class("field"),
+							El("select", ID("guild-transfer-select"), Class("select"),
 								ds.Bind("target_kingdom_id"),
 								Map(eligibleMembers, func(m db.ListGuildMembersWithNamesRow) Node {
 									return El("option", Value(strconv.Itoa(m.KingdomID)), Text(m.KingdomName))
@@ -874,29 +872,24 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 						),
 						Button(Class("btn"),
 							ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildTransferLeadershipPath, slug))),
-							Text("Transfer Leadership"),
-						),
+							Text("Transfer Leadership")),
 					)
 				}),
 			)),
 		),
 
-		// Danger zone — disband + settings
-		Div(Class("card"), Div(Class("card-inner"),
-			Div(Class("section-header"),
-				Div(Class("section-title"), Text("Danger Zone")),
-				Div(Class("section-rule")),
-			),
-			P(Class("disband-note"), Text("Disbanding the guild removes all members and cannot be undone.")),
-			Div(Style("display:flex; gap:12px; flex-wrap:wrap;"),
+		// Danger zone
+		Div(Class("card"), Div(Class("card-inner")),
+			SectionHeader("Danger Zone", ""),
+			P(Class("danger-note"),
+				Text("Disbanding strikes the fellowship from the roll and releases every kingdom from its oath. This cannot be undone.")),
+			Div(Class("settings-actions"),
 				Button(Class("btn btn--danger"),
 					ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildDisbandPath, slug))),
-					Text("Disband Guild"),
-				),
+					Text("Disband the Guild")),
 				A(Href(slugURL(routes.GuildSettingsPath, slug)), Class("btn btn--quiet"),
-					Text("Guild Settings"),
-				),
+					Text("Guild Settings")),
 			),
-		)),
+		),
 	)
 }

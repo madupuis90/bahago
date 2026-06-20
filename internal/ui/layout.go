@@ -268,18 +268,6 @@ func HomeSideNav(currentPath string) Node {
 	})
 }
 
-// ── Parchment page helpers ────────────────────────────────────────────────────
-
-// PageHeader renders the page header: optional accent tag, italic H1, double rule.
-// An empty tag omits the accent line.
-func PageHeader(tag, body string) Node {
-	return Div(Class("page-header"),
-		If(tag != "", Div(Classes{"caps-label": true, "text-highlight": true, "page-header-tag": true}, Text(tag))),
-		H1(Span(Class("italic"), Text(body))),
-		Div(Class("rule-dbl")),
-	)
-}
-
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
 func formatPopulation(n int) string {

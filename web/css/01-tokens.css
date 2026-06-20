@@ -42,6 +42,9 @@
   --gem-sun: #d8456b;
   --gem-star: #7a52c8;
 
+  --brass: #e0a51c;        /* meter brass = "time/ticks" fill (canon default) */
+  --unread: #fbeec0;       /* messages: unread row wash */
+
   /* ── Typography — TWO faces (repointed) ────────────────────────────────── */
   /* Lilita One: every title, label, numeral, button.  Nunito: body & prose. */
   --font-display: 'Lilita One', cursive;

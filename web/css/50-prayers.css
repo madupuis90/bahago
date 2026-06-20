@@ -1,100 +1,199 @@
 /* =============================================================================
-   Prayers
+   Prayers — The Sanctum (Comic Lab)
+   ---------------------------------------------------------------------------
+   Reuses: .page-header*, .card, .card-inner, .card-header-row, .card-title,
+           .btn, .field, .select, .step-btn, .meter (+ .meter-fill brass),
+           .stat-pill, .slot-gauge, .section-header, .gem (via ResourceGem),
+           .icon, .alert--* (all in earlier CSS files).
+
+   Page title-plate accent: --gem-sun (pink) — see .page-header-title--sun.
+
+   Deferred (Option C — visual structure now, data wiring later):
+     • "Upon Your Realm" incoming-rites section (needs
+       ListPrayersTargetingKingdom query) — omitted until the query lands.
+     • Cross-kingdom targeting (perk-gated) — shown as a locked .target-perk.
+     • Live total-cost recompute uses a fixed 20/tick multiplier (every current
+       rite costs 20 devotion/tick); update .offer-cost-val expression if a
+       future rite changes that.
    ============================================================================= */
 
-.prayers-grid {
+/* Title-plate accent — pink (devotion sun). */
+.page-header-title--sun { background: var(--gem-sun); }
+
+/* ── devotion ledger — the altar's reckoning strip ───────────────────────── */
+.devotion-ledger {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--card); border: 3px solid var(--ink); border-radius: 13px;
+  box-shadow: var(--shadow-ink-sm); padding: 9px 16px; margin: 0 2px 22px;
+}
+.ledger-item { display: inline-flex; align-items: center; gap: 8px; }
+.ledger-val {
+  font-family: var(--font-display); font-size: 18px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-val.is-drain { color: var(--red); }
+.ledger-lbl {
+  font-family: var(--font-body); font-weight: 800; font-size: 10px;
+  letter-spacing: .05em; text-transform: uppercase; opacity: .6;
+}
+.ledger-sep {
+  width: 0; align-self: stretch;
+  border-left: 2.5px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  margin: 0 2px;
+}
+
+/* ── The Sanctum — altar card ────────────────────────────────────────────── */
+.sanctum .card-header-row { margin-bottom: 18px; }
+
+/* the burning rite */
+.rite-active { display: flex; flex-direction: column; gap: 4px; }
+.rite-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.rite-id { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.rite-target {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-body); font-weight: 800; font-size: 11px;
+  letter-spacing: .05em; text-transform: uppercase; opacity: .62;
+}
+.rite-target .icon { stroke: var(--ink); }
+.rite-name { font-family: var(--font-display); font-size: 28px; line-height: 1; }
+.rite-effect { font-family: var(--font-body); font-weight: 700; font-size: 14.5px; text-wrap: pretty; }
+.rite-effect b { color: var(--gem-flame); font-weight: 800; }
+.rite-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.rite-drain { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.rite-drain-lbl {
+  font-family: var(--font-body); font-weight: 800; font-size: 9.5px;
+  letter-spacing: .06em; text-transform: uppercase; opacity: .6;
+}
+.rite-active .meter { margin-bottom: 4px; }
+
+.rite-foot {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; margin-top: 18px; flex-wrap: wrap;
+}
+.rite-foot-note {
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px;
+  line-height: 1.5; max-width: 56ch; opacity: .72; text-wrap: pretty;
+  margin: 0;
+}
+
+/* ── offering form (altar free) ──────────────────────────────────────────── */
+.offering { display: flex; flex-direction: column; gap: 4px; }
+.offering-lede {
+  font-family: var(--font-body); font-weight: 700; font-size: 15px;
+  line-height: 1.55; margin: 0 0 18px; max-width: 64ch; text-wrap: pretty;
+}
+.offering-form {
+  display: grid; grid-template-columns: 1.1fr 1.1fr; gap: 18px 26px;
+  align-items: start;
+}
+.offering-form .target-perk-group { grid-column: 1 / -1; }
+.offering-form-foot {
+  grid-column: 1 / -1;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap; margin-top: 4px;
+}
+
+/* duration stepper */
+.dur { display: flex; flex-direction: column; gap: 12px; }
+.dur-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dur-input { width: 78px; text-align: center; font-family: var(--font-display); font-size: 17px; }
+.dur-unit {
+  font-family: var(--font-body); font-weight: 800; font-size: 12px;
+  letter-spacing: .04em; text-transform: uppercase; opacity: .6;
+}
+.dur-presets { display: flex; gap: 8px; }
+.dur-chip {
+  cursor: pointer; font-family: var(--font-display); font-size: 14px; color: var(--ink);
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 9px;
+  box-shadow: var(--shadow-ink-xs); padding: 5px 14px 4px;
+  transition: transform .08s, box-shadow .08s, background .12s;
+}
+.dur-chip:hover { transform: translate(-1px, -1px); box-shadow: var(--shadow-ink-sm); }
+
+/* perk-gated target notice */
+.target-perk {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 700; font-style: italic;
+  font-size: 12px; opacity: .62; padding: 8px 12px;
+  background: var(--card-2); border: 2px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 10px;
+}
+.target-perk .icon { stroke: var(--ink); flex: none; }
+
+/* total-cost readout */
+.offer-cost { display: flex; flex-direction: column; gap: 5px; }
+.offer-cost-lbl {
+  font-family: var(--font-body); font-weight: 800; font-size: 10px;
+  letter-spacing: .06em; text-transform: uppercase; opacity: .6;
+}
+.offer-cost-val {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 24px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.offer-cost-val.is-short { color: var(--red); }
+
+/* ── Available Prayers — catalogue ───────────────────────────────────────── */
+.prayer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
 }
-
 .prayer-card {
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: flex; flex-direction: column; padding: 20px 22px 22px;
+}
+.prayer-card.is-active {
+  background: var(--card-2);
+  box-shadow: var(--shadow-ink), inset 0 0 0 3px var(--yellow);
+}
+.prayer-card.is-sealed {
+  background: repeating-linear-gradient(45deg, var(--card) 0 11px, var(--card-2) 11px 22px);
+}
+.prayer-card.is-sealed .prayer-card-name,
+.prayer-card.is-sealed .prayer-flavour,
+.prayer-card.is-sealed .prayer-stats { opacity: .7; }
 
-  & .panel-title {
-    font-size: 1rem;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-  }
+.prayer-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.prayer-card-name { font-family: var(--font-display); font-size: 20px; line-height: 1; }
+.prayer-flavour {
+  font-family: var(--font-body); font-weight: 600; font-size: 13.5px;
+  line-height: 1.55; margin: 0 0 16px; text-wrap: pretty; opacity: .85; flex: 1;
+}
+.prayer-stats {
+  display: flex; flex-direction: column; gap: 9px; padding: 12px 0; margin-bottom: 14px;
+  border-top: 2px dotted color-mix(in srgb, var(--ink) 26%, transparent);
+  border-bottom: 2px dotted color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.prayer-effect,
+.prayer-upkeep {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 800; font-size: 13.5px;
+}
+.prayer-effect .icon,
+.prayer-upkeep .icon { stroke: var(--ink); flex: none; }
+.prayer-effect b { color: var(--gem-flame); font-weight: 800; }
 
-  & .prayer-card__description {
-    font-size: 0.875rem;
-    font-style: italic;
-    opacity: 0.8;
-    margin-bottom: 0.25rem;
-  }
-
-  & .prayer-card__effect {
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-
-  & .prayer-card__upkeep {
-    font-size: 0.875rem;
-    color: var(--panel-link-color);
-  }
+.prayer-card-foot { margin-top: auto; }
+.prayer-card-foot .btn { width: 100%; }
+.rite-burning {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  font-family: var(--font-display); font-size: 14px; color: var(--gem-sun);
+  width: 100%; padding: 8px 10px;
+}
+.rite-burning .icon { stroke: var(--gem-sun); flex: none; }
+.cap-note {
+  display: block; font-family: var(--font-body); font-weight: 700; font-style: italic;
+  font-size: 12.5px; line-height: 1.5; opacity: .7; text-wrap: pretty;
 }
 
-.prayer-active-section {
-  margin-top: 1.5rem;
-  padding: 1.25rem;
-
-  & .panel-title {
-    font-size: 1rem;
-    font-weight: bold;
-    margin-bottom: 0.75rem;
-  }
+/* the seal-glyph disc on each card head (a gem sits inside it) */
+.seal-glyph {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 11px; background: var(--card-2);
+  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
-.prayer-cast-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  margin-bottom: 1rem;
-
-  & label {
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-
-  & select {
-    padding: 0.25rem 0.5rem;
-  }
-
-  & input[type="number"] {
-    width: 4rem;
-    padding: 0.25rem 0.5rem;
-  }
+/* ── responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .offering-form { grid-template-columns: 1fr; }
 }
-
-.prayer-empty {
-  color: var(--panel-link-color);
-  opacity: 0.6;
-}
-
-.prayer-active-table {
-  border-collapse: collapse;
-  width: 100%;
-
-  th,
-  td {
-    text-align: left;
-    padding: 0.4rem 1rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  }
-
-  th {
-    font-weight: 600;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.15);
-  }
-
-  tr:last-child td {
-    border-bottom: none;
-  }
-}
-

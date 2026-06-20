@@ -218,26 +218,7 @@
 .lock-banner .gem { width: 34px; height: 34px; }
 .lock-banner b { font-style: normal; font-weight: 800; }
 
-/* --- training-slot panel (slot gauge + slots) ----------------------------- */
-.slot-gauge { display: inline-flex; align-items: center; gap: 9px; }
-.slot-gauge-dots { display: flex; gap: 5px; }
-.slot-gauge-dot {
-  width: 13px;
-  height: 13px;
-  border-radius: 4px;
-  border: 2.5px solid var(--ink);
-  background: var(--card-2);
-}
-.slot-gauge-dot.is-on { background: var(--yellow); box-shadow: var(--shadow-ink-xs); }
-.slot-gauge-label {
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--ink);
-  opacity: .68;
-  white-space: nowrap;
-}
+/* --- training-slot panel (slot gauge dots moved to 20-shared.css) -------- */
 
 .train-slots { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
 .train-slot { border-radius: 13px; }

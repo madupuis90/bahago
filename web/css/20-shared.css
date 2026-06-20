@@ -384,6 +384,22 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 
 
 /* =============================================================================
+   Slot gauge — small "N/M in use" dot readout (Units training, Prayers sanctum).
+   Markup: .slot-gauge > .slot-gauge-dots (N × .slot-gauge-dot[.is-on]) + .slot-gauge-label
+   ============================================================================= */
+.slot-gauge { display: inline-flex; align-items: center; gap: 9px; }
+.slot-gauge-dots { display: flex; gap: 5px; }
+.slot-gauge-dot {
+  width: 13px; height: 13px; border-radius: 4px;
+  border: 2.5px solid var(--ink); background: var(--card-2);
+}
+.slot-gauge-dot.is-on { background: var(--yellow); box-shadow: var(--shadow-ink-xs); }
+.slot-gauge-label {
+  font-family: var(--font-display); font-size: 12px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink); opacity: .68; white-space: nowrap;
+}
+
+/* =============================================================================
    Stepper — − [count] + control (Units training count, etc.)
    Markup: .train-ctl > .stepper (.step-btn--l, .count-box, .step-btn--r) [.btn]
    The count-box stays an editable field, so direct entry AND tap targets work.
@@ -447,4 +463,44 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 .count-box:focus {
   outline: none;
   background: var(--yellow);
+}
+
+/* =============================================================================
+   Empty state — centered crest + title + hint (Messages, Guild).
+   Markup: .empty-state [.empty-state--row] > (.crest | .icon) + .empty-state-title
+           + (.empty-state-hint | <p>) [.btn]
+   ============================================================================= */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 13px;
+  text-align: center; padding: 44px 24px;
+}
+.empty-state > .crest { width: 58px; height: 58px; }
+.empty-state > .crest svg { width: 30px; height: 30px; }
+.empty-state p {
+  font-family: var(--font-body); font-weight: 700; font-size: 14.5px;
+  margin: 0; max-width: 34ch; text-wrap: pretty; opacity: .8;
+}
+.empty-state-title { font-family: var(--font-display); font-size: 22px; line-height: 1; opacity: 1; }
+.empty-state-hint {
+  font-family: var(--font-body); font-weight: 600; font-style: italic;
+  font-size: 14.5px; max-width: 42ch; text-wrap: pretty; opacity: .78;
+}
+.empty-state .btn { margin-top: 4px; }
+.empty-state--row { padding: 26px 20px; gap: 4px; }
+
+/* =============================================================================
+   BREADCRUMB — back-link chip (no sprite glyph; literal arrow)
+   Shared by guild + army sub-pages.
+   ============================================================================= */
+.breadcrumb { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.crumb-back {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-display); font-size: 13px; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--ink); background: var(--card);
+  border: 2.5px solid var(--ink); border-radius: 10px;
+  box-shadow: var(--shadow-ink-xs); padding: 6px 13px 5px; text-decoration: none;
+  transition: transform .08s, box-shadow .08s, background .12s;
+
+  &:hover { background: var(--yellow); transform: translate(-1px, -1px); box-shadow: var(--shadow-ink-sm); }
+  &:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
 }

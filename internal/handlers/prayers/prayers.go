@@ -291,109 +291,371 @@ func (h *handler) renderPrayersPage(w http.ResponseWriter, r *http.Request, king
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 func prayersContent(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
-	return Group([]Node{
-		Div(ds.Init(GetSSENoSignals(routes.KingdomPrayersRefreshPath))),
-		H1(Class("page-title"), Text("Prayers")),
-		ds.Signals(map[string]any{
-			"prayer_type":    game.PrayerManaPrayer,
-			"prayer_ticks":   8,
-			"target_kingdom": kingdom.Name,
-		}, ds.ModifierIfMissing),
-		prayerAlert(nil),
-		activePrayersSection(prayers),
-		availablePrayersSection(),
-	})
-}
-
-func activePrayersSection(prayers []db.KingdomPrayer) Node {
 	prayerKeys := make([]string, 0, len(game.PrayerDefs))
 	for k := range game.PrayerDefs {
 		prayerKeys = append(prayerKeys, k)
 	}
 	sort.Strings(prayerKeys)
 
-	castDisabled := len(prayers) >= maxPrayers
-
-	return Div(Class("prayer-active-section panel"),
-		P(Class("panel-title"), Text("Active Prayers")),
-		Div(Class("prayer-cast-form"),
-			Label(For("prayer_type"), Text("Prayer")),
-			Select(ID("prayer_type"), ds.Bind("prayer_type"),
-				Group(Map(prayerKeys, func(key string) Node {
-					def := game.PrayerDefs[key]
-					return Option(Value(key), Text(def.Name))
-				})),
-			),
-			Label(For("prayer_ticks"), Text("Duration")),
-			Input(Type("number"), ID("prayer_ticks"), Min("1"), Max("48"), ds.Bind("prayer_ticks")),
-			Input(Type("hidden"), ds.Bind("target_kingdom")),
-			Button(
-				Classes{"btn": true, "btn--locked": castDisabled},
-				ds.On("click", datastar.PostSSE(routes.KingdomPrayerCastPath)),
-				If(castDisabled, Disabled()),
-				Text("Pray"),
-			),
-		),
-		Iff(len(prayers) == 0, func() Node {
-			return P(Class("prayer-empty"), Text("No active prayers."))
-		}),
-		Iff(len(prayers) > 0, func() Node {
-			return Table(Class("prayer-active-table"),
-				THead(Tr(
-					Th(Text("Prayer")),
-					Th(Text("Effect")),
-					Th(Text("Ticks Remaining")),
-					Th(Text("")),
-				)),
-				TBody(Map(prayers, func(p db.KingdomPrayer) Node {
-					return activePrayerRow(p)
-				})),
-			)
-		}),
-	)
-}
-
-func activePrayerRow(p db.KingdomPrayer) Node {
-	def, ok := game.PrayerDefs[p.PrayerType]
-	name := p.PrayerType
-	effect := ""
-	if ok {
-		name = def.Name
-		effect = resourceBonusText(def)
-	}
-	return Tr(
-		Td(Text(name)),
-		Td(Text(effect)),
-		Td(Text(fmt.Sprintf("%d / %d", p.TicksRemaining, p.TicksTotal))),
-		Td(Button(
-			Class("btn btn--danger"),
-			ds.On("click", datastar.PostSSE("%s", cancelPrayerPath(p.ID))),
-			Text("Cancel"),
-		)),
-	)
-}
-
-func availablePrayersSection() Node {
-	cards := make([]Node, 0, len(game.PrayerDefs))
-	for _, def := range game.PrayerDefs {
-		cards = append(cards, availablePrayerCard(def))
-	}
 	return Group([]Node{
-		H2(Class("section-heading"), Text("Available Prayers")),
-		Div(Class("prayers-grid"), Group(cards)),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomPrayersRefreshPath))),
+		ds.Signals(map[string]any{
+			"prayer_type":    game.PrayerManaPrayer,
+			"prayer_ticks":   8,
+			"target_kingdom": kingdom.Name,
+		}, ds.ModifierIfMissing),
+		prayerAlert(nil),
+		Div(Class("page-header"),
+			P(Class("page-header-kicker"), Text("❦ Of the Sanctum")),
+			P(Class("page-header-title page-header-title--sun"), Text("The Sanctum")),
+			P(Class("page-header-sub"),
+				Text("Channel devotion into rites that bless your realm's yield.")),
+		),
+		devotionLedger(kingdom, prayers),
+		sanctumSection(kingdom, prayers, prayerKeys),
+		availablePrayersSection(prayers, prayerKeys),
 	})
 }
 
-func availablePrayerCard(def game.PrayerDef) Node {
-	effectText := resourceBonusText(def)
-	return Div(Class("prayer-card panel"),
-		P(Class("panel-title"), Text(def.Name)),
-		Iff(def.Description != "", func() Node {
-			return P(Class("prayer-card__description"), Text(def.Description))
-		}),
-		P(Class("prayer-card__effect"), Text(effectText)),
-		P(Class("prayer-card__upkeep"), Text(fmt.Sprintf("Devotion upkeep: %d/tick", def.DevotionUpkeep))),
+// devotionLedger is the altar's reckoning strip: the kingdom's current devotion
+// stock (sun gem) and, while a rite burns, its per-tick drain.
+func devotionLedger(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
+	items := []Node{
+		Span(Class("ledger-item"),
+			ResourceGem("sun", 22),
+			Span(Class("ledger-val"), Text(strconv.Itoa(kingdom.Devotion))),
+			Span(Class("ledger-lbl"), Text("Devotion")),
+		),
+	}
+	if len(prayers) > 0 {
+		drain := 0
+		for _, p := range prayers {
+			if def, ok := game.PrayerDefs[p.PrayerType]; ok {
+				drain += def.DevotionUpkeep
+			}
+		}
+		items = append(items,
+			Span(Class("ledger-sep")),
+			Span(Class("ledger-item"),
+				Icon("sandglass", 18, false),
+				Span(Class("ledger-val is-drain"), Text(fmt.Sprintf("−%d", drain))),
+				Span(Class("ledger-lbl"), Text("Per tick")),
+			),
+		)
+	}
+	return Div(Class("devotion-ledger"), Group(items))
+}
+
+// sanctumSection is the altar card. When a rite is burning it shows the active
+// rite with a brass tick meter and a cancel button; when the altar is free it
+// shows the offering form (rite · duration stepper · cost · Pray).
+func sanctumSection(kingdom db.Kingdom, prayers []db.KingdomPrayer, prayerKeys []string) Node {
+	busy := len(prayers) > 0
+	used := len(prayers)
+	if used > maxPrayers {
+		used = maxPrayers
+	}
+
+	body := Iff(busy, func() Node { return activeRiteView(prayers[0]) })
+	if !busy {
+		body = offeringForm(kingdom, prayerKeys)
+	}
+
+	return Div(Class("card sanctum"),
+		Div(Class("card-inner"),
+			Div(Class("card-header-row"),
+				P(Class("card-title"), Text("The Sanctum")),
+				Div(Class("slot-gauge"),
+					Div(Class("slot-gauge-dots"),
+						Range(maxPrayers, func(i int) Node {
+							return Div(Classes{"slot-gauge-dot": true, "is-on": i < used})
+						}),
+					),
+					Span(Class("slot-gauge-label"),
+						Text(fmt.Sprintf("%d/%d in use", used, maxPrayers))),
+				),
+			),
+			body,
+		),
 	)
+}
+
+// Range emits n zero-indexed child nodes via fn.
+func Range(n int, fn func(i int) Node) Group {
+	nodes := make([]Node, 0, n)
+	for i := range n {
+		nodes = append(nodes, fn(i))
+	}
+	return Group(nodes)
+}
+
+// activeRiteView renders the single burning rite: glyph + name/effect + drain,
+// a brass tick meter, and a cancel footer.
+func activeRiteView(p db.KingdomPrayer) Node {
+	def, ok := game.PrayerDefs[p.PrayerType]
+	name, effect, upkeep := p.PrayerType, "", 0
+	gemID := "sun"
+	if ok {
+		name = def.Name
+		effect = resourceBonusText(def)
+		upkeep = def.DevotionUpkeep
+		gemID = prayerGemID(def)
+	}
+
+	fillPct := 0.0
+	if p.TicksTotal > 0 {
+		fillPct = float64(p.TicksTotal-p.TicksRemaining) / float64(p.TicksTotal) * 100
+	}
+	notches := make([]Node, 0, p.TicksTotal)
+	for range int(p.TicksTotal) {
+		notches = append(notches, Span(Class("meter-notch")))
+	}
+
+	return Div(Class("rite-active"),
+		Div(Class("rite-top"),
+			ResourceGem(gemID, 44),
+			Div(Class("rite-id"),
+				Span(Class("rite-target"),
+					Icon("crown", 13, false),
+					Text("Upon your realm"),
+				),
+				Span(Class("rite-name"), Text(name)),
+				Iff(effect != "", func() Node {
+					return Span(Class("rite-effect"), Raw(effectHTML(def)))
+				}),
+			),
+			Div(Class("rite-aside"),
+				Div(Class("rite-drain"),
+					Span(Class("rite-drain-lbl"), Text("Devotion drain")),
+					Span(Class("stat-pill"),
+						Span(Classes{"pill-neg": true}, Text(fmt.Sprintf("−%d", upkeep))),
+						Text("/tick"),
+					),
+				),
+			),
+		),
+		Div(Class("meter"),
+			Div(Class("meter-top"),
+				Span(Class("meter-name"), Text("Time burning")),
+				Span(Class("meter-eta"),
+					Text(fmt.Sprintf("%d of %d ticks left", p.TicksRemaining, p.TicksTotal))),
+			),
+			Div(Class("meter-track"),
+				Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
+				Div(Class("meter-notches"), Group(notches)),
+			),
+		),
+		Div(Class("rite-foot"),
+			P(Class("rite-foot-note"),
+				Text("The rite drains devotion each tick and ends when it runs dry or the ticks elapse.")),
+			Button(Class("btn btn--danger"),
+				ds.On("click", datastar.PostSSE("%s", cancelPrayerPath(p.ID))),
+				Text("Cancel rite"),
+			),
+		),
+	)
+}
+
+// offeringForm renders the cast form when the altar is free. The duration
+// stepper is driven by the $prayer_ticks signal; the total-cost readout is a
+// datastar expression (every current rite costs 20 devotion/tick, so the
+// multiplier is fixed — update here if a future rite changes that).
+func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
+	return Div(Class("offering"),
+		P(Class("offering-lede"),
+			Text("The altar stands open. Choose a rite and the devotion you will spend per tick."),
+		),
+		Form(Class("offering-form"),
+			ds.On("submit", datastar.PostSSE(routes.KingdomPrayerCastPath)),
+			Div(Class("field-group"),
+				Label(For("prayer_type"), Class("field-label"), Text("Rite")),
+				Select(ID("prayer_type"), Class("select"), ds.Bind("prayer_type"),
+					Group(Map(prayerKeys, func(key string) Node {
+						return Option(Value(key), Text(game.PrayerDefs[key].Name))
+					})),
+				),
+			),
+			Div(Class("field-group"),
+				Label(For("prayer_ticks"), Class("field-label"), Text("Duration")),
+				Div(Class("dur"),
+					Div(Class("dur-row"),
+						Span(Class("step-btn step-btn--l"), Role("button"),
+							ds.On("click", "$prayer_ticks = Math.max(1, ($prayer_ticks || 1) - 1)"),
+							Text("−")),
+						Input(ID("prayer_ticks"), Class("field field--num dur-input"),
+							Type("text"), Attr("inputmode", "numeric"),
+							Min("1"), Max("48"), ds.Bind("prayer_ticks")),
+						Span(Class("step-btn step-btn--r"), Role("button"),
+							ds.On("click", "$prayer_ticks = Math.min(48, ($prayer_ticks || 1) + 1)"),
+							Text("+")),
+						Span(Class("dur-unit"), Text("ticks")),
+					),
+					Div(Class("dur-presets"),
+						presetChip(8), presetChip(16), presetChip(24), presetChip(48),
+					),
+				),
+			),
+			Div(Class("field-group target-perk-group"),
+				Label(Class("field-label"), Text("Target")),
+				Div(Class("target-perk"),
+					Icon("crown", 14, false),
+					Text("Cross-kingdom targeting awaits a perk — rites fall upon your own realm."),
+				),
+			),
+			Input(Type("hidden"), ds.Bind("target_kingdom"), Value(kingdom.Name)),
+			Div(Class("offering-form-foot"),
+				Div(Class("offer-cost"),
+					Span(Class("offer-cost-lbl"), Text("Total devotion")),
+					Span(Class("offer-cost-val"),
+						ResourceGem("sun", 20),
+						// 20 = current per-tick upkeep for every rite; see func comment.
+						ds.Text("$prayer_ticks * 20"),
+					),
+				),
+				Button(Type("submit"), Class("btn btn--primary"), Text("Offer rite")),
+			),
+		),
+	)
+}
+
+func presetChip(ticks int) Node {
+	return Span(Classes{"dur-chip": true},
+		ds.On("click", fmt.Sprintf("$prayer_ticks = %d", ticks)),
+		Role("button"),
+		Text(strconv.Itoa(ticks)),
+	)
+}
+
+func availablePrayersSection(active []db.KingdomPrayer, prayerKeys []string) Node {
+	activeTypes := make(map[string]bool, len(active))
+	for _, p := range active {
+		activeTypes[p.PrayerType] = true
+	}
+	capReached := len(active) >= maxPrayers
+
+	cards := make([]Node, 0, len(prayerKeys))
+	for _, key := range prayerKeys {
+		cards = append(cards, availablePrayerCard(key, game.PrayerDefs[key],
+			activeTypes[key], capReached))
+	}
+
+	return Group([]Node{
+		Div(Class("section-header"),
+			Span(Class("section-title"), Text("Available Prayers")),
+			Span(Class("section-rule")),
+			Span(Class("section-meta"),
+				Text(fmt.Sprintf("%d rites", len(prayerKeys)))),
+		),
+		Div(Class("prayer-grid"), Group(cards)),
+	})
+}
+
+func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bool) Node {
+	cls := "prayer-card card"
+	if isActive {
+		cls += " is-active"
+	} else if capReached {
+		cls += " is-sealed"
+	}
+
+	var foot Node
+	switch {
+	case isActive:
+		foot = Div(Class("prayer-card-foot"),
+			Span(Class("rite-burning"),
+				Icon("sandglass", 16, false),
+				Text("Burning in the Sanctum"),
+			),
+		)
+	case capReached:
+		foot = Div(Class("prayer-card-foot"),
+			Span(Class("cap-note"), Text("The altar holds one rite at a time — cancel the burning rite to offer another.")),
+		)
+	default:
+		expr := fmt.Sprintf("$prayer_type='%s';$prayer_ticks=8;%s",
+			key, datastar.PostSSE(routes.KingdomPrayerCastPath))
+		foot = Div(Class("prayer-card-foot"),
+			Button(Class("btn btn--primary"), ds.On("click", expr), Text("Offer rite")),
+		)
+	}
+
+	return Div(Class(cls),
+		Div(Class("prayer-card-head"),
+			Span(Class("seal-glyph"), ResourceGem(prayerGemID(def), 22)),
+			Span(Class("prayer-card-name"), Text(def.Name)),
+		),
+		P(Class("prayer-flavour"), Text(def.Description)),
+		Div(Class("prayer-stats"),
+			Span(Class("prayer-effect"),
+				Icon("res-"+prayerResKey(def), 16, false),
+				Raw(effectHTML(def)),
+			),
+			Span(Class("prayer-upkeep"),
+				Icon("sandglass", 16, false),
+				Text(fmt.Sprintf("%d devotion/tick", def.DevotionUpkeep)),
+			),
+		),
+		foot,
+	)
+}
+
+// prayerResKey returns the sprite resource-symbol key (wood/stone/food/mana/
+// devotion/knowledge) for a prayer's boosted resource, defaulting to "devotion".
+func prayerResKey(def game.PrayerDef) string {
+	switch {
+	case def.ResourceBonusPct.Wood > 0:
+		return "wood"
+	case def.ResourceBonusPct.Stone > 0:
+		return "stone"
+	case def.ResourceBonusPct.Food > 0:
+		return "food"
+	case def.ResourceBonusPct.Mana > 0:
+		return "mana"
+	case def.ResourceBonusPct.Knowledge > 0:
+		return "knowledge"
+	default:
+		return "devotion"
+	}
+}
+
+// resKeyToGemID maps a resource symbol key to its gem colour id.
+var resKeyToGemID = map[string]string{
+	"wood": "tree", "stone": "mountain", "food": "wheat",
+	"mana": "flame", "devotion": "sun", "knowledge": "star",
+}
+
+// prayerGemID returns the gem colour id for a prayer's boosted resource.
+func prayerGemID(def game.PrayerDef) string {
+	return resKeyToGemID[prayerResKey(def)]
+}
+
+// effectHTML returns the bonus text wrapped so the boosted resource reads as an
+// ink-stroked <b>. It mirrors resourceBonusText but allows inline emphasis.
+func effectHTML(def game.PrayerDef) string {
+	b := def.ResourceBonusPct
+	var parts []string
+	if b.Wood > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> wood", b.Wood))
+	}
+	if b.Stone > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> stone", b.Stone))
+	}
+	if b.Food > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> food", b.Food))
+	}
+	if b.Mana > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> mana", b.Mana))
+	}
+	if b.Devotion > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> devotion", b.Devotion))
+	}
+	if b.Knowledge > 0 {
+		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> knowledge", b.Knowledge))
+	}
+	if len(parts) == 0 {
+		return "No resource bonus"
+	}
+	return strings.Join(parts, " · ")
 }
 
 func prayerAlert(inner Node) Node { return AlertContainer("prayer-alert", inner) }

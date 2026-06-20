@@ -1,211 +1,304 @@
 /* =============================================================================
-   Army
+   Army — Command Tent (Comic Lab)
+   Page title plate accent: --red (default .page-header-title — no modifier).
+   Depends on shared .card / .card-inner / .card-title / .btn / .field / .select /
+   .eyebrow / .section-header / .page-header* (20-shared.css, 41-kingdom-overview.css).
    ============================================================================= */
 
-/* Legion crest */
+/* ── Command summary strip ─────────────────────────────────────────────── */
+.summary {
+  display: flex; margin: 0 0 26px;
+  background: var(--card); border: 3.5px solid var(--ink); border-radius: 16px;
+  box-shadow: var(--shadow-ink-lg); overflow: hidden;
+
+  @media (max-width: 760px) { flex-wrap: wrap; }
+}
+.summary-stat {
+  flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 15px 20px 17px;
+
+  & + & { border-left: 3px solid var(--ink); }
+  @media (max-width: 760px) { flex: 1 0 45%; }
+  @media (max-width: 760px) & + & { border-left: 3px solid var(--ink); }
+}
+.ss-label {
+  font-family: var(--font-caps); font-weight: 900; letter-spacing: .05em;
+  text-transform: uppercase; font-size: 11px; opacity: .62;
+}
+.ss-val { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.ss-num {
+  font-family: var(--font-display); font-size: 30px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+
+  &.is-muted { color: color-mix(in srgb, var(--ink) 40%, transparent); }
+}
+.ss-sub {
+  font-family: var(--font-caps); font-weight: 800; font-size: 10.5px;
+  letter-spacing: .05em; text-transform: uppercase; opacity: .62; white-space: nowrap;
+}
+
+/* ── Unit token · roster · strength line ───────────────────────────────── */
+.portrait {
+  flex: none; display: grid; place-items: center; position: relative;
+  background: var(--card-2); border: 3px solid var(--ink); border-radius: 12px;
+  box-shadow: var(--shadow-ink-xs);
+
+  &.is-summon { background: color-mix(in srgb, var(--yellow) 28%, var(--card-2)); }
+}
+.portrait__initial {
+  font-family: var(--font-display); font-size: 1.3em; line-height: 1; color: var(--ink);
+}
+.unit-token { position: relative; display: inline-flex; }
+.unit-tally {
+  position: absolute; bottom: -8px; right: -8px;
+  font-family: var(--font-display); font-size: 13px; color: #fff;
+  background: var(--ink); border: 2.5px solid var(--card); border-radius: 8px;
+  padding: 1px 7px 0; box-shadow: var(--shadow-ink-xs);
+}
+
+.roster-strip { display: flex; flex-wrap: wrap; gap: 18px 20px; align-items: flex-start; padding: 4px 2px 10px; }
+.roster-item { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.roster-name {
+  font-family: var(--font-caps); font-weight: 800; font-size: 10.5px;
+  letter-spacing: .03em; text-transform: uppercase; opacity: .68; text-align: center;
+}
+.roster-more {
+  align-self: center; font-family: var(--font-display); font-size: 16px;
+  padding: 7px 12px 5px; border: 3px solid var(--ink); border-radius: 11px;
+  background: var(--card-2); box-shadow: var(--shadow-ink-xs);
+}
+.roster-empty {
+  font-family: var(--font-body); font-weight: 700; font-style: italic;
+  font-size: 13.5px; opacity: .7; text-wrap: pretty; max-width: 42ch;
+}
+
+.strength-line {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-caps); font-weight: 800; font-size: 13.5px;
+}
+.sl-item { display: inline-flex; align-items: baseline; gap: 6px; }
+.sl-item b { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
+.sl-sep { opacity: .35; }
+/* NOTE: upkeep / .sl-drain is dropped permanently — strength line is power · units only. */
+
+/* ── Quartermaster — Reserve strip + transfer form ─────────────────────── */
+.qm-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; margin-bottom: 6px; flex-wrap: wrap;
+}
+.qm-strip {
+  display: flex; flex-wrap: wrap; gap: 20px 26px; padding: 8px 2px 18px; margin-bottom: 4px;
+  border-bottom: 3px dotted color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.qm-form-head { margin: 16px 0 12px; }
+.xfer-grid {
+  display: grid;
+  grid-template-columns: minmax(140px,1fr) minmax(140px,1fr) minmax(130px,1fr) 96px auto;
+  gap: 14px; align-items: end;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr 1fr; }
+}
+.xfer-go { height: 46px; }
+@media (max-width: 720px) { .xfer-go { grid-column: 1 / -1; } }
+
+/* ── Legion stack & cards ──────────────────────────────────────────────── */
+.legion-stack { display: flex; flex-direction: column; gap: 20px; }
+
+.legion-card {
+  background: var(--card); border: 3.5px solid var(--ink); border-radius: 20px;
+  box-shadow: var(--shadow-ink); padding: 20px 22px 22px; position: relative;
+
+  &.is-afield { background: var(--card-2); }
+}
+.legion-card-head { display: flex; align-items: center; gap: 15px; margin-bottom: 16px; }
+.legion-card-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.legion-name { font-family: var(--font-display); font-size: 22px; line-height: 1; color: var(--ink); }
+
 .legion-crest {
-  flex: none; position: relative; display: grid; place-items: center;
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
-  background: linear-gradient(180deg, #8c5e3d 0%, var(--wood) 45%, var(--wood-dark) 100%);
-  box-shadow: inset 0 1px 0 rgba(255,248,220,.4);
+  flex: none; width: 52px; height: 60px; display: grid; place-items: center;
+  background: var(--card-2); border: 3px solid var(--ink); box-shadow: var(--shadow-ink-xs);
+  border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
 
-  &::before {
-    content: ''; position: absolute; inset: 2px;
-    clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
-    border: 1px solid rgba(255,248,220,.35); pointer-events: none;
+  &.is-afield { background: var(--yellow); }
+}
+.crest-num {
+  font-family: var(--font-display); font-size: 23px; line-height: 1; padding-bottom: 8px;
+  color: var(--ink);
+}
+
+/* Status pill (reused for legion state). */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-caps); font-weight: 900; font-size: 11px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink);
+  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: var(--shadow-ink-xs);
+  padding: 4px 11px 3px; background: var(--card-2); width: max-content;
+}
+.status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink); background: var(--ink); flex: none; }
+.status-pill--home   { background: var(--card-2); }
+.status-pill--march  { background: var(--yellow); }
+.status-pill--march  .status-dot { background: var(--ink); }
+.status-pill--combat { background: var(--red); color: #fff; }
+.status-pill--combat .status-dot { background: #fff; border-color: #fff; animation: blip 1.1s ease-in-out infinite; }
+.status-pill--guard  { background: #d6e6f4; color: #1f4f7a; }
+.status-pill--guard  .status-dot { background: var(--blue); border-color: var(--ink); }
+.status-pill--return { background: #cdebd3; color: #1c5b2c; }
+.status-pill--return .status-dot { background: var(--green); border-color: var(--ink); }
+@keyframes blip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
+
+/* Afield order readout (sits right in the card head). */
+.legion-head-order { margin-left: auto; }
+.afield-order {
+  display: inline-flex; align-items: center; gap: 10px; background: var(--card);
+  border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow-ink-xs);
+  padding: 8px 14px;
+}
+.afield-arrow { font-family: var(--font-display); font-size: 18px; opacity: .6; }
+.afield-target { font-family: var(--font-display); font-size: 16px; color: var(--ink); }
+
+/* Action tag (attack/defend chip) + action toggle segments. */
+.action-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display); font-size: 13px; letter-spacing: .02em;
+  text-transform: uppercase; color: #fff;
+  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: var(--shadow-ink-xs);
+  padding: 5px 12px 4px;
+}
+.action-tag--attack { background: var(--red); }
+.action-tag--defend { background: var(--blue); }
+.action-tag--sm { font-size: 11px; padding: 3px 9px 2px; box-shadow: none; }
+
+.action-toggle {
+  display: inline-flex; border: 3px solid var(--ink); border-radius: 12px;
+  overflow: hidden; box-shadow: var(--shadow-ink-xs); width: max-content;
+}
+.seg {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font-family: var(--font-display); font-size: 14px; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--ink); background: var(--card);
+  border: none; padding: 9px 16px 8px;
+
+  & + & { border-left: 3px solid var(--ink); }
+  &.seg--attack.is-on { background: var(--red); color: #fff; }
+  &.seg--defend.is-on { background: var(--blue); color: #fff; }
+}
+
+/* At-home legion: muster column | dispatch column. */
+.legion-home {
+  display: grid; grid-template-columns: 1fr 330px; gap: 24px; align-items: start;
+
+  @media (max-width: 760px) { grid-template-columns: 1fr; }
+}
+.legion-muster { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.legion-dispatch {
+  display: flex; flex-direction: column; gap: 12px;
+  border-left: 3px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-left: 24px;
+
+  @media (max-width: 760px) {
+    border-left: none; padding-left: 0;
+    border-top: 3px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-top: 18px;
   }
-  &.is-afield { background: linear-gradient(180deg, var(--chrome-accent-light) 0%, var(--chrome-accent) 50%, #9a6f28 100%); }
 }
-.crest-num { font-family: var(--font-display); font-weight: 900; color: #fbeec6; line-height: 1; letter-spacing: .02em; text-shadow: 0 1px 1px rgba(60,30,10,.55); margin-top: -8%; }
-.is-afield .crest-num { color: #4a2e08; text-shadow: 0 1px 0 rgba(255,248,220,.5); }
-.legion-name { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.32rem; color: var(--red-darker); line-height: 1; letter-spacing: .01em; }
-
-/* Status pill */
-.status-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 5px; font-family: var(--font-cinzel); font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 3px 9px 3px 8px; border-radius: 99px; border: 1px solid var(--edge); background: rgb(255 250 236 / .6); color: var(--ink-soft); white-space: nowrap; width: max-content; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
-.status-pill--home   { color: var(--ink-soft); }
-.status-pill--march  { color: #8a5a14; background: rgb(200 154 74 / .16); border-color: rgb(154 111 40 / .4); }
-.status-pill--combat { color: #7a1818; background: rgb(168 50 50 / .13); border-color: rgb(122 24 24 / .38); }
-.status-pill--guard  { color: #2a4a6a; background: rgb(72 112 165 / .14); border-color: rgb(42 74 106 / .38); }
-.status-pill--return { color: #2d6a3a; background: rgb(58 124 78 / .14); border-color: rgb(46 85 50 / .4); }
-.status-pill--combat .status-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
-@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-
-/* Action tag */
-.action-tag { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cinzel); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 11px; border-radius: 5px; white-space: nowrap; }
-.action-tag--attack { color: #fdeede; background: linear-gradient(180deg, #a83232 0%, #7a1818 100%); border: 1px solid #5a1010; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
-.action-tag--defend { color: #eaf2fb; background: linear-gradient(180deg, #3a6390 0%, #284a6e 100%); border: 1px solid #1a2f48; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
-.afield-target { font-family: var(--font-heading); font-weight: 600; font-size: 1.3rem; color: var(--ink); }
-
-/* Action toggle */
-.action-toggle { display: flex; border-radius: 5px; overflow: hidden; border: 1px solid var(--wood); width: max-content; box-shadow: inset 0 1px 0 rgba(255,248,220,.5); }
-.seg { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; height: 38px; font-family: var(--font-cinzel); font-weight: 600; font-size: .82rem; letter-spacing: .04em; cursor: pointer; background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-deep) 100%); color: var(--ink-soft); border: none; }
-.seg + .seg { border-left: 1px solid var(--wood); }
-.seg--attack.is-on { background: linear-gradient(180deg, #a83232 0%, #7a1818 100%); color: #fdeede; }
-.seg--defend.is-on { background: linear-gradient(180deg, #3a6390 0%, #284a6e 100%); color: #eaf2fb; }
-
-/* Timeline */
-.timeline { display: flex; align-items: flex-start; margin: 4px 0 12px; }
-.tl-stop { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-.tl-line { position: absolute; top: 7px; right: 50%; width: 100%; height: 2px; background: var(--edge); }
-.tl-dot { position: relative; z-index: 1; width: 14px; height: 14px; border-radius: 50%; background: rgb(255 250 236 / .8); border: 2px solid var(--edge); box-shadow: inset 0 1px 1px rgba(60,40,20,.3); }
-.tl-label { font-family: var(--font-cinzel); font-size: .64rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.2; max-width: 11ch; }
-.tl-stop--done .tl-line { background: linear-gradient(90deg, #4a7c4e, #3a6b48); }
-.tl-stop--done .tl-dot { background: linear-gradient(180deg, #5a8f5e, #3f6e44); border-color: var(--accent-dark); }
-.tl-stop--now .tl-dot { background: radial-gradient(circle at 38% 32%, var(--chrome-accent-light) 0%, var(--chrome-accent) 55%, #9a6f28 100%); border-color: #7a5418; box-shadow: 0 0 0 4px rgba(200,154,74,.22); }
-.tl-stop--now .tl-label { color: #8a5a14; font-weight: 700; }
-
-/* Unit medallion — wooden icon container inside a .unit-token */
-.unit-medallion {
-  position: relative; flex: none; border-radius: 7px; overflow: hidden;
-  display: grid; place-items: center;
-  border: 1.5px solid var(--wood);
-  background:
-    repeating-linear-gradient(45deg, rgba(125,81,50,.08) 0 6px, transparent 6px 12px),
-    linear-gradient(180deg, #efe3bf 0%, #e3d4ab 100%);
-  box-shadow: inset 0 2px 5px rgba(60,40,20,.32), inset 0 -1px 0 rgba(255,248,220,.4);
+.dispatch-empty {
+  margin: 4px 0 0; font-family: var(--font-body); font-weight: 700; font-style: italic;
+  font-size: 13.5px; opacity: .72; text-wrap: pretty;
 }
-.unit-medallion__initial {
-  font-family: var(--font-display); font-weight: 900;
-  color: var(--wood-dark); line-height: 1;
+.dispatch-go { margin-top: 4px; }
+
+/* Afield legion: campaign view. */
+.legion-campaign { display: flex; flex-direction: column; gap: 2px; }
+.timeline { display: flex; align-items: flex-start; max-width: 520px; margin: 2px 0 18px; }
+.tl-stop {
+  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 8px; text-align: center;
+}
+.tl-dot {
+  width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--ink);
+  background: var(--card); box-shadow: var(--shadow-ink-xs); z-index: 1;
+}
+.tl-line {
+  position: absolute; top: 8px; right: 50%; width: 100%; height: 4px;
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+.tl-label {
+  font-family: var(--font-caps); font-weight: 800; font-size: 11px;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.tl-stop--done .tl-dot { background: var(--green); }
+.tl-stop--done .tl-line { background: var(--green); }
+.tl-stop--now .tl-dot { background: var(--yellow); animation: pulseDot 1.4s ease-in-out infinite; }
+.tl-stop--now .tl-line { background: var(--green); }
+.tl-stop--todo .tl-label { opacity: .5; }
+@keyframes pulseDot {
+  0%,100% { box-shadow: var(--shadow-ink-xs); }
+  50% { box-shadow: var(--shadow-ink-xs), 0 0 0 4px color-mix(in srgb, var(--yellow) 55%, transparent); }
 }
 
-/* Roster strip */
-.roster-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 14px; padding: 4px 0 8px; }
-.roster-more { font-family: var(--font-cinzel); font-weight: 700; font-size: .9rem; color: var(--ink-soft); align-self: center; }
-.roster-empty { font-family: var(--font-body); font-style: italic; font-size: .95rem; color: var(--ink-soft); }
+.cc-body {
+  display: grid; grid-template-columns: 1fr 230px; gap: 24px; align-items: start;
 
-/* Strength line */
-.strength-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-family: var(--font-cinzel); font-size: .82rem; color: var(--ink-soft); }
-.sl-item { display: inline-flex; align-items: center; gap: 5px; }
-.sl-item b { font-weight: 700; color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
-.sl-sep { color: var(--edge); }
-
-/* Army grid + legion stack */
-.army-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-.legion-stack { display: flex; flex-direction: column; gap: 14px; }
-
-/* Legion card */
-.legion-card { padding: 14px 18px; }
-.legion-card-head { display: flex; align-items: center; gap: 13px; }
-.legion-card-id { display: flex; flex-direction: column; }
-
-/* At-home card */
-.legion-home { display: grid; grid-template-columns: 1fr 320px; margin-top: 12px; padding-top: 14px; border-top: 1px dotted var(--edge); }
-.legion-muster { display: flex; flex-direction: column; gap: 10px; padding-right: 22px; }
-.legion-disband { align-self: flex-start; margin-top: auto; }
-.legion-dispatch { border-left: 1px solid var(--edge); padding-left: 22px; display: flex; flex-direction: column; gap: 11px; }
-.legion-dispatch .eyebrow { margin-bottom: 0; }
-.dispatch-empty { margin: 0; font-family: var(--font-body); font-style: italic; font-size: .92rem; color: var(--ink-soft); text-wrap: pretty; }
-.dispatch-readout { display: flex; gap: 16px; padding-top: 2px; }
-.dispatch-go { height: 40px; margin-top: 2px; }
-
-/* Afield card */
-.legion-head-order { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
-.legion-head-order .afield-target { font-size: 1.12rem; }
-.legion-campaign { margin-top: 12px; padding-top: 12px; border-top: 1px dotted var(--edge); }
-
-/* Afield + locked state */
-.legion-card.is-afield {
-  background:
-    repeating-linear-gradient(45deg, rgba(125,81,50,.05) 0 9px, transparent 9px 18px),
-    var(--card-fill, rgb(255 250 236 / .5));
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
 }
-.legion-card-locked { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px dotted var(--edge); }
-.lock-badge {
-  flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px;
-  background: rgb(125 81 50 / .1); border: 1px dashed var(--wood); color: var(--wood-dark); opacity: .8;
+.cc-roster { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.cc-label { display: block; }
+.cc-eta {
+  display: flex; flex-direction: column; gap: 11px; background: var(--card);
+  border: 3px solid var(--ink); border-radius: 13px; padding: 13px 16px;
+  box-shadow: var(--shadow-ink-sm);
 }
-.lock-copy { min-width: 0; }
-.lock-h { font-family: var(--font-cinzel); font-weight: 700; font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
-.lock-sub { font-family: var(--font-body); font-style: italic; font-size: .95rem; color: var(--ink-soft); margin-top: 3px; text-wrap: pretty; }
-.lock-sub b { font-style: normal; font-weight: 700; color: var(--ink); }
+.cc-eta-row { display: flex; flex-direction: column; gap: 3px; }
+.cc-eta-row--total { border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent); padding-top: 10px; }
+.cc-eta-lbl {
+  font-family: var(--font-caps); font-weight: 800; font-size: 9.5px;
+  letter-spacing: .05em; text-transform: uppercase; opacity: .6;
+}
+.cc-eta-val {
+  font-family: var(--font-display); font-size: 27px; line-height: 1; color: var(--ink);
+  font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 5px;
+}
+.cc-eta-unit {
+  font-family: var(--font-caps); font-weight: 800; font-size: 11px;
+  letter-spacing: .03em; text-transform: uppercase; opacity: .55;
+}
+.cc-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap; margin-top: 18px; padding-top: 15px; border-top: 3px solid var(--ink);
+}
+.cc-foot-note {
+  font-family: var(--font-body); font-weight: 700; font-style: italic;
+  font-size: 13.5px; opacity: .72; text-wrap: pretty;
+}
 
-/* Open slot */
+/* ── Open banner slot ──────────────────────────────────────────────────── */
 .legion-slot {
-  display: flex; align-items: center; gap: 15px;
-  background: rgb(125 81 50 / .05); border: 1.5px dashed var(--edge); border-radius: 9px; padding: 14px 18px;
+  display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
+  cursor: pointer; font: inherit; color: inherit;
+  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 18px;
+  padding: 18px 20px; background:
+    repeating-linear-gradient(45deg, transparent 0 10px,
+      color-mix(in srgb, var(--ink) 4%, transparent) 10px 20px),
+    var(--card);
+  transition: border-color .12s, transform .08s;
+
+  &:hover { border-color: var(--ink); transform: translate(-1px, -1px); }
+  &:active { transform: translate(1px, 1px); }
 }
 .slot-crest {
-  flex: none; width: 40px; height: 47px; display: grid; place-items: center;
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
-  background: rgb(125 81 50 / .14); color: var(--wood-dark);
-  font-family: var(--font-display); font-weight: 900; font-size: 1.05rem;
+  flex: none; width: 50px; height: 58px; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 21px;
+  color: color-mix(in srgb, var(--ink) 55%, transparent); background: var(--card);
+  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
 }
 .slot-copy { flex: 1; min-width: 0; }
-.slot-h { font-family: var(--font-display); font-weight: 700; font-size: 1.12rem; color: var(--ink); }
-.slot-sub { font-family: var(--font-body); font-style: italic; font-size: .9rem; color: var(--ink-soft); margin-top: 2px; text-wrap: pretty; }
-.slot-cta { flex: none; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cinzel); font-weight: 700; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; color: var(--wood-dark); }
-
-/* Reserve rail */
-.reserve-rail { position: relative; }
-.reserve-rail-inner { padding: 20px 18px 18px; }
-.rail-foot { margin-top: 16px; padding-top: 14px; border-top: 1.5px solid var(--edge); }
-
-/* Reserve pool */
-.reserve-pool { display: flex; flex-wrap: wrap; gap: 18px 16px; }
-.reserve-pool.is-dense { flex-direction: column; gap: 13px; }
-.reserve-item { display: flex; flex-direction: column; align-items: center; gap: 11px; width: 60px; }
-.is-dense .reserve-item { flex-direction: row; align-items: center; gap: 14px; width: auto; }
-.reserve-name { font-family: var(--font-cinzel); font-size: .7rem; font-weight: 600; letter-spacing: .04em; color: var(--ink-soft); text-align: center; }
-.is-dense .reserve-name { font-size: .92rem; }
-
-/* Quartermaster card */
-.qm-card { padding: 20px 22px 22px; }
-.qm-hint { font-family: var(--font-body); font-style: italic; font-size: .92rem; color: var(--ink-soft); align-self: center; }
-.qm-reserve-list { display: flex; flex-direction: column; gap: 2px; }
-.qm-reserve-row {
-  display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
-  padding: 8px 12px 16px 8px; border-radius: 8px; border: 1px solid transparent; background: none; font: inherit;
+.slot-h { font-family: var(--font-display); font-size: 18px; color: var(--ink); display: block; }
+.slot-sub {
+  font-family: var(--font-body); font-weight: 700; font-size: 13px; opacity: .7;
+  margin-top: 3px; text-wrap: pretty;
 }
-button.qm-reserve-row.is-pick { cursor: pointer; transition: background .12s, border-color .12s; }
-button.qm-reserve-row.is-pick:hover { background: rgb(125 81 50 / .07); border-color: var(--edge); }
-button.qm-reserve-row.is-on { background: rgb(200 154 74 / .18); border-color: var(--wood); box-shadow: inset 0 1px 0 rgba(255,248,220,.6); }
-.qm-reserve-name { font-family: var(--font-cinzel); font-weight: 600; font-size: .98rem; letter-spacing: .02em; color: var(--ink); }
-
-/* Direction C: stacked reserve strip + form beneath */
-.qm-stacked .qm-strip { margin: 6px 0 2px; }
-.qm-stacked .qm-reserve-list { flex-direction: row; flex-wrap: wrap; gap: 14px 24px; }
-.qm-stacked .qm-reserve-row { flex-direction: column; width: 66px; gap: 12px; text-align: center; padding: 4px 0 18px; }
-.qm-stacked .qm-reserve-name { font-size: .72rem; font-weight: 600; letter-spacing: .04em; color: var(--ink-soft); }
-.qm-stacked-form { margin-top: 16px; padding-top: 16px; border-top: 1px dotted var(--edge); }
-
-/* Transfer grid */
-.xfer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-items: end; }
-.xfer-go { grid-column: 1 / -1; height: 42px; margin-top: 4px; }
-
-/* Campaign cards */
-.campaign-list { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-.campaign-empty { padding: 22px; text-align: center; font-family: var(--font-body); font-style: italic; font-size: 1rem; color: var(--ink-soft); }
-.campaign-card { padding: 16px 18px 14px; }
-.campaign-card.is-returning {
-  background:
-    radial-gradient(ellipse 70% 120% at 90% 0%, rgba(74,124,78,.1), transparent 60%),
-    var(--card-fill, rgb(255 250 236 / .5));
+.slot-cta {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  font-family: var(--font-display); font-size: 13px; letter-spacing: .03em;
+  text-transform: uppercase; color: var(--ink); background: var(--yellow);
+  border: 2.5px solid var(--ink); border-radius: 10px; box-shadow: var(--shadow-ink-xs);
+  padding: 7px 13px 6px;
 }
-.cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
-.cc-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.cc-order { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
-.cc-order .afield-target { font-size: 1.12rem; }
-.cc-body { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 4px; padding-top: 12px; border-top: 1px dotted var(--edge); }
-.cc-roster { min-width: 0; }
-.cc-label { display: block; font-family: var(--font-caps); letter-spacing: .1em; text-transform: uppercase; font-size: 10px; color: var(--ink-soft); margin-bottom: 6px; }
-.cc-eta { flex: none; display: flex; flex-direction: column; gap: 6px; min-width: 134px; }
-.cc-eta-row { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; text-align: right; }
-.cc-eta-lbl { font-family: var(--font-cinzel); font-size: .64rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); }
-.cc-eta-val { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 5px; }
-.cc-eta-row--total .cc-eta-val { color: var(--red-darker); }
-.cc-eta-unit { font-family: var(--font-cinzel); font-weight: 600; font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
-.cc-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 13px; padding-top: 11px; border-top: 1px dotted var(--edge); }
-.cc-foot-note { font-family: var(--font-body); font-style: italic; font-size: .86rem; color: var(--ink-soft); text-wrap: pretty; }
-
-/* Toast */
-.toast {
-  position: fixed; left: 50%; bottom: 104px; transform: translateX(-50%); z-index: 30;
-  background: linear-gradient(180deg, #2e1808, #4a2814); border: 1.5px solid var(--chrome-accent);
-  border-radius: 6px; padding: 10px 20px; font-family: var(--font-cinzel); font-size: .82rem;
-  color: #fbe9bf; letter-spacing: .04em; box-shadow: 0 8px 24px rgba(0,0,0,.55);
-  animation: toast-in .2s ease;
-}
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
-

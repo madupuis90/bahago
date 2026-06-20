@@ -158,49 +158,50 @@ func guildSettingsContent(guild db.Guild, perms _guild.MessagePermissions) Node 
 	}
 
 	return Group([]Node{
-		H1(Class("page-title"), Text("Guild Settings — "+guild.Name)),
+		Breadcrumb("← Manage "+guild.Name, slugURL(routes.GuildManagePath, guild.Slug)),
+		PageHeader("❦ Guild settings", "Settings — "+guild.Name,
+			"Control who may post to the guild.", nil),
 		guildSettingsAlert(nil),
-		Div(Class("guild-settings panel"),
+		Div(Class("card"), Div(Class("card-inner"),
 			ds.Signals(map[string]any{
 				"guild_msg_all":      string(perms.MsgAll),
 				"guild_msg_officers": string(perms.MsgOfficers),
 			}),
-			P(Class("panel-title"), Text("Permissions")),
-			P(Class("guild-settings-hint"), Text("Control who can send guild messages to each recipient group.")),
-			Div(Class("guild-settings-fields"),
-				Label(For("guild-msg-all"), Text("Who can message all members?")),
-				Select(
-					ID("guild-msg-all"),
-					ds.Bind("guild_msg_all"),
-					Group(Map(roleOptions, func(opt struct {
-						Value string
-						Label string
-					}) Node {
-						return Option(Value(opt.Value), Text(opt.Label))
-					})),
+			Div(Class("card-header"), H2(Class("card-title"), Text("Permissions"))),
+			P(Class("card-flavour"), Text("Control who can send guild messages to each recipient group.")),
+			Div(Class("settings-fields"),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("guild-msg-all"), Text("Who can message all members?")),
+					El("select", ID("guild-msg-all"), Class("select"),
+						ds.Bind("guild_msg_all"),
+						Group(Map(roleOptions, func(opt struct {
+							Value string
+							Label string
+						}) Node {
+							return El("option", Value(opt.Value), Text(opt.Label))
+						})),
+					),
 				),
-
-				Label(For("guild-msg-officers"), Text("Who can message officers?")),
-				Select(
-					ID("guild-msg-officers"),
-					ds.Bind("guild_msg_officers"),
-					Group(Map(roleOptions, func(opt struct {
-						Value string
-						Label string
-					}) Node {
-						return Option(Value(opt.Value), Text(opt.Label))
-					})),
+				Div(Class("field-group"),
+					Label(Class("field-label"), For("guild-msg-officers"), Text("Who can message officers?")),
+					El("select", ID("guild-msg-officers"), Class("select"),
+						ds.Bind("guild_msg_officers"),
+						Group(Map(roleOptions, func(opt struct {
+							Value string
+							Label string
+						}) Node {
+							return El("option", Value(opt.Value), Text(opt.Label))
+						})),
+					),
 				),
 			),
-			Div(Class("guild-settings-actions"),
-				Button(
-					Class("btn"),
+			Div(Class("settings-actions"),
+				Button(Class("btn btn--primary"),
 					ds.On("click", datastar.PostSSE("%s", slugURL(routes.GuildSettingsSavePath, guild.Slug))),
-					Text("Save"),
-				),
-				A(Href(slugURL(routes.GuildManagePath, guild.Slug)), Class("btn btn-text"), Text("Back to Manage")),
+					Text("Save Changes")),
+				A(Href(slugURL(routes.GuildManagePath, guild.Slug)), Class("btn btn--quiet"), Text("Back to Manage")),
 			),
-		),
+		)),
 	})
 }
 

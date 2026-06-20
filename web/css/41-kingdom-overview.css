@@ -56,6 +56,27 @@
   text-wrap: pretty;
 }
 
+/* Action buttons that sit on the right of a page header (Messages: Write /
+   Guild Dispatch). When a header carries actions it becomes a flex row: the
+   text block (kicker/title/sub, wrapped in .page-header-text) sits left and the
+   actions sit right, aligned to the bottom of the plate. Headers without
+   actions (Units, Allocation, …) keep their default block stacking. */
+.page-header:has(.page-header-actions) {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.page-header-text { min-width: 0; }
+.page-header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+  padding-bottom: 4px;
+}
+
 /* Overview card (parchment-toned card with a floating tab) */
 .overview-card {
   background: linear-gradient(180deg, #fbf2d4 0%, #ecd9a6 100%);
