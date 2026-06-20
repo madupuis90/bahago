@@ -113,10 +113,10 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 	}
 	return Header(Class("home-chrome bar"),
 		A(Class("home-chrome-brand"), Href(routes.HomePath),
-			Crest("", 32, "home-chrome-crest"),
+			Crest("crown", 38, "home-chrome-crest"),
 			Span(Class("home-chrome-name"), Text("Bahago")),
 		),
-		Span(Class("home-chrome-sep vrule")),
+		Span(Class("home-chrome-sep")),
 		Nav(Class("home-chrome-nav"),
 			A(Classes{"nav-link": true, "is-on": currentPath == routes.HomePath},
 				Href(routes.HomePath), Text("Home")),
@@ -237,7 +237,7 @@ func NavItem(href, name, currentPath string) Node {
 
 func NavGroup(name string, items ...Node) Node {
 	return Div(Class("nav-group"),
-		Div(P(Class("nav-group-name"), Text(name))),
+		Span(Class("nav-group-name"), Text(name)),
 		Div(Class("nav-group-content"), Group(items)),
 	)
 }
@@ -247,8 +247,10 @@ func HomeSideNav(currentPath string) Node {
 	return Group([]Node{
 		Div(Class("nav-live"),
 			Span(Class("nav-live-dot")),
-			Span(Class("nav-live-n"), Text("40")),
-			Span(Class("nav-live-l"), Text("active")),
+			Div(
+				Div(Class("nav-live-n"), Text("40")),
+				Div(Class("nav-live-l"), Text("active")),
+			),
 		),
 		NavGroup("Lore",
 			NavItem("/beginning", "The beginning", ""),

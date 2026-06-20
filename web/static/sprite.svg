@@ -27,6 +27,14 @@
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
 
+    <!-- Envelope — used by the auth crest on the recovery-sent state. -->
+    <symbol id="envelope" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7 H21 V18 H3 Z"/>
+        <polyline points="3,7 12,14 21,7"/>
+      </g>
+    </symbol>
+
     <!-- Idle — sleeping zzz, three Z's of growing size. -->
     <symbol id="idle" viewBox="0 0 24 24">
       <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

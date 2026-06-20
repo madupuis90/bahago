@@ -43,11 +43,17 @@ Inventory of design-system components: class names, implementation status, and t
 
 | Component | Class(es) | Status | styles.css Section | Design Reference |
 |---|---|---|---|---|
-| Home chrome bar | `.home-chrome`, `.home-chrome-brand`, `.home-chrome-crest`, `.home-chrome-name`, `.home-chrome-sep`, `.home-chrome-nav`, `.home-chrome-right`, `.home-chrome-register`, `.home-chrome-login` | live | Home shell | Home & Auth |
-| Auth stage + card | `.auth-stage`, `.auth-wrap`, `.auth-wrap--wide`, `.auth-body`, `.auth-crest`, `.crest-lg`, `.auth-wordmark`, `.auth-tagline`, `.auth-divider`, `.auth-form`, `.auth-btn`, `.auth-quiet`, `.auth-foot`, `.auth-foot-text`, `.auth-foot-link`, `.auth-foot-link--muted`, `.auth-instruct`, `.auth-alert`, `.auth-alert--success` | live | Auth | Home & Auth |
-| Password toggle | `.password-field`, `.btn-text` | live | Shared components | Home & Auth |
-| Side nav live indicator | `.nav-live`, `.nav-live-dot`, `.nav-live-n`, `.nav-live-l` | live | Home shell | Home & Auth |
-| Home hero | `.home-hero`, `.home-hero-title`, `.home-hero-sub`, `.home-hero-cta`, `.home-rule`, `.home-cards`, `.home-card` | live | Home (flip card) | Home & Auth |
+| Home chrome bar | `.bar.home-chrome` · `.home-chrome-brand` · `.home-chrome-crest` · `.home-chrome-name` · `.home-chrome-sep` · `.home-chrome-nav .nav-link` (`.is-on`/`.is-locked`) · `.home-chrome-right` · `.home-chrome-login` · `.home-chrome-register` | live · **reskinned** (Comic Lab) | Home shell | Home & Auth |
+| Side nav (home) | `.side-nav.panel` (transparent flex column) · `.nav-live` (green card) · `.nav-live-dot`/`-n`/`-l` · `.nav-group` (ink card) · `.nav-group-name` · `.nav-group-content` | live · **reskinned** (Comic Lab) | Home shell | Home & Auth |
+| Home footer | `.home-foot` | live · **reskinned** (Comic Lab) | Home shell | Home & Auth |
+| Home hero | `.home-hero` · `.home-kicker` · `.home-title` · `.home-sub` · `.home-cta` · `.home-signin-prompt` · `.home-rule` | live · **reskinned** (Comic Lab) | Home | Home & Auth |
+| Home hero scene *(additive)* | `.home-hero-scene` · `.home-hero-sun` · `.home-hero-birds` · `.home-hero-burst` · `.home-hero-burst-txt` | live · **new** (Comic Lab) | Home | Home & Auth |
+| Home info cards | `.panel` + `.panel-title` (`--red`/`--blue`/`--green`, corner tab) | live · **reskinned** (Comic Lab) | Home | Home & Auth |
+| Card content helpers | `.ci` · `.c-eye` · `.c-hed` · `.c-p` · `.stat-row` · `.stat` · `.stat-n` · `.stat-l` | live · **reskinned** (Comic Lab) | Home | Home & Auth |
+| News dispatch | `.news` · `.news-item` · `.news-date` · `.news-head` · `.news-body` | live · **reskinned** (Comic Lab) | Home | Home & Auth |
+| Auth crest lockup | `.crest` · `.crest.crest-lg` (yellow shield sticker, `#g-crown`/`#g-envelope`) | live · **reskinned** (Comic Lab) | Auth | Home & Auth |
+| Auth stage + card | `.auth-stage` · `.auth-wrap` (`--wide`) · `.auth-body` · `.auth-crest` · `.auth-wordmark` · `.auth-tagline` · `.auth-divider` · `.auth-form` · `.auth-btn` · `.auth-quiet` · `.auth-instruct` · `.auth-foot` · `.auth-foot-text` · `.auth-foot-link` (`--muted`) · `.auth-alert` (`--success`) | live · **reskinned** (Comic Lab) | Auth | Home & Auth |
+| Password toggle | `.password-field` · `.btn-text` | live · **reskinned** (Comic Lab) | Auth | Home & Auth |
 
 ---
 

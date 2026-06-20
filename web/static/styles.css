@@ -253,65 +253,122 @@ code {
   padding: 0 6px;
 }
 /* =============================================================================
-   Home shell (home-chrome, content-area, side-nav)
+   Home shell — COMIC LAB re-skin (Home & Auth handoff, 2026-06-20)
+   ---------------------------------------------------------------------------
+   Drop-in replacement for web/css/10-home-shell.css.
+   In-place re-skin of the live SEMANTIC classes — names + markup are preserved
+   (one structural addition: each .nav-group is now its own ink card and the
+   container .side-nav is a spaced flex column instead of a hairline rail).
+   Values come from the Comic Lab tokens already in 01-tokens.css.
+
+   NOTE: the chrome crest overrides are scoped `.home-chrome-crest.crest` so
+   they beat the kingdom identity `.crest` coin in 40-kingdom-chrome.css (which
+   loads later and would otherwise win equal-specificity). The kingdom coin is
+   untouched.
    ============================================================================= */
 
+/* ── Top chrome bar — flat red, ink underline ──────────────────────────────*/
 .home-chrome {
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  min-height: 52px;
+  gap: 14px;
+  padding: 12px 22px;
 
   * { box-sizing: border-box; }
 
   &.bar {
-    background: linear-gradient(180deg, #8e5e3a 0%, #6b4226 55%, #573218 100%);
-    border-bottom: 1px solid #3a1e0e;
-    box-shadow: inset 0 1px 0 rgba(255,220,160,.20), 0 1px 0 rgba(200,154,74,.58), 0 3px 10px rgba(0,0,0,.38);
+    background: var(--red);
+    color: var(--primary-ink);
+    border-bottom: 4px solid var(--ink);
+    box-shadow: none;
   }
 }
 
 .home-chrome-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   flex: none;
   cursor: pointer;
   text-decoration: none;
+}
 
-  .home-chrome-crest {
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
-    --crest-ring:  var(--chrome-accent);
-    --crest-fill:  rgba(247,238,213,.6);
-    --crest-glyph: var(--highlight);
+/* brand crest — small yellow shield sticker with line-art glyph.
+   Scoped `.home-chrome-crest.crest` (0,2,0) to override the kingdom `.crest`
+   coin (border-radius:50% + token fill) from 40-kingdom-chrome.css. */
+.home-chrome-crest.crest {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
+
+  svg { width: 22px; height: 22px; display: block; }
+  svg [stroke], svg path, svg polyline {
+    stroke: var(--ink);
+    stroke-width: 2.2;
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
   }
 }
 
 .home-chrome-name {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--c-ink-strong);
-  letter-spacing: .01em;
+  font-size: 23px;
   line-height: 1;
-  transition: color .12s;
+  letter-spacing: .01em;
+  color: var(--primary-ink);
+  -webkit-text-stroke: .4px var(--ink);
+  transition: filter .12s;
 
-  .home-chrome-brand:hover & { color: #fff8dc; }
+  .home-chrome-brand:hover & { filter: brightness(1.06); }
 }
 
 .home-chrome-sep {
-  margin: 0 16px;
+  margin: 0 4px;
   height: 26px;
   align-self: center;
 }
 
+/* nav tabs — cream "open chapter" on is-on, locked tabs dimmed */
 .home-chrome-nav {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  margin-left: 8px;
+}
 
-  .nav-link[aria-disabled="true"] {
-    opacity: .28;
+.home-chrome-nav .nav-link {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--primary-ink);
+  text-decoration: none;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 3px solid transparent;
+  transition: background .12s, border-color .12s;
+
+  &:hover { background: rgba(255,255,255,.14); }
+
+  &.is-on {
+    background: var(--card);
+    color: var(--ink);
+    border-color: var(--ink);
+    box-shadow: var(--shadow-ink-sm);
+  }
+
+  &.is-locked,
+  &[aria-disabled="true"] {
+    opacity: .42;
+    cursor: default;
     pointer-events: none;
   }
 }
@@ -319,121 +376,163 @@ code {
 .home-chrome-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-left: auto;
 }
 
+/* chrome auth buttons — chunky comic stickers (self-contained, not .btn) */
+.home-chrome-login,
 .home-chrome-register {
   display: inline-flex;
   align-items: center;
-  height: 32px;
-  padding: 0 16px;
-  border-radius: 5px;
-  font-family: var(--font-cinzel);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .09em;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .03em;
   text-transform: uppercase;
-  color: #1a1008;
-  text-decoration: none;
+  padding: 8px 14px 6px;
+  border-radius: 10px;
   cursor: pointer;
-  background: linear-gradient(180deg, #e8c478 0%, #c89a4a 100%);
-  border: 1px solid #4d2f1c;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 0 rgba(0,0,0,.3);
-  transition: filter .12s, transform .1s;
+  text-decoration: none;
   white-space: nowrap;
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform .08s ease, box-shadow .08s ease, filter .15s;
 
-  &:hover { filter: brightness(1.09); transform: translateY(-1px); text-decoration: none; }
-  &:active { transform: translateY(0); }
+  &:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); text-decoration: none; }
+  &:active { transform: translate(3px,3px); box-shadow: 0 0 0 var(--ink); }
 }
 
-.home-chrome-login {
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  padding: 0 15px;
-  border-radius: 5px;
-  background: linear-gradient(180deg, rgba(145,93,48,.62) 0%, rgba(108,64,28,.75) 100%);
-  border: 1px solid rgba(255,185,90,.28);
-  color: rgba(255,235,180,.93);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 0 rgba(0,0,0,.30);
-  font-family: var(--font-cinzel);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-  text-decoration: none;
-  cursor: pointer;
-  transition: filter .12s, transform .1s;
-  white-space: nowrap;
+.home-chrome-login    { background: var(--card); color: var(--ink); }
+.home-chrome-register { background: var(--primary, var(--red)); color: var(--primary-ink); }
 
-  &:hover { filter: brightness(1.13); transform: translateY(-1px); text-decoration: none; }
-  &:active { transform: translateY(0); }
-}
-
+/* ── Content area — centered max-width, flat dotted paper behind ───────────*/
 .content-area {
   display: flex;
   flex: 1;
-  gap: 1rem;
-  background: var(--page-bg) fixed;
+  gap: 26px;
+  max-width: 1160px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 26px 24px 40px;
+  background: transparent;
 
   main {
     flex: 1;
-    padding: 1.5rem;
+    min-width: 0;
+    padding: 0;
   }
 
-  main.auth-stage {
-    padding: 44px 20px;
-  }
+  main.auth-stage { padding: 44px 20px; }
 
   .side-nav {
-    padding: 24px 0;
-    gap: 0;
-    width: 15rem;
+    width: 250px;
     flex-shrink: 0;
+    padding: 0;
+  }
+
+  @media (max-width: 820px) {
+    flex-direction: column;
+
+    .side-nav { width: 100%; }
   }
 }
 
+/* ── Side nav — spaced column of ink cards (rail hairline removed) ──────────*/
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* the .panel co-class is neutralised — groups are individual cards now */
 .side-nav.panel {
-  background: rgba(186,148,82,.045);
+  background: transparent;
   border: none;
   box-shadow: none;
   border-radius: 0;
-  position: relative;
   color: var(--ink);
 
-  &::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(90deg, var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
-    mask: linear-gradient(180deg, transparent 0%, rgba(0,0,0,1) 9%, rgba(0,0,0,1) 91%, transparent 100%);
-    -webkit-mask: linear-gradient(180deg, transparent 0%, rgba(0,0,0,1) 9%, rgba(0,0,0,1) 91%, transparent 100%);
-    pointer-events: none;
-  }
+  &::after { display: none; }
 
   a { color: var(--ink); }
+
+  @media (max-width: 820px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 }
 
+/* live count — promoted to a green sticker card */
+.nav-live {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--green);
+  color: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-ink);
+}
+
+.nav-live-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--ink);
+  flex: none;
+  animation: blip 1.6s ease-in-out infinite;
+}
+
+@keyframes blip {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(.7); }
+}
+
+.nav-live-n {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: .9;
+  color: #fff;
+  -webkit-text-stroke: .5px var(--ink);
+}
+
+.nav-live-l {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* nav groups — cream ink cards with a blue chip header */
 .nav-group {
-  margin-bottom: 22px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-ink);
+  padding: 12px 14px 14px;
+  margin-bottom: 0;
 }
 
 .nav-group-name {
-  display: block;
-  font-family: var(--font-caps);
-  font-weight: normal;
-  font-size: 9px;
-  letter-spacing: .18em;
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .04em;
   text-transform: uppercase;
-  color: var(--ink-soft);
-  opacity: .55;
-  padding: 0 18px 5px;
-  border-bottom: 1px solid rgba(184,162,106,.3);
-  margin: 0 0 4px;
+  color: var(--card);
+  background: var(--accent, var(--blue));
+  border: 2.5px solid var(--ink);
+  border-radius: 8px;
+  padding: 3px 10px 2px;
+  margin: 0 0 10px;
+  box-shadow: var(--shadow-ink-xs);
+  opacity: 1;
 }
 
 .side-nav .nav-group-content {
@@ -442,59 +541,34 @@ code {
 
   a {
     display: block;
-    padding: 5px 18px;
+    padding: 5px 4px;
     font-family: var(--font-body);
-    font-size: 0.88rem;
+    font-weight: 700;
+    font-size: 15px;
     color: var(--ink);
     text-decoration: none;
-    border-radius: 0;
+    border-radius: 7px;
     background: transparent;
-    transition: color .12s, padding-left .1s;
+    cursor: pointer;
+    transition: background .1s, padding-left .1s;
 
-    &:hover {
-      color: var(--wood-dark);
-      text-decoration: none;
-      padding-left: 22px;
-    }
+    &:hover { background: var(--card-2); padding-left: 10px; text-decoration: none; }
   }
+
+  a + a { border-top: 2px dotted color-mix(in srgb, var(--ink) 24%, transparent); }
 }
 
-.nav-live {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 18px 10px;
-}
-
-.nav-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4a8a50;
-  box-shadow: 0 0 5px rgba(74,138,80,.7);
-  flex: none;
-  align-self: flex-start;
-  margin-top: 5px;
-  animation: pdot 2.5s ease-in-out infinite;
-}
-
-.nav-live-n {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.18rem;
+/* ── Footer — small Lilita line ────────────────────────────────────────────*/
+.home-foot {
+  text-align: center;
+  padding: 18px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   color: var(--ink);
-  line-height: 1;
+  opacity: .6;
 }
-
-.nav-live-l {
-  font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-  margin-top: 1px;
-  white-space: nowrap;
-}
-
 /* =============================================================================
    Shared components (panel, btn, form, alert)
    ============================================================================= */
@@ -1001,7 +1075,16 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
   &:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
 }
 /* =============================================================================
-   Auth
+   Auth — COMIC LAB re-skin (Home & Auth handoff, 2026-06-20)
+   ---------------------------------------------------------------------------
+   Drop-in replacement for web/css/30-auth.css.
+   Pure re-skin: every live semantic class keeps its name + markup. Inputs use
+   the SHARED .field / .field-group / .field-label (already comic from
+   Foundation) — they are NOT redefined here.
+
+   NOTE: the crest shield is scoped `.auth-crest .crest` so it beats the kingdom
+   identity `.crest` coin in 40-kingdom-chrome.css (which loads later). The
+   kingdom coin is untouched.
    ============================================================================= */
 
 .auth-stage {
@@ -1016,365 +1099,588 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 
 .auth-wrap {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
 
-  .card { background: rgb(255 250 236 / 0.85); }
-  .card.is-lit { background: linear-gradient(180deg, rgb(255 250 236 / 0.92) 0%, rgb(240 228 190 / 0.80) 100%); }
+  /* the auth card is the comic surface, slightly rounder + deeper shadow */
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 22px;
+    box-shadow: 8px 8px 0 var(--ink);
+  }
+  /* .is-lit is a no-op alias since the Card re-skin — flat cream is the surface */
+  .card.is-lit { background: var(--card); }
 }
 
 .auth-wrap--wide { max-width: 444px; }
 
-.auth-body { padding: 30px 28px 26px; }
+.auth-body { padding: 30px 30px 28px; }
 
+/* centered crest + wordmark + tagline lockup */
 .auth-crest {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 22px;
   text-align: center;
 }
 
-.crest-lg {
-  filter: drop-shadow(0 3px 6px rgba(60,40,20,.32));
-  --crest-ring:  var(--chrome-accent);
-  --crest-fill:  rgba(247,238,213,.72);
-  --crest-glyph: var(--highlight);
+/* crest — chunky yellow shield sticker, line-art glyph.
+   Rendered by the shared authCrest() Go helper as .crest.crest-lg, nested
+   inside .auth-crest. Scoped `.auth-crest .crest` (0,2,0) to override the
+   kingdom `.crest` coin (border-radius:50% + token fill). */
+.auth-crest .crest {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
+
+  svg { width: 22px; height: 22px; display: block; }
+  svg [stroke], svg path, svg polyline {
+    stroke: var(--ink);
+    stroke-width: 2.2;
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  &.crest-lg {
+    width: 78px;
+    height: 78px;
+    border-radius: 18px;
+    box-shadow: 6px 6px 0 var(--ink);
+
+    svg { width: 44px; height: 44px; }
+  }
 }
 
+/* wordmark — red sticker, white ink-stroked Lilita, tilted */
 .auth-wordmark {
+  display: inline-block;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.65rem;
-  color: var(--red-darker);
-  text-shadow: 0 1px 0 rgba(255,245,200,.55);
+  font-size: 34px;
   line-height: 1;
+  letter-spacing: .03em;
+  color: #fff;
+  -webkit-text-stroke: 2.4px var(--ink);
+  paint-order: stroke fill;
+  background: var(--red);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-ink);
+  padding: 7px 20px 11px;
+  transform: rotate(-2deg);
 }
 
 .auth-tagline {
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  margin-top: 1px;
+  font-weight: 700;
+  font-style: normal;
+  font-size: 15px;
+  color: var(--ink);
+  opacity: .85;
+  margin-top: -2px;
 }
 
+/* dashed ink divider */
 .auth-divider {
-  height: 3px;
-  background: linear-gradient(180deg, var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
-  margin-bottom: 22px;
+  height: 4px;
+  background: var(--ink);
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 14px, transparent 14px 22px);
+  border-radius: 4px;
+  margin: 0 0 22px;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 15px;
 }
 
-.auth-btn {
-  margin-top: 6px;
-  width: 100%;
-  height: 42px;
-  font-size: 0.86rem;
-  letter-spacing: .07em;
+/* password reveal — comic chip toggle inside the .field well */
+.password-field {
+  position: relative;
+
+  .field { padding-right: 64px; }
 }
 
-.auth-quiet {
-  font-family: var(--font-cinzel);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: .07em;
+.btn-text {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .04em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  background: var(--card-2);
+  color: var(--ink);
+  border: 2.5px solid var(--ink);
+  border-radius: 8px;
+  padding: 4px 8px 3px;
+  cursor: pointer;
+  box-shadow: var(--shadow-ink-xs);
+
+  &:active { transform: translateY(-50%) translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+}
+
+/* "Forgot your password?" — quiet blue link, right aligned */
+.auth-quiet {
+  align-self: flex-end;
+  display: block;
+  text-align: right;
+  margin-top: -5px;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--link-color, var(--blue));
   text-decoration: none;
   cursor: pointer;
-  text-align: right;
-  display: block;
-  margin-top: -5px;
 
-  &:hover { color: var(--wood-dark); text-decoration: underline; }
+  &:hover { color: var(--link-hover-color, #235a93); text-decoration: underline; text-decoration-thickness: 2.5px; }
 }
 
+/* submit — full-width comic primary (self-contained) */
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  padding: 14px 26px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 3px solid var(--ink);
+  background: var(--primary, var(--red));
+  color: var(--primary-ink);
+  box-shadow: var(--shadow-ink);
+  transition: transform .08s ease, box-shadow .08s ease;
+
+  &:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+  &:active { transform: translate(4px,4px); box-shadow: 0 0 0 var(--ink); }
+}
+
+/* footer link group */
 .auth-foot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px dotted var(--edge);
+  gap: 6px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 3px dotted color-mix(in srgb, var(--ink) 30%, transparent);
   text-align: center;
 }
 
 .auth-foot-text {
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  opacity: .85;
 }
 
 .auth-foot-link {
-  font-family: var(--font-cinzel);
-  font-size: 0.73rem;
-  font-weight: 600;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--wood-dark);
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: .03em;
+  color: var(--red);
   text-decoration: none;
   cursor: pointer;
 
-  &:hover { color: var(--highlight); text-decoration: underline; }
+  &:hover { text-decoration: underline; text-decoration-thickness: 2.5px; text-underline-offset: 3px; }
 }
 
 .auth-foot-link--muted {
-  color: var(--ink-soft);
+  color: var(--ink);
+  opacity: .7;
 
-  &:hover { color: var(--wood-dark); }
+  &:hover { color: var(--red); opacity: 1; }
 }
 
+/* recovery-page instruction line */
 .auth-instruct {
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.9rem;
-  color: var(--ink-soft);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 14px;
+  color: var(--ink);
+  opacity: .85;
   line-height: 1.55;
   margin-bottom: 16px;
   text-wrap: pretty;
 }
 
+/* success / notice alert (recovery sent) */
 .auth-alert {
-  padding: 13px 15px;
-  border-radius: 7px;
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-ink);
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .auth-alert--success {
-  background: rgba(74,138,80,.11);
-  border: 1px solid rgba(74,138,80,.32);
-  color: #214824;
+  background: var(--green);
+  color: #fff;
 
   strong {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 1.05rem;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 17px;
     display: block;
     margin-bottom: 3px;
-    color: #1a3e1e;
+    color: #fff;
   }
 }
-
 /* =============================================================================
-   Home
+   Home — COMIC LAB re-skin (Home & Auth handoff, 2026-06-20)
+   ---------------------------------------------------------------------------
+   Drop-in replacement for web/css/31-home.css.
+   Re-skin of the live home classes + two additive pieces flagged below:
+     • .home-hero-* illustration scene (optional decorative SVG band)
+     • .panel-title corner-tab colour modifiers (--red/--blue/--green)
+   The old .players-badge / .players-* block is DROPPED — superseded by the
+   green .nav-live card in the side nav.
    ============================================================================= */
 
-.home-hero { padding: 4px 0 28px; }
+/* ── Hero — sky card with ink border + offset shadow ───────────────────────*/
+.home-hero {
+  --sky: #cfe6ea;
+  position: relative;
+  overflow: hidden;
+  min-height: 388px;
+  margin-bottom: 26px;
+  padding: 28px 32px 168px;
+  background: var(--sky);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 8px 8px 0 var(--ink);
+}
 
+/* keep hero text above the scene */
+.home-kicker,
+.home-title,
+.home-sub,
+.home-cta { position: relative; z-index: 2; }
+
+/* ── Hero illustration (ADDITIVE — optional inline SVG decoration) ──────────*/
+/* flat ligne-claire landscape band along the bottom */
+.home-hero-scene {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  width: calc(100% + 4px);
+  height: auto;
+  display: block;
+  z-index: 1;
+  pointer-events: none;
+
+  [stroke] { stroke: var(--ink); }
+}
+.home-hero-sun {
+  position: absolute;
+  top: 22px;
+  right: 30px;
+  width: 76px;
+  height: 76px;
+  z-index: 1;
+  pointer-events: none;
+
+  [stroke] { stroke: var(--ink); }
+}
+.home-hero-birds {
+  position: absolute;
+  top: 38px;
+  right: 124px;
+  width: 92px;
+  height: 36px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .85;
+
+  [stroke] { stroke: var(--ink); }
+}
+/* comic "FREE to play" starburst sticker */
+.home-hero-burst {
+  position: absolute;
+  z-index: 3;
+  top: 196px;
+  right: 22px;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  transform: rotate(8deg);
+  pointer-events: none;
+
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  svg [stroke] { stroke: var(--ink); }
+}
+.home-hero-burst-txt {
+  position: relative;
+  font-family: var(--font-display);
+  line-height: .92;
+  color: var(--ink);
+
+  b { display: block; font-size: 26px; -webkit-text-stroke: .4px var(--ink); }
+  span { display: block; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+}
+@media (max-width: 600px) {
+  .home-hero-burst,
+  .home-hero-birds { display: none; }
+}
+
+/* ── Hero copy ─────────────────────────────────────────────────────────────*/
 .home-kicker {
-  font-family: var(--font-caps);
-  letter-spacing: .15em;
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  font-size: 10.5px;
-  color: var(--highlight);
-  margin-bottom: 6px;
+  color: var(--ink);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  padding: 4px 12px 3px;
+  box-shadow: var(--shadow-ink-sm);
+  margin-bottom: 16px;
+  white-space: nowrap;
 }
 
 .home-title {
+  display: inline-block;
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(28px, 4.5vw, 46px);
-  color: var(--red-darker);
-  text-shadow: 0 2px 0 rgba(255,245,200,.5);
-  line-height: 1.05;
-  margin-bottom: 10px;
+  font-weight: 400;
+  font-size: clamp(48px, 8vw, 90px);
+  line-height: 1;
+  letter-spacing: .025em;
+  margin: 2px 0 14px;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  background: var(--red);
+  border: 3.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 7px 7px 0 var(--ink);
+  padding: 6px 30px 18px;
+  transform: rotate(-2.5deg);
 }
 
 .home-sub {
+  max-width: 34ch;
+  margin: 0;
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 1.05rem;
-  color: var(--ink-soft);
-  max-width: 44ch;
-  line-height: 1.57;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.5;
   text-wrap: pretty;
 }
 
 .home-cta {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  align-items: center;
+  gap: 13px;
   flex-wrap: wrap;
+  margin-top: 22px;
 }
 
 .home-signin-prompt {
-  margin-top: 11px;
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.875rem;
-  color: var(--ink-soft);
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
 
   a {
     font-style: normal;
-    font-family: var(--font-cinzel);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: .07em;
-    color: var(--wood-dark);
-    text-decoration: none;
+    font-family: var(--font-body);
+    font-weight: 800;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 2.5px;
+    text-underline-offset: 3px;
     cursor: pointer;
-
-    &:hover { color: var(--highlight); text-decoration: underline; }
   }
 }
 
+/* dashed ink rule (kept for compat; comic home spaces cards instead) */
 .home-rule {
-  height: 3px;
-  background: linear-gradient(180deg, var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
+  height: 4px;
+  background: var(--ink);
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 14px, transparent 14px 22px);
+  border-radius: 4px;
   margin: 4px 0 18px;
 }
 
+/* ── Info cards ────────────────────────────────────────────────────────────*/
 .home-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 22px;
 
   @media (max-width: 680px) { grid-template-columns: 1fr; }
 }
 
-.players-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
-  background: rgba(255,250,236,.55);
-  border: 1px solid var(--edge);
-  border-radius: 7px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 1px 4px rgba(60,40,20,.1);
+/* the .panel surface comes from shared (--panel-* tokens, already comic).
+   Here it just needs relative positioning + padding for the corner tab. */
+.home-cards .panel {
+  position: relative;
+  padding: 20px 22px 22px;
 }
 
-.players-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4a8a50;
-  box-shadow: 0 0 5px rgba(74,138,80,.65);
-  flex: none;
-  animation: pdot 2.5s ease-in-out infinite;
-}
-
-@keyframes pdot {
-  0%,100% { box-shadow: 0 0 4px rgba(74,138,80,.5); }
-  50% { box-shadow: 0 0 11px rgba(74,138,80,.95); }
-}
-
-.players-n {
+/* panel title — corner sticker tab (ADDITIVE colour modifiers).
+   Base sets the shared frame props; the colour is applied by a modifier so
+   the generic .panel-title--* classes (0,1,0) override cleanly. */
+.home-cards .panel-title {
+  position: absolute;
+  top: -15px;
+  left: 18px;
+  margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.3rem;
-  color: var(--red-darker);
-  line-height: 1;
-}
-
-.players-l {
-  font-family: var(--font-cinzel);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .11em;
+  font-size: 13px;
+  letter-spacing: .05em;
   text-transform: uppercase;
-  color: var(--ink-soft);
-  margin-top: 1px;
+  color: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  padding: 3px 12px 2px;
+  box-shadow: var(--shadow-ink-sm);
 }
+.panel-title--red   { background: var(--red); }
+.panel-title--blue  { background: var(--blue); }
+.panel-title--green { background: var(--green); }
 
-.ci { padding: 16px 18px; }
+/* card content helpers */
+.ci { padding: 0; }
 
 .c-eye {
-  font-family: var(--font-caps);
-  letter-spacing: .14em;
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: .12em;
   text-transform: uppercase;
   font-size: 10px;
-  color: var(--highlight);
-  margin-bottom: 8px;
+  color: var(--ink);
+  opacity: .7;
+  margin-bottom: 6px;
 }
 
 .c-hed {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.08rem;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.05;
   color: var(--ink);
-  margin-bottom: 2px;
+  margin: 8px 0 6px;
 }
 
 .c-p {
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  line-height: 1.55;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0;
   text-wrap: pretty;
 }
 
+/* stat trio — small recessed cards */
 .stat-row {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex: 1;
+  min-width: 76px;
+  text-align: center;
+  background: var(--card-2);
+  border: 2.5px solid var(--ink);
+  border-radius: 11px;
+  box-shadow: var(--shadow-ink-sm);
+  padding: 10px 6px 8px;
 }
 
 .stat-n {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.42rem;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: .9;
   color: var(--ink);
-  line-height: 1;
 }
 
 .stat-l {
-  font-family: var(--font-cinzel);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: .1em;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--ink);
+  opacity: .8;
+  margin-top: 4px;
+}
+
+/* ── Dispatches ────────────────────────────────────────────────────────────*/
+.news {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .news-item {
-  padding: 11px 0;
-
-  & + .news-item { border-top: 1px dotted var(--edge); }
+  padding: 11px 13px;
+  background: var(--card-2);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-ink-sm);
 }
 
 .news-date {
-  font-family: var(--font-cinzel);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: .09em;
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .05em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: #fff;
+  background: var(--ink);
+  border-radius: 6px;
+  padding: 2px 8px 1px;
 }
 
 .news-head {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.1;
   color: var(--ink);
-  margin: 2px 0 3px;
+  margin: 7px 0 3px;
 }
 
 .news-body {
   font-family: var(--font-body);
-  font-style: italic;
-  font-size: 0.88rem;
-  color: var(--ink-soft);
-  line-height: 1.5;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0;
   text-wrap: pretty;
 }
-
 /* =============================================================================
    Kingdom chrome (CommandBar topbar, nav, typography helpers) — Comic Lab skin
    ============================================================================= */

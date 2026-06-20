@@ -68,18 +68,29 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, ap
 
 func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 
-func authCrest() Node {
-	return Crest("", 54, "crest-lg")
+// authCrest renders the yellow shield crest (.crest.crest-lg) that sits atop
+// every auth card. glyph is the sprite symbol id shown inside the shield —
+// "crown" for the standard auth screens, "envelope" for the recovery-sent
+// state. An empty glyph falls back to "crown".
+func authCrest(glyph string) Node {
+	if glyph == "" {
+		glyph = "crown"
+	}
+	return Crest(glyph, 78, "crest-lg")
 }
 
 func invalidTokenContent() Node {
 	return Div(Class("auth-wrap"),
-		authCrest(),
-		P(Class("auth-wordmark"), Text("Bahago")),
-		Hr(Class("auth-divider")),
-		Div(Class("auth-body"),
-			P(Class("auth-instruct"), Text("This verification link is invalid or has expired.")),
-			A(Class("auth-quiet"), Href(routes.RegisterPath), Text("← Back to Register")),
+		Div(Class("card"),
+			Div(Class("auth-crest"),
+				authCrest("crown"),
+				Div(Class("auth-wordmark"), Text("Bahago")),
+			),
+			Div(Class("auth-divider")),
+			Div(Class("auth-body"),
+				P(Class("auth-instruct"), Text("This verification link is invalid or has expired.")),
+				A(Class("auth-quiet"), Href(routes.RegisterPath), Text("← Back to Register")),
+			),
 		),
 	)
 }
