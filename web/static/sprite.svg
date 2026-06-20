@@ -12,7 +12,7 @@
       (see .gem / .crest in the CSS), never baked into these paths.
 
       Kept set (9): the six resources + idle + sandglass + crown.
-      See docs/design-system/icons.md and docs/adr/0003-sprite-icon-system.md.
+      See docs/design-system/icons.md.
     -->
 
     <!-- ── Standalone glyphs ─────────────────────────────────────────────── -->
