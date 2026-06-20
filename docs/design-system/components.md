@@ -1,6 +1,6 @@
 # Component Registry
 
-**Single writer: Claude Code.** Claude Design reads this file at the start of each session to know what is already implemented and how components are named in the codebase. Claude Design supplies "Registry delta" sections in each handoff with the exact rows to add or update — applying them is mechanical.
+Inventory of design-system components: class names, implementation status, and the `styles.css` section they live in. Consult it before adding a component to avoid duplicating an existing one, and update it when a component's status changes.
 
 **Status values:** `live` — in `styles.css` and in use · `pending` — handoff received, not yet implemented · `in-progress` — partially implemented
 

@@ -1,4 +1,0 @@
-- [Claude Design workflow](project_design_workflow.md) — handoff packages in `design_handoff_<feature>/`; registries in `.claude/design/components.md` + `.claude/design/naming.md`; Claude Code is single writer
-- [Subagent restraint](feedback_subagent_restraint.md) — decision rule: spawn for independent 3+ file tasks with precise prompts; do inline for small/already-in-context work
-- [Handoff over re-exploration](feedback_handoff_over_reexploration.md) — use /handoff between AND within sessions; precise handoffs prevent re-exploration; compaction forces re-reads
-- [Token cost awareness](user_token_cost_awareness.md) — user is quota-sensitive; "cheaper" means total cost, not always inline; focused subagents can be cheaper than compacting inline work

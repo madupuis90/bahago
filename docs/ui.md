@@ -217,6 +217,14 @@ New feature files go between the last feature file and `99-utilities.css`. Style
 - `.map-nav-btn--disabled` — modifier (state) ✓
 - Never `.btn-locked` or `.building-locked` for modifiers — those look like separate blocks
 
+**Class names are structural / semantic, never narrative flavor.** This is a standing project instruction from the owner — `naming.md` is the authority and lists existing offenders to rename.
+
+- Use structural names: `title`, `sub-title`, `section`, `item`, `meta`, `row`, `cell`, `body`, `foot`, `actions`, `toolbar`, `list`, `grid`, `panel`, `card`.
+- **Do not invent in-fiction dressing** as class names: `charter`, `oath`, `decree`, `seal`, `missive`, `ledger`, `grimoire`, `folio`, `tome`, `codex`, `edict`, `sigil`, `tablet`, `vellum`, `scriptorium`, `refectory`, `herald`, `pennant`.
+- **Game-mechanic nouns are allowed** because they name real objects the simulation/UI treats as first-class: `unit`, `legion`, `roster`, `muster`, `summon`, `portrait`, `medallion`, `gem`, `army`, `campaign`, `guild`, `prayer`, `building`, `kingdom`, `world-map`, and the resource keys.
+- The test: *does the noun name a thing the game treats as a first-class object?* If yes → semantic. *Does it only evoke a medieval-scribe's office?* If yes → flavor, rejected. When a name sits on both sides, use the structural name.
+- When touching a feature that already has flavor class names (see the offenders table in `naming.md`), rename them in that pass — do not propagate them into new work.
+
 ## Heading structure
 
 Each page has exactly one `H1` — the page title. Never use heading elements (`H2`–`H6`) purely for visual styling (bold label, larger font inside a panel). Use `P(Class("panel-title"), ...)` instead, styled via `.panel-title` in CSS.

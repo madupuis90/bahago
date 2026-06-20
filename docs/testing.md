@@ -1,6 +1,5 @@
 ---
 description: "Use when writing or reviewing test files in this project"
-applyTo: "**/*_test.go"
 ---
 
 # Testing Conventions

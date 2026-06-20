@@ -5,11 +5,10 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "remoteUser": "vscode",
   "updateRemoteUserUID": false,
-  "postCreateCommand": "bash .devcontainer/setup-claude.sh && bash .devcontainer/setup-pi.sh",
+  "postCreateCommand": "bash .devcontainer/setup-pi.sh",
   "features": {
     "ghcr.io/devcontainers-extra/features/go-task:1": {},
-    "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+    "ghcr.io/devcontainers/features/node:1": {}
   },
   "customizations": {
     "vscode": {

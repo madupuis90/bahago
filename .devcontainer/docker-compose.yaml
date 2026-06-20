@@ -23,8 +23,6 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=appdb
-      - CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-      - DISABLE_AUTOUPDATER=1
     depends_on:
       db:
         condition: service_healthy

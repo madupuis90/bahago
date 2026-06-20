@@ -1,6 +1,5 @@
 ---
 description: "Use when writing or reviewing SQL query files in internal/database/queries/ or migrations in internal/database/migrations/"
-applyTo: "**/database/queries/*.sql,**/database/migrations/*.sql"
 ---
 
 # SQL Conventions

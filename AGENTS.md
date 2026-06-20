@@ -1,60 +1,175 @@
-# Agent Setup Notes
+# Bahago
 
-This file documents how the coding-agent tooling (pi) is configured inside the
-dev container. It is housekeeping, not game-domain guidance — domain
-conventions live in `CLAUDE.md`.
+Browser-based multiplayer medieval kingdom strategy game. Go web app: pgx/v5 +
+PostgreSQL 18, sqlc, goose, gomponents, datastar. Runs in a dev container;
+**Task** is the only entry point to tooling.
 
-## Why this exists
+## Read on demand
 
-The dev container's `/home` (and therefore `~/.pi/agent/`) is wiped whenever the
-container is recreated. The repo checkout at `/workspaces/bahago` survives, so
-agent config is stored there and restored on container creation.
+- `CONTEXT.md` — ubiquitous-language glossary. Read when naming things or
+  discussing game concepts. Be precise: a *Legion* is not an *Army*, a *Kingdom*
+  is not a *Player*.
+- `docs/design.md` — game mechanics design notes.
+- `docs/adr/` — architectural decision records (hard-to-reverse, non-obvious
+  decisions). Created lazily by the `grill-with-docs` skill.
+- `docs/go.md` · `docs/sql.md` · `docs/ui.md` · `docs/testing.md` — deep
+  conventions. **Read the relevant one before touching that area.**
+- `docs/review.md` — when doing a code review.
+- `docs/ui-test-plans.md` — when running a UI test plan.
+- `docs/design-system/` — visual direction + icon spec. Read when implementing
+  a design handoff.
+- `docs/agent-setup.md` — how the pi agent config is restored in the dev container.
 
-## Restore flow
+## Communication & approach
 
-`devcontainer.json` runs `.devcontainer/setup-pi.sh` in `postCreateCommand`,
-which copies the following into `~/.pi/agent/`:
+- Never make up information — research or ask.
+- Give reasoning behind suggestions.
 
-| Source (in repo) | Restores to | Tracked? |
-|---|---|---|
-| `.devcontainer/configs/pi-settings.json` | `~/.pi/agent/settings.json` | yes |
-| `.devcontainer/configs/pi-keybindings.json` | `~/.pi/agent/keybindings.json` | yes |
-| `.devcontainer/configs/pi-auth.json` | `~/.pi/agent/auth.json` | **no** (gitignored — contains API key) |
+## Working style (token-cost aware)
 
-`pi-auth.json` is gitignored. Copy `.devcontainer/configs/pi-auth.example.json`
-to `pi-auth.json` and fill in your key, or run `/login` after starting pi. The
-setup script is guarded so a fresh clone without `pi-auth.json` warns instead of
-failing.
+The user is quota-sensitive. Keep context lean.
 
-No custom `models.json` is restored — built-in providers (e.g. `opencode-go`)
-are used directly.
+- **Use `/handoff` aggressively** — between sessions and within a session when a
+  logical sub-task completes and the next is a fresh scope. A precise handoff
+  (exact file paths, function signatures, query names) prevents re-exploration
+  after compaction; a vague one forces re-reads that cost 2–3×.
+- In a new session, if the user references prior work, check `.handoff/` and
+  `/pickup` before exploring.
+- Separate exploration from implementation: explore early in the main context,
+  then hand off focused implementation work with precise prompts.
+- Surface expensive operations (broad searches, large reads) before doing them;
+  default to the cheaper total-cost path.
+- Proactively suggest `/handoff` when a sub-task is complete and more remains.
+  Don't suggest it mid-task (mid-function, mid-migration, mid-test).
+- Don't duplicate content already in artifacts (ADRs, plans, diffs, handoffs) —
+  reference by path.
 
-## Project settings
+## Tooling rules
 
-`.pi/settings.json` (committed) sets:
+- **Always use `task` commands**, never run `goose`/`sqlc`/`air`/`go build`/
+  `go vet`/`go test` directly. `go doc` is a read-only lookup — run it directly.
+- Container commands: use **Podman** (rootless, daemonless) unless Docker is
+  explicitly requested.
+- `task dev` — live reload (runs `task css:build` first)
+- `task check` — fast compile check; run after every code change before anything else
+- `task lint` · `task test` · `task gen` (regenerate sqlc) · `task css:build`
+- `task db:up` / `task db:down` / `task db:create -- <description>`
 
-- `sessionDir` → `/workspaces/bahago/.pi/sessions` so **session history survives
-  container recreation** (`.pi/sessions/` is gitignored).
-- `compaction.keepRecentTokens` → a generous recent slice kept verbatim during
-  auto-compaction, suited to long multi-file sessions.
-- `enabledModels` → the two-model cycle used by the toggle hotkey (see below).
+## Project structure
 
-## Keybindings
+All code under `internal/` — nothing importable externally.
 
-`~/.pi/agent/keybindings.json` is restored from
-`.devcontainer/configs/pi-keybindings.json` and remaps model cycling off the
-VSCode-intercepted `Ctrl+P` / `Shift+Ctrl+P`:
+- `cmd/server/main.go` — entry point; wiring only (routes, middleware, server
+  start). Never add features here.
+- `internal/contextkeys/` — shared context key constants (avoids import cycles)
+- `internal/routes/` — shared route path constants (avoids import cycle between
+  `internal/ui` and feature packages)
+- `internal/database/{db,migrations,queries}/` — sqlc-generated code (never
+  edit) / goose migrations / sqlc query files
+- `internal/email/` · `internal/middleware/` · `internal/router/` · `internal/server/`
+- `internal/ui/` — shared gomponents: `HomeLayout`, `KingdomLayout`, nav,
+  alerts. **Dot-imported** in all handler packages.
+- `internal/handlers/<feature>/` — one package per feature
+- `web/static/` — served assets; `web/static/styles.css` is a **generated
+  artifact** — never read or edit it. `web/static/sprite.svg` is the icon sprite.
+- `web/css/` — CSS source files (edit these); run `task css:build` after any change.
 
-- `Ctrl+Shift+M` — cycle forward through scoped models (acts as a toggle when
-  two models are scoped)
-- `Ctrl+Alt+M` — cycle backward
+### Feature package structure
 
-The scoped model set comes from `enabledModels` in `.pi/settings.json`. Edit it
-there, or use `/scoped-models` interactively and press `Ctrl+S` to save.
+- One file exports route constants in `internal/routes/`, registers routes, and
+  defines the `handler` struct.
+- Handler methods return `http.HandlerFunc` closures (enables pre-computation
+  outside the request loop). Kept thin: read input → call queries → render.
+- Content functions are pure `func(...) Node` taking only domain data, never
+  user/path/request. Co-located with handlers.
+- Reusable components stay in the feature package until a second package needs
+  them, then move to `internal/ui/`.
 
-## Project trust
+### Handler pattern
 
-Because `.pi/settings.json` exists, pi prompts once to trust this folder. The
-saved decision lives in `~/.pi/agent/trust.json` and is **not** restored by the
-setup script — that's intentional, so a fresh machine still asks. Approve and
-run `/trust` to silence it for future sessions.
+- Full-page responses call `HomeLayout(r, title, content...)` or
+  `KingdomLayout(r, title, content...)`; they read user/kingdom/path from
+  context. No explicit `Content-Type` needed.
+- SSE handlers use `datastar.NewSSE`; see `docs/ui.md` for ordering rules. Use
+  `http.Error()` only before `NewSSE` is called.
+- **Do not re-check middleware guarantees inside handlers.** If a route is
+  behind `RequireAuth`/`LoadKingdom`, trust the context — no `if user == nil`
+  guards. Defensive checks add noise and imply the scenario is possible.
+- **No service layer.** When a handler grows beyond `read input → one query →
+  render`, extract into same-package helpers: sentinel errors → validators →
+  orchestrators → thin handler. See `internal/handlers/army/` for the reference
+  implementation and `docs/testing.md` for the test shape. Apply only when
+  there's real complexity; don't impose on thin handlers.
+
+## Database
+
+Quick rules (full conventions in `docs/sql.md`):
+
+- `pgxpool.Pool` for pooling; context with timeouts for all DB ops.
+- All SQL in `internal/database/queries/*.sql`, one file per feature. Generated
+  code in `internal/database/db/` — never edit. Run `task gen` after query changes.
+- Bulk ops: `WHERE id = ANY(@ids::bigint[])` or `unnest` arrays — never per-row
+  queries in loops. Tick-loop queries follow the `DecrementAndList*AtZero` CTE
+  pattern.
+- Named params (`@name`) for 3+ params; positional (`$1`) for 1–2.
+- Migrations: both Up and Down; never modify a deployed migration;
+  `YYYYMMDDHHMMSS_description.sql`.
+- PG18: `GENERATED ALWAYS AS IDENTITY` (not `SERIAL`), `TEXT` (not `VARCHAR`),
+  `TIMESTAMPTZ`, `JSONB`. Index FKs.
+- CHECK constraints: inline for single-column numeric bounds; named for
+  enums/multi-column. Never mix on one column.
+
+## Configuration
+
+- Non-sensitive config (port, local DSN) in `docker-compose.yml`; sensitive or
+  environment-specific values in `.env` (see `.env.example`). Never commit
+  `.env`; keep `.env.example` in sync.
+- `main.go` reads required vars at startup and `log.Fatal`s if any are missing —
+  fail fast.
+
+## Security
+
+- Never log sensitive data. Validate/sanitize input at the HTTP boundary.
+  Generic errors to clients; details server-side only. No credentials committed.
+
+## Instruction conflicts
+
+When a request contradicts a project instruction, **point it out explicitly
+before proceeding**: name the instruction, state the request, and offer the
+choice (update the instruction, one-time exception, or reconsider). If a
+pattern or decision worth capturing comes up, raise it proactively — the user
+prefers accurate instructions over silent divergence.
+
+## Design handoffs
+
+A design handoff is a self-contained package describing a UI feature to
+implement. Read `docs/design-system/` first for the visual direction and icon
+spec. Implement CSS in the correct `web/css/` source file, markup in the
+feature handler package, run `task css:build`, and verify at real sizes.
+
+## CSS source file map
+
+| File | Area |
+|------|------|
+| `web/css/00-reset.css` | reset |
+| `web/css/01-tokens.css` | design tokens |
+| `web/css/02-base.css` | base element styles |
+| `web/css/10-home-shell.css` | home shell: top-nav, content-area, side-nav |
+| `web/css/20-shared.css` | shared: `.panel`, `.btn`, `.form-fields`, `.alert-*` |
+| `web/css/30-auth.css` | auth pages |
+| `web/css/31-home.css` | home page content |
+| `web/css/40-kingdom-chrome.css` | kingdom chrome: topbar, bottom-nav, `.nav-stone` |
+| `web/css/41-kingdom-overview.css` | overview: `.page-header`, `.overview-grid`, `.chronicle` |
+| `web/css/42-allocation.css` | allocation |
+| `web/css/43-buildings.css` | buildings |
+| `web/css/44-units.css` | units |
+| `web/css/45-world-map.css` | world map |
+| `web/css/46-army.css` | army |
+| `web/css/47-flipcard.css` | home/about flip card |
+| `web/css/48-messages.css` | messages |
+| `web/css/49-guild.css` | guild |
+| `web/css/50-prayers.css` | prayers |
+| `web/css/99-utilities.css` | utility overrides |
+
+New feature sections: new numbered file between the last feature file and
+`99-utilities.css`. Styles shared across 2+ features: `20-shared.css`.
