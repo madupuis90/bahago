@@ -159,8 +159,7 @@ func guildSettingsContent(guild db.Guild, perms _guild.MessagePermissions) Node 
 
 	return Group([]Node{
 		Breadcrumb("← Manage "+guild.Name, slugURL(routes.GuildManagePath, guild.Slug)),
-		PageHeader("❦ Guild settings", "Settings — "+guild.Name,
-			"Control who may post to the guild.", nil),
+		PageHeader("Settings — "+guild.Name),
 		guildSettingsAlert(nil),
 		Div(Class("card"), Div(Class("card-inner"),
 			ds.Signals(map[string]any{

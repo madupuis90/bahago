@@ -10,22 +10,32 @@
    The tick meter is NO LONGER defined here — it ships shared via 20-shared.css.
    ============================================================================= */
 
-/* --- standing-host summary strip (the praised "summary bar" pattern) ------- */
+/* --- host cards — roster cards (Units + Summons) stacked with a gap -------- */
+.host-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* --- standing-host summary strip -------------------------------------------
+   Lives at the BOTTOM of the page as a slim closing tally (a lighter, flatter
+   line — no big offset shadow, no heavy top presence). The roster + footers
+   are the page's focus; this is the receipt-style total. */
 .units-summary {
   display: flex;
-  margin-bottom: 22px;
+  margin-top: 22px;
   background: var(--card);
-  border: 3.5px solid var(--ink);
-  border-radius: 16px;
-  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
+  border: 3px solid var(--ink);
+  border-radius: 12px;
   overflow: hidden;
 }
 .units-summary-stat {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 20px 16px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 18px 10px;
 }
 .units-summary-stat + .units-summary-stat { border-left: 3px solid var(--ink); }
 .units-summary-label {
@@ -35,11 +45,12 @@
   font-size: 11px;
   color: var(--ink);
   opacity: .62;
+  white-space: nowrap;
 }
-.units-summary-val { display: flex; align-items: center; gap: 9px; }
+.units-summary-val { display: flex; align-items: baseline; gap: 6px; }
 .units-summary-num {
   font-family: var(--font-display);
-  font-size: 1.9rem;
+  font-size: 1.3rem;
   line-height: 1;
   color: var(--ink);
 }
@@ -218,42 +229,11 @@
 .lock-banner .gem { width: 34px; height: 34px; }
 .lock-banner b { font-style: normal; font-weight: 800; }
 
-/* --- training-slot panel (slot gauge dots moved to 20-shared.css) -------- */
-
-.train-slots { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
-.train-slot { border-radius: 13px; }
-.train-slot.is-active {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 13px 15px;
-  border: 3px solid var(--ink);
-  background: var(--card-2);
-  box-shadow: var(--shadow-ink);
-}
-.train-slot.is-idle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent);
-  border-radius: 13px;
-  background: repeating-linear-gradient(45deg, transparent 0 9px, color-mix(in srgb, var(--ink) 4%, transparent) 9px 18px);
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-style: italic;
-  font-size: 14px;
-  color: var(--ink);
-  opacity: .8;
-}
-.train-slot-idle-gem {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: var(--card);
-  border: 2.5px solid color-mix(in srgb, var(--ink) 55%, transparent);
-}
-.train-slot-idle-gem svg { stroke: color-mix(in srgb, var(--ink) 60%, transparent); }
+/* --- training progress banner (shared .progress-banner in 20-shared.css) ---
+   The glyph slot wraps a .unit-portrait--sm so the summon/unit tint shows up
+   inside the banner. */
+.progress-banner-gem.progress-banner-gem--unit
+  { width: 46px; height: 46px; display: grid; place-items: center; }
+.progress-banner-gem.progress-banner-gem--summon
+  { width: 46px; height: 46px; display: grid; place-items: center; }
+.progress-banner-gem .unit-portrait { width: 46px; height: 46px; }

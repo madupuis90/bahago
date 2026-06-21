@@ -2,65 +2,42 @@
    Kingdom overview (page header, cards, combat log, stats panel)
    ============================================================================= */
 
-/* Page header — COMIC LAB title plate (kicker chip + rotated red plate + sub).
-   Left-aligned: the plate sits at the start, not centred. One loud title
-   treatment across the app (Design Reference §3). */
+/* Page header — COMIC LAB title plate. A small rotated red plate that hangs
+   off the top of the content like a price tag, overlapping the first block
+   below by a few pixels: keeps the loud title identity without eating desktop
+   real estate. Uniform on every page (Design Reference §3). */
 .page-header {
-  margin: 0 2px 22px;
-  /* left-aligned: the plate + kicker sit at the start, not centred */
-}
-
-.page-header-kicker {
-  display: inline-block;
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--ink);
-  background: var(--card);
-  border: 3px solid var(--ink);
-  border-radius: 9px;
-  padding: 4px 12px 3px;
-  box-shadow: var(--shadow-ink-sm);
-  white-space: nowrap;
-  margin-bottom: 0;
+  margin: 0 0 -12px;
+  /* left-aligned: the plate sits at the start, not centred. The negative
+     bottom margin pulls the next block up so the plate overlaps it. */
+  position: relative;
+  z-index: 1; /* plate sits on top of the card/block it overlaps */
 }
 
 .page-header-title {
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(34px, 5.5vw, 56px);
+  font-size: clamp(22px, 3vw, 30px);
   line-height: 1;
-  margin: 12px 0 8px;
+  margin: 0;
   color: #fff;
-  -webkit-text-stroke: 2.6px var(--ink);
+  -webkit-text-stroke: 1.6px var(--ink);
   paint-order: stroke fill;
   background: var(--red);
-  border: 3.5px solid var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
-  padding: 5px 22px 14px;
-  transform: rotate(-1.5deg);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: var(--shadow-ink-sm, 4px 4px 0 var(--ink));
+  padding: 5px 16px 10px;
+  transform: translateX(-36px) rotate(-1.5deg);
   text-shadow: none;
-}
-
-.page-header-sub {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-style: normal;
-  font-size: 1rem;
-  color: var(--ink);
-  margin: 6px 0 0;
-  max-width: 52ch;
-  text-wrap: pretty;
 }
 
 /* Action buttons that sit on the right of a page header (Messages: Write /
    Guild Dispatch). When a header carries actions it becomes a flex row: the
-   text block (kicker/title/sub, wrapped in .page-header-text) sits left and the
-   actions sit right, aligned to the bottom of the plate. Headers without
-   actions (Units, Allocation, …) keep their default block stacking. */
+   title (wrapped in .page-header-text) sits left and the actions sit right,
+   aligned to the bottom of the plate. Headers without actions (Units,
+   Allocation, …) keep their default block stacking. */
 .page-header:has(.page-header-actions) {
   display: flex;
   align-items: flex-end;
@@ -91,25 +68,25 @@
   margin-top: 14px;
 }
 
-/* Page header — legacy <h1> markup (kept for pages not yet migrated to
-   -kicker/-title/-sub). The title plate covers the <h1> via the element
-   selector below; inert if unused. Prefer migrating to the plate markup. */
+/* Page header — legacy <h1> markup (pages still using a bare <h1> inside
+   .page-header instead of .page-header-title). Mirrors the price-tag plate so
+   the treatment is uniform. */
 .page-header h1 {
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(34px, 5.5vw, 56px);
+  font-size: clamp(22px, 3vw, 30px);
   line-height: 1;
-  margin: 12px 0 8px;
+  margin: 0;
   color: #fff;
-  -webkit-text-stroke: 2.6px var(--ink);
+  -webkit-text-stroke: 1.6px var(--ink);
   paint-order: stroke fill;
   background: var(--red);
-  border: 3.5px solid var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--shadow-ink-lg, 6px 6px 0 var(--ink));
-  padding: 5px 22px 14px;
-  transform: rotate(-1.5deg);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: var(--shadow-ink-sm, 4px 4px 0 var(--ink));
+  padding: 5px 16px 10px;
+  transform: translateX(-36px) rotate(-1.5deg);
   letter-spacing: 0;
 }
 

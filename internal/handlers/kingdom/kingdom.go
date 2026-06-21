@@ -116,11 +116,7 @@ func groupCombatLog(rows []db.GetRecentCombatLogsRow) []combatLogDisplay {
 func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) Node {
 	return Div(
 		Div(ds.Init(GetSSENoSignals(routes.KingdomRefreshPath))),
-		Div(Class("page-header"),
-			P(Class("page-header-kicker"), Text("Kingdom of "+kingdom.Name)),
-			H1(Class("page-header-title"), Text("The realm holds firm.")),
-			P(Class("page-header-sub"), Text("Population: "+FormatThousands(kingdom.Population))),
-		),
+		PageHeader(kingdom.Name),
 		Div(Class("overview-grid"),
 			overviewCard("red", "Journal Log",
 				Div(Class("combat-log"),

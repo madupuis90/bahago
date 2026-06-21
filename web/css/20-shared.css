@@ -75,6 +75,7 @@
 .card-tab--green  { background: var(--green); }
 .card-tab--blue   { background: var(--blue); }
 .card-tab--yellow { background: var(--yellow); color: var(--ink); }
+.card-tab--summon { background: var(--purple); }   /* arcane — matches .unit-portrait--summon */
 /* alias — retire once templates migrate .card-tab--wood → .card-tab--blue */
 .card-tab--wood   { background: var(--blue); }
 
@@ -380,6 +381,33 @@ input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: i
 .meter-notches { position: absolute; inset: 0; display: flex; pointer-events: none; }
 .meter-notch { flex: 1; border-right: 2.5px solid var(--ink); }
 .meter-notch:last-child { border-right: none; }
+
+
+/* =============================================================================
+   Progress banner — shared "active work" strip (Buildings construction,
+   Units training). A compact ink-outlined band sitting above the page title:
+   glyph + meter, with an idle (hatched) variant when no work is underway.
+   Markup (active): .progress-banner > .progress-banner-gem + .progress-banner-body
+                       (.meter …) [.btn cancel]
+   Markup (idle):   .progress-banner.is-idle > .progress-banner-body
+                       (.progress-banner-idle-title + .progress-banner-idle-text)
+   ============================================================================= */
+.progress-banner {
+  display: flex; align-items: center; gap: 18px;
+  padding: 14px 20px; margin-bottom: 14px;
+  background: var(--card);
+  border: 3.5px solid var(--ink); border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+/* idle = diagonal "no work" hatch */
+.progress-banner.is-idle {
+  background: repeating-linear-gradient(45deg, var(--card) 0 12px, var(--card-2) 12px 24px);
+}
+.progress-banner-gem { flex: none; }
+.progress-banner-body { flex: 1; min-width: 0; }
+.progress-banner-idle-title { font-family: var(--font-display); font-size: 17px; line-height: 1; margin-bottom: 4px; }
+.progress-banner-idle-text  { font-family: var(--font-body); font-weight: 700; font-size: 13px; opacity: .7; }
+.progress-banner .meter { flex: 1; min-width: 0; }
 
 
 /* =============================================================================

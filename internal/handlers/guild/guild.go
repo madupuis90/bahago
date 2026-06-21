@@ -749,8 +749,7 @@ func swornDays(valid bool, t time.Time) Node {
 
 func guildLandingContent(invitations []db.ListKingdomInvitationsRow) Node {
 	return Div(Class("guild"),
-		PageHeader("❦ Of fellowship & common cause", "The Guild Hall",
-			"Pledge your banner to a fellowship of kingdoms — or found one in your own name.", nil),
+		PageHeader("Guild"),
 		Div(ds.Init(GetSSENoSignals(routes.GuildRefreshPath))),
 		Iff(len(invitations) > 0, func() Node {
 			return Div(
@@ -818,8 +817,7 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 	actions := A(Href(routes.GuildNewPath), Class("btn btn--primary"), Text("Found a Guild"))
 	return Div(Class("guild"),
 		Breadcrumb("← The Guild Hall", routes.GuildPath),
-		PageHeader("❦ The roll of fellowships", "The Guild Roll",
-			"Every sworn fellowship in the realm, and the charters yet to be sealed.", actions),
+		PageHeader("Guilds", actions),
 		SectionHeader("Active Fellowships",
 			fmt.Sprintf("%d fellowships · %d kingdoms sworn", len(activeGuilds), sworn)),
 		Div(Class("card"), Div(Class("card-inner"), Style("padding: 8px 12px"),
@@ -921,8 +919,7 @@ func metaForCharters(charters []db.ListPendingGuildsRow) string {
 func guildNewContent() Node {
 	return Div(Class("guild"),
 		Breadcrumb("← The Guild Hall", routes.GuildPath),
-		PageHeader("❦ Of founding charters", "Founding Charter",
-			"Set down a name and a purpose; the realm will judge.", nil),
+		PageHeader("Create Guild"),
 		Div(Class("charter-grid"),
 			Div(Class("card"), Div(Class("card-inner"),
 				Div(Class("charter-form"),
@@ -1008,7 +1005,7 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 	return Div(Class("guild"),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildViewRefreshPath, g.Slug)))),
 		Breadcrumb("← The Guild Roll", routes.GuildListPath),
-		guildHead(g, isPending),
+		guildHead(g),
 		guildMetaStrip(g, members, isPending, supportCount, activeCount),
 		If(!standing.foot, standingNode(standing)),
 		If(isPending, guildSealSection(members, supportCount, viewerKingdomID)),
@@ -1018,14 +1015,10 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 	)
 }
 
-func guildHead(g db.Guild, isPending bool) Node {
-	kicker := "❦ A sworn fellowship"
-	if isPending {
-		kicker = "❦ A charter awaiting seals"
-	}
+func guildHead(g db.Guild) Node {
 	return Div(Class("guild-head"),
 		guildCrest("lg", "crest"),
-		PageHeader(kicker, g.Name, g.Description, nil),
+		PageHeader(g.Name),
 	)
 }
 

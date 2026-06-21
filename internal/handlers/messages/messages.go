@@ -726,15 +726,7 @@ func messagesShell(groups []MsgGroup, selectedMessageID int, panel Node, gc *gui
 	}
 
 	return Group([]Node{
-		Div(Class("page-header"),
-			Div(Class("page-header-text"),
-				P(Class("page-header-kicker"), Text("❦ Of the Quiet Desk")),
-				P(Class("page-header-title"), Text("Messages")),
-				P(Class("page-header-sub"),
-					Text("Correspondence arriving at your kingdom's gate.")),
-			),
-			Div(Class("page-header-actions"), Group(actions)),
-		),
+		PageHeader("Messages", Group(actions)),
 		Div(Class("messages-panel"),
 			Div(Class("messages-left"),
 				messagesList(groups, selectedMessageID),

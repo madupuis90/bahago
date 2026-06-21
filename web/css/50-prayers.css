@@ -6,8 +6,6 @@
            .stat-pill, .slot-gauge, .section-header, .gem (via ResourceGem),
            .icon, .alert--* (all in earlier CSS files).
 
-   Page title-plate accent: --gem-sun (pink) — see .page-header-title--sun.
-
    Deferred (Option C — visual structure now, data wiring later):
      • "Upon Your Realm" incoming-rites section (needs
        ListPrayersTargetingKingdom query) — omitted until the query lands.
@@ -16,9 +14,6 @@
        rite costs 20 devotion/tick); update .offer-cost-val expression if a
        future rite changes that.
    ============================================================================= */
-
-/* Title-plate accent — pink (devotion sun). */
-.page-header-title--sun { background: var(--gem-sun); }
 
 /* ── devotion ledger — the altar's reckoning strip ───────────────────────── */
 .devotion-ledger {

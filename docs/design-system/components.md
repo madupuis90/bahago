@@ -32,7 +32,7 @@ Inventory of design-system components: class names, implementation status, and t
 | Section header | `.section-header` · `.section-title` · `.section-rule` · `.section-meta` | live · **reskinned** (Comic Lab) | Shared components | Section header (guild handoff) |
 | Card header | `.card-header` · `.card-header-row` · `.card-title` · `.card-subtitle` · `.card-flavour` | live · **reskinned** (Comic Lab) | Shared components | Card header |
 | Eyebrow | `.eyebrow` | live · **reskinned** (Comic Lab) | Shared components | Eyebrow (guild handoff) |
-| Page header | `.page-header` · `.page-header-kicker` · `.page-header-title` · `.page-header-sub` (left-aligned chunky red plate, rotated; legacy `.page-header h1` covered) | live · **reskinned** (Comic Lab) | Page composition (`41-kingdom-overview.css`) | Page title (Design Reference §3) |
+| Page header | `.page-header` · `.page-header-title` · `.page-header-actions` / `.page-header-text` (left-aligned chunky red plate, rotated; uniform title-only treatment across all pages) | live · **reskinned** (Comic Lab) | Page composition (`41-kingdom-overview.css`) | Page title (Design Reference §3) |
 | Status pill | `.status-pill`, `--home`, `--march`, `--return`, `--combat`, `--guard` | live | Army | Status pill (shared) |
 | Action tag | `.action-tag`, `--attack`, `--defend` | live | Army | Action tag (shared) |
 | Roster strip / unit token | `.roster-strip`, `.unit-token`, `.unit-medallion`, `.unit-tally`, `.roster-more`, `.roster-empty` | live | Army + Units | Roster / unit token |

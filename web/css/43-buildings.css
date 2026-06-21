@@ -9,33 +9,17 @@
 
    Reuses (all already live — do NOT redefine here):
      .card · .btn (+ states) · .gem / .gem-* · .meter (+ .meter-notches) ·
-     .page-header / .page-header-kicker / .page-header-title / .page-header-sub
+     .page-header / .page-header-title
    Tokens used: --card --card-2 --ink --red --green --yellow --gem-* (brass =
    --gem-wheat) --shadow-ink / -sm / -xs. All live in 01-tokens.css.
    ============================================================================= */
 
 /* ── Page wrapper ───────────────────────────────────────────────────────────── */
 .builds { width: 100%; display: flex; flex-direction: column; min-height: 0; }
-.builds .page-header { margin-bottom: 18px; }
 
-/* ── Construction banner (above the tree) ───────────────────────────────────── */
-.build-banner {
-  display: flex; align-items: center; gap: 18px;
-  padding: 16px 22px; margin-bottom: 22px;
-  background: var(--card);
-  border: 3.5px solid var(--ink); border-radius: 16px;
-  box-shadow: 5px 5px 0 var(--ink);
-}
-/* idle = diagonal "no work" hatch */
-.build-banner.is-idle {
-  background: repeating-linear-gradient(45deg, var(--card) 0 12px, var(--card-2) 12px 24px);
-}
-.build-banner-gem { flex: none; }
-.build-banner-body { flex: 1; min-width: 0; }
-.build-banner-idle-title { font-family: var(--font-display); font-size: 17px; line-height: 1; margin-bottom: 4px; }
-.build-banner-idle-text  { font-family: var(--font-body); font-weight: 700; font-size: 13px; opacity: .7; }
-/* the shared .meter fills the banner; brass is its default (= time/ticks) */
-.build-banner .meter { flex: 1; min-width: 0; }
+/* ── Construction progress banner lives above the title (shared
+   .progress-banner in 20-shared.css). The page-header plate overlaps the
+   .builds-stage below it (global -12px bottom margin). ──────────────────── */
 
 /* ── Stage: tree board left, detail panel right ─────────────────────────────── */
 .builds-stage {

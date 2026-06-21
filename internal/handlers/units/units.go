@@ -389,17 +389,13 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 		ds.Signals(signals, ds.ModifierIfMissing),
 		Div(ds.Init(GetSSENoSignals(routes.KingdomUnitsRefreshPath))),
 		unitsAlert(nil),
-		Div(Class("page-header"),
-			P(Class("page-header-kicker"), Text("❦ Of the Mustering of Arms")),
-			P(Class("page-header-title"), Text("The Host")),
-			P(Class("page-header-sub"), Text("Raise and hold your kingdom's fighting strength.")),
+		trainingGrounds(training),
+		PageHeader("Units"),
+		Div(Class("host-cards"),
+			musterRoll("", "", game.UnitOrder, counts, buildingCounts, training, false),
+			musterRoll("Summons", "card-tab--summon", game.SummonOrder, counts, buildingCounts, training, !canSummon),
 		),
 		hostSummary(counts, allTypes),
-		trainingGrounds(training),
-		Div(Class("host-cards"),
-			musterRoll("Units", game.UnitOrder, counts, buildingCounts, training, false),
-			musterRoll("Summons", game.SummonOrder, counts, buildingCounts, training, !canSummon),
-		),
 	)
 }
 
@@ -412,7 +408,7 @@ func hostSummary(counts map[string]int, allTypes []string) Node {
 		totalFood += n * def.FoodUpkeep
 		totalMana += n * def.ManaUpkeep
 	}
-	return Div(Class("units-summary"),
+	return Div(Class("units-summary is-foot"),
 		hostStat("Standing", "units", totalUnits, false),
 		hostStat("Food Drain", "per tick", totalFood, totalFood > 0),
 		hostStat("Mana Drain", "per tick", totalMana, totalMana > 0),
@@ -430,61 +426,53 @@ func hostStat(label, sub string, num int, drain bool) Node {
 }
 
 func trainingGrounds(training *db.KingdomTraining) Node {
-	busy := training != nil
-	used := 0
-	if busy {
-		used = 1
+	if training == nil {
+		return Div(Classes{"progress-banner": true, "is-idle": true},
+			Div(Class("progress-banner-body"),
+				P(Class("progress-banner-idle-title"), Text("Active Training")),
+				P(Class("progress-banner-idle-text"), Text("No training in progress")),
+			),
+		)
 	}
-	return Div(Class("card"),
-		Div(Class("card-inner"),
-			Div(Class("card-header-row"),
-				P(Class("card-title"), Text("Training Grounds")),
-				Div(Class("slot-gauge"),
-					Div(Class("slot-gauge-dots"),
-						Div(Classes{"slot-gauge-dot": true, "is-on": busy}),
-					),
-					Span(Class("slot-gauge-label"), Text(fmt.Sprintf("%d/1 in use", used))),
-				),
-			),
-			Div(Class("train-slots"),
-				Iff(training != nil, func() Node {
-					return Div(Class("train-slot is-active"), meterRow(training))
-				}),
-				If(!busy, Div(Class("train-slot is-idle"),
-					Text("No training in progress"),
-				)),
-			),
-		),
-	)
-}
-
-func meterRow(t *db.KingdomTraining) Node {
-	def := game.UnitDefs[t.UnitType]
+	def := game.UnitDefs[training.UnitType]
 	fillPct := 0.0
-	if t.TicksTotal > 0 {
-		fillPct = float64(t.TicksTotal-t.TicksRemaining) / float64(t.TicksTotal) * 100
+	if training.TicksTotal > 0 {
+		fillPct = float64(training.TicksTotal-training.TicksRemaining) / float64(training.TicksTotal) * 100
 	}
-	notches := make([]Node, 0, int(t.TicksTotal))
-	for range int(t.TicksTotal) {
+	notches := make([]Node, 0, int(training.TicksTotal))
+	for range int(training.TicksTotal) {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
-	return Group([]Node{
-		Div(Class("unit-portrait unit-portrait--sm " + portraitMod(def))),
-		Div(Class("meter"),
-			Div(Class("meter-top"),
-				Span(Class("meter-name"),
-					Text(def.Name+" "),
-					Span(Class("meter-qty"), Text(fmt.Sprintf("× %d", t.Count))),
+	return Div(Class("progress-banner"),
+		Div(Class("progress-banner-gem "+portraitClass(def)),
+			Div(Class("unit-portrait unit-portrait--sm "+portraitMod(def))),
+		),
+		Div(Class("progress-banner-body"),
+			Div(Class("meter"),
+				Div(Class("meter-top"),
+					Span(Class("meter-name"),
+						Text(def.Name+" "),
+						Span(Class("meter-qty"), Text(fmt.Sprintf("× %d", training.Count))),
+					),
+					Span(Class("meter-eta"), Text(fmt.Sprintf("%d ticks", training.TicksRemaining))),
 				),
-				Span(Class("meter-eta"), Text(fmt.Sprintf("%d ticks", t.TicksRemaining))),
-			),
-			Div(Class("meter-track"),
-				Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
-				Div(Class("meter-notches"), Group(notches)),
+				Div(Class("meter-track"),
+					Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
+					Div(Class("meter-notches"), Group(notches)),
+				),
 			),
 		),
 		Button(Class("btn"), ds.On("click", datastar.PostSSE(routes.KingdomUnitsCancelPath)), Text("Cancel")),
-	})
+	)
+}
+
+// portraitClass returns a modifier class for the gem wrapper so the summon vs
+// unit portrait tint still applies inside the progress banner.
+func portraitClass(def game.UnitDef) string {
+	if def.IsSummon {
+		return "progress-banner-gem--summon"
+	}
+	return "progress-banner-gem--unit"
 }
 
 func portraitMod(def game.UnitDef) string {
@@ -494,11 +482,11 @@ func portraitMod(def game.UnitDef) string {
 	return "unit-portrait--unit"
 }
 
-func musterRoll(title string, order []string, counts, buildingCounts map[string]int, training *db.KingdomTraining, sectionLocked bool) Node {
+func musterRoll(title, tabClass string, order []string, counts, buildingCounts map[string]int, training *db.KingdomTraining, sectionLocked bool) Node {
 	return Div(Class("card"),
+		If(title != "", Div(Class("card-tab "+tabClass), Text(title))),
 		Div(Class("card-inner"),
 			If(sectionLocked, lockBanner()),
-			P(Class("section-title"), Text(title)),
 			Div(Class("muster-roll-head"),
 				Div(),
 				Div(Class("muster-roll-col"), Text("Name")),

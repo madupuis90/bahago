@@ -5,24 +5,19 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-// PageHeader renders the Comic Lab title plate (kicker + rotated red plate +
-// sub). actions is optional; when present the text block is wrapped in
-// .page-header-text and the header becomes a flex row (the actions sit right,
-// aligned to the plate's bottom — see 41-kingdom-overview.css).
-func PageHeader(kicker, title, sub string, actions Node) Node {
-	textChildren := []Node{
-		P(Class("page-header-kicker"), Text(kicker)),
-		H1(Class("page-header-title"), Text(title)),
-	}
-	if sub != "" {
-		textChildren = append(textChildren, P(Class("page-header-sub"), Text(sub)))
-	}
-	if actions == nil {
-		return Div(Class("page-header"), Div(Class("page-header-text"), Group(textChildren)))
+// PageHeader renders the page title plate (a single rotated red plate). All
+// pages share this one loud title treatment (Design Reference §3). actions is
+// optional; when present the title is wrapped in .page-header-text and the
+// header becomes a flex row (the actions sit right, aligned to the plate's
+// bottom — see 41-kingdom-overview.css).
+func PageHeader(title string, actions ...Node) Node {
+	titleNode := H1(Class("page-header-title"), Text(title))
+	if len(actions) == 0 {
+		return Div(Class("page-header"), titleNode)
 	}
 	return Div(Class("page-header"),
-		Div(Class("page-header-text"), Group(textChildren)),
-		Div(Class("page-header-actions"), actions),
+		Div(Class("page-header-text"), titleNode),
+		Div(Class("page-header-actions"), Group(actions)),
 	)
 }
 

@@ -701,8 +701,7 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 
 	return Div(Class("guild"),
 		Breadcrumb("← "+g.Name, slugURL(routes.GuildViewPath, slug)),
-		PageHeader("❦ The guild's desk", "Manage Guild",
-			"Admit kingdoms, send invitations, and keep the charter.", nil),
+		PageHeader("Manage "+g.Name),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
 		guildAlert(nil),
 

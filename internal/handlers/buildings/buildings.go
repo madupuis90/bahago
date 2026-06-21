@@ -361,13 +361,9 @@ func buildingsContent(defs []game.BuildingDef, counts map[string]int, constructi
 	return Div(Class("builds"),
 		ds.Signals(map[string]any{"selected_building": selectedID}),
 		Div(Style("display:none"), ds.Init(GetSSENoSignals(routes.KingdomBuildingsRefreshPath))),
-		Div(Class("page-header"),
-			P(Class("page-header-kicker"), Text("❦ Of timber, stone & the raising of works")),
-			H1(Class("page-header-title"), Text("Buildings")),
-			P(Class("page-header-sub"), Text("Raise your works in order — each finished building lights the path to the next along its line.")),
-		),
 		buildingsAlert(nil),
 		buildingsBanner(construction),
+		PageHeader("Buildings"),
 		Div(Class("builds-stage"),
 			Div(Class("tree-scroll"),
 				buildingsTree(tree, counts, construction),
@@ -379,10 +375,10 @@ func buildingsContent(defs []game.BuildingDef, counts map[string]int, constructi
 
 func buildingsBanner(construction *db.KingdomConstruction) Node {
 	if construction == nil {
-		return Div(Classes{"build-banner": true, "is-idle": true},
-			Div(Class("build-banner-body"),
-				P(Class("build-banner-idle-title"), Text("Workshop")),
-				P(Class("build-banner-idle-text"), Text("No construction underway — select a building to begin.")),
+		return Div(Classes{"progress-banner": true, "is-idle": true},
+			Div(Class("progress-banner-body"),
+				P(Class("progress-banner-idle-title"), Text("Active Construction")),
+				P(Class("progress-banner-idle-text"), Text("No construction underway — select a building to begin.")),
 			),
 		)
 	}
@@ -395,9 +391,9 @@ func buildingsBanner(construction *db.KingdomConstruction) Node {
 	if construction.TicksTotal > 0 {
 		fillPct = float64(construction.TicksTotal-construction.TicksRemaining) / float64(construction.TicksTotal) * 100
 	}
-	return Div(Class("build-banner"),
-		Div(Class("build-banner-gem"), buildingGlyph(def, 34)),
-		Div(Class("build-banner-body"),
+	return Div(Class("progress-banner"),
+		Div(Class("progress-banner-gem"), buildingGlyph(def, 34)),
+		Div(Class("progress-banner-body"),
 			Div(Class("meter"),
 				Div(Class("meter-top"),
 					Span(Class("meter-name"), Text(def.Name)),
