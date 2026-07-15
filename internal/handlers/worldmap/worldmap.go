@@ -413,7 +413,7 @@ func findBar() Node {
 			Input(
 				Type("text"),
 				Placeholder("Kingdom name…"),
-				Class("cmd-search-input"),
+				Class("field"),
 				ds.Bind("find_name"),
 			),
 			Button(

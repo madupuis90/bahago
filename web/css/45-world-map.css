@@ -147,17 +147,9 @@
 .cmd-minimap-wrap { display: flex; justify-content: center; }
 .cmd-nav-hint { margin: 9px 0 0; text-align: center; font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 12.5px; color: var(--ink-soft); opacity: .8; }
 
-/* find bar — the search input reuses the shared .field well vocabulary */
+/* find bar — the search input reuses the shared .field well (20-shared.css) */
 .cmd-search { display: flex; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-.cmd-search-input {
-  flex: 1; min-width: 0; height: 34px; padding: 0 10px;
-  font-family: var(--font-body); font-weight: 700; font-size: 13px; color: var(--paper);
-  background: var(--slate-edge); border: 1px solid var(--brass-dark); border-radius: 8px;
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.45); outline: none;
-  transition: box-shadow .1s, border-color .1s;
-}
-.cmd-search-input::placeholder { color: color-mix(in srgb, var(--brass-light) 60%, transparent); font-weight: 600; }
-.cmd-search-input:focus { border-color: var(--brass); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.55), 0 0 0 2px color-mix(in srgb, var(--brass) 55%, transparent); }
+.cmd-search .field { flex: 1; min-width: 0; }
 
 /* minimap — 8×8 region grid on a slate ground */
 .map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: 2.5px; padding: 6px; background: var(--slate-2); border: 1px solid var(--brass); border-radius: 8px; box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
