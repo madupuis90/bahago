@@ -74,7 +74,7 @@
   --gem-star:     #5a4474;
 
   --brass-meter: #c69a4a;   /* meter brass = "time/ticks" fill (canon default) */
-  --unread: #2a1a10;        /* messages: unread row tint on parchment */
+  --unread: #e8dcc0;        /* messages: warm parchment-unread row tint on the page */
 
   /* heraldic map washes — biome fills (terrain "feel") for the World board */
   --bio-p: #bcd089;   /* Plains   */
