@@ -43,7 +43,7 @@ func forgotPasswordContent() Node {
 				Form(Class("auth-form"),
 					Div(Class("field-group"),
 						Label(Class("field-label"), For("email"), Text("Email")),
-						Input(ID("email"), Type("email"), ds.Bind("email")),
+						Input(ID("email"), Type("email"), Class("field"), ds.Bind("email")),
 					),
 				),
 				Button(Class("auth-btn"),

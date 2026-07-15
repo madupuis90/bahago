@@ -43,25 +43,26 @@ a {
   }
 }
 
-/* Bare inputs (un-classed) get the comic recessed-well look so legacy forms
-   read correctly before .field is applied. */
-input:not([type="range"]),
+/* Bare text-like inputs (un-classed) get the codex recessed-slate well as a
+   fallback so they still read correctly before .field is applied. Every form
+   control should wear .field / .select / .field--area; this is the safety net. */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]),
 select,
 textarea {
   padding: 0.5rem 0.7rem;
-  border-radius: 11px;
-  border: 3px solid var(--ink);
-  background: #fff;
-  color: var(--ink);
+  border-radius: 8px;
+  border: 1px solid var(--brass-dark);
+  background: var(--slate-edge);
+  color: var(--paper);
   font-size: 0.95rem;
   font-weight: 700;
   font-family: inherit;
-  box-shadow: inset 3px 3px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.45);
 
   &:focus-visible {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: inset 0 0 0 2px var(--blue);
+    border-color: var(--brass);
+    box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.55), 0 0 0 2px color-mix(in srgb, var(--brass) 55%, transparent);
   }
 }
 

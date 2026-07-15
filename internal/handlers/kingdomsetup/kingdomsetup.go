@@ -217,6 +217,7 @@ func setupContent() Node {
 				Text("Kingdom Name"),
 				Input(
 					Type("text"),
+					Class("field"),
 					ds.Bind("kingdom_name"),
 					Placeholder("Enter your kingdom name"),
 				),

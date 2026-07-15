@@ -55,7 +55,7 @@ func resetPasswordContent(token string) Node {
 					Div(Class("field-group"),
 						Label(Class("field-label"), For("password"), Text("New password")),
 						Div(Class("password-field"),
-							Input(ID("password"), ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
+							Input(ID("password"), Class("field"), ds.Bind("password"), ds.Attr("type", "$showPassword ? 'text' : 'password'")),
 							Button(Class("btn-text"),
 								Type("button"),
 								ds.Text("$showPassword ? 'Hide' : 'Show'"),
