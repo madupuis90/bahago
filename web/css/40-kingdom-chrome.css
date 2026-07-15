@@ -1,5 +1,11 @@
 /* =============================================================================
-   Kingdom chrome (CommandBar topbar, nav, typography helpers) — Comic Lab skin
+   Kingdom chrome (CommandBar topbar, nav, typography, filigree) — Codex skin
+   ---------------------------------------------------------------------------
+   Illuminated-journal look: light parchment page, DARK charcoal-slate frame,
+   gold filigree & bevels, "metallic slate" selectors with bright gold
+   highlights, symmetrical engraved titles (no rotation). Semantic class names
+   and gomponents markup are preserved; only styling changes.
+   See docs/design-system/design-language.md.
    ============================================================================= */
 
 .kingdom-page {
@@ -31,13 +37,11 @@
   font-size: 10.5px;
   color: var(--ink-soft);
 
-  &.text-highlight {
-    color: var(--highlight);
-  }
+  &.text-highlight { color: var(--brass-dark); }
 }
 
 .text-highlight {
-  color: var(--highlight);
+  color: var(--brass-dark);
   font-family: var(--font-body);
 }
 
@@ -48,14 +52,24 @@
   font-size: 1rem;
 }
 
-.italic {
-  font-style: italic;
+.italic { font-style: italic; }
+
+/* Double rule — now two gold engraved lines */
+.rule-dbl {
+  height: 4px;
+  background:
+    linear-gradient(90deg, transparent, var(--brass) 8%, var(--brass) 92%, transparent) 0 0 / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, var(--brass-dark) 8%, var(--brass-dark) 92%, transparent) 0 2px / 100% 1px no-repeat;
 }
 
-.rule-dbl {
-  height: 3px;
-  background: linear-gradient(180deg,
-      var(--edge) 0 1px, transparent 1px 2px, var(--edge) 2px 3px);
+/* Filigree divider — a gold engraved line with a centered diamond ornament.
+   Use for formal section breaks (under the nav band, under page titles). */
+.rule-filigree {
+  height: 12px;
+  margin: 10px 0;
+  background:
+    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3.5px, var(--brass) 3.5px 4.5px, transparent 4.6px) center / 12px 12px no-repeat,
+    linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass) 82%, transparent) center / 100% 1px no-repeat;
 }
 
 /* ── Sprite glyphs (bare line-art) ───────────────────────────────────────── */
@@ -63,44 +77,39 @@
   display: block;
   color: var(--ink);
 
-  &.icon--active {
-    color: var(--red);
-  }
-
-  &.icon--dim {
-    opacity: .5;
-  }
+  &.icon--active { color: var(--red); }
+  &.icon--dim    { opacity: .5; }
 }
 
-/* a bare glyph — just the line-art, no frame */
 .gly { display: block; color: inherit; }
 
-/* crest composition tokens — declared at root so they register as DS tokens */
+/* crest composition tokens — brass-rimmed dark slate medallion by default */
 :root {
-  --crest-ring:  var(--ink);                  /* @kind color */
-  --crest-fill:  rgba(255, 250, 236, .5);     /* @kind other */
-  --crest-glyph: var(--ink);                  /* @kind color */
-  --c-ink:        #e6cf94;                     /* @kind color */
-  --c-ink-strong: #fff8dc;                     /* @kind color */
-  --c-sub:        #c2a468;                     /* @kind color */
-  --c-divider:    1px solid rgba(0,0,0,.4);    /* @kind other */
+  --crest-ring:  var(--brass);
+  --crest-fill:  radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));
+  --crest-glyph: var(--brass-light);
+  --c-ink:        #efe1b4;
+  --c-ink-strong: #efe1b4;
+  --c-sub:        #b89a5e;
+  --c-divider:    1px solid var(--brass-dark);
 }
 
-/* The kingdom identity mark — The Coin.
-   A bold BD medallion: thick ink ring, flat fill, optionally bearing a glyph.
-   No shield frame (see docs/design-system/icons.md). Per-skin classes override
-   the --crest-* tokens below. The inner symbol is currently empty (TBD). */
+/* The kingdom identity mark — brass-rimmed slate medallion, embossed gold
+   glyph. Per-skin classes override the --crest-* tokens. */
 .crest {
   display: inline-grid; place-items: center; flex: none;
   border-radius: 50%;
-  border: 3px solid var(--crest-ring);
+  border: 1px solid var(--crest-ring);
   background: var(--crest-fill);
-  box-shadow: var(--shadow-ink-xs);
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    0 2px 4px rgba(40,28,12,.30);
 }
 .crest .icon { color: var(--crest-glyph); }
-.crest--ghost { --crest-fill: transparent; }
+.crest--ghost { --crest-fill: transparent; box-shadow: 0 0 0 1px var(--brass-dark); }
 
-/* ── Resource gems — flat heraldic discs, ink ring, white glyph ───────────── */
+/* ── Resource medallions — brass-rimmed, muted metal tint, gold glyph ───── */
 .gem {
   position: relative;
   display: inline-grid;
@@ -109,39 +118,45 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 2.5px solid var(--ink);
-  box-shadow: var(--shadow-ink-xs);
+  border: 1px solid var(--brass);
+  background:
+    radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--gem-fill, var(--card)) 100%, #fff 10%) 0%,
+      var(--gem-fill, var(--card-2)) 70%);
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 4px rgba(0,0,0,.35),
+    0 1px 3px rgba(40,28,12,.30);
 }
 .gem .icon,
 .gem .gly,
-.gem svg { color: #fff; stroke: #fff; }
+.gem svg { color: var(--c-ink-strong); stroke: var(--c-ink-strong); }
 
-.gem-tree     { background: var(--gem-tree); }      /* Wood     — green  */
-.gem-mountain { background: var(--gem-mountain); }  /* Stone    — slate  */
-.gem-wheat    { background: var(--gem-wheat); }     /* Food     — amber  */
-.gem-flame    { background: var(--gem-flame); }     /* Mana     — blue   */
-.gem-sun      { background: var(--gem-sun); }       /* Devotion — rose   */
-.gem-star     { background: var(--gem-star); }      /* Knowledge— violet */
+.gem-tree     { --gem-fill: var(--gem-tree); }      /* Wood     */
+.gem-mountain { --gem-fill: var(--gem-mountain); }  /* Stone    */
+.gem-wheat    { --gem-fill: var(--gem-wheat); }      /* Food     */
+.gem-flame    { --gem-fill: var(--gem-flame); }      /* Mana     */
+.gem-sun      { --gem-fill: var(--gem-sun); }        /* Devotion */
+.gem-star     { --gem-fill: var(--gem-star); }      /* Knowledge*/
 
-/* ── CommandBar shell ─────────────────────────────────────────────────────── */
+/* ── CommandBar shell — dark slate frame with gold trim ─────────────────── */
 
-/* the bar base — shared shell; the visible skin lives on the consumer
-   (.barB2 here, .home-chrome.bar on the home shell) */
 .bar {
   font-family: var(--font-cinzel);
-  color: var(--c-ink);
+  color: var(--primary-ink);
   width: 100%;
   box-sizing: border-box;
 }
 .bar * { box-sizing: border-box; }
 
-/* Layout B2 — Row 1: identity · centered resource pills · tick + Leave
-              Row 2: full-width band of section links */
+/* Layout B2 — slate frame, brass trim underline, gold filigree under the nav.
+   Row 1: identity · centered resource pills · tick + Leave
+   Row 2: full-width band of section links */
 .barB2 {
   display: flex;
   flex-direction: column;
-  background: var(--red);
-  border-bottom: 4px solid var(--ink);
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--brass);
+  box-shadow: var(--shadow-frame);
   position: relative;
   z-index: 2;
 }
@@ -149,100 +164,124 @@
 .barB2-res { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 10px; }
 .barB2-right { display: flex; align-items: center; gap: 11px; }
 .barB2-nav {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  padding: 7px 22px;
-  border-top: 3px solid var(--ink);
-  background: rgba(0, 0, 0, .12);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 4px;
+  padding: 0 22px;
+  border-top: 1px solid var(--brass-dark);
+  background: linear-gradient(180deg, var(--slate-2), var(--slate));
 }
 .barB2-nav--ico { padding: 5px 22px; }
 
-/* identity — crest + name + population */
+/* a thin gold filigree seam between the nav band and the content */
+.barB2-nav::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brass) 10%, var(--brass) 90%, transparent);
+}
+
+/* identity — medallion + name + population */
 .id { display: flex; align-items: center; gap: 11px; flex: none; }
-.id-crest { flex: none; --crest-ring: var(--primary-ink); --crest-fill: rgba(255, 246, 230, .18); --crest-glyph: var(--primary-ink); }
+.id-crest {
+  flex: none;
+  --crest-ring: var(--brass-light);
+  --crest-fill: radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));
+  --crest-glyph: var(--brass-light);
+}
 .id-name {
-  font-family: var(--font-display); font-size: 20px; line-height: 1.05;
-  color: var(--primary-ink); -webkit-text-stroke: .4px var(--ink);
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 20px; line-height: 1.05;
+  letter-spacing: .10em; text-transform: uppercase;
+  color: var(--brass-light);
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
 }
 .id-sub {
   margin-top: 3px; font-family: var(--font-body); font-weight: 800;
-  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
-  color: rgba(255, 246, 230, .9);
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--c-sub);
 }
 
-/* resource PILL — cream cartouche with an ink ring */
+/* resource PILL — "metallic slate selector": dark charcoal cell, gold trim */
 .pill {
-  display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 4px;
-  background: var(--card); border: 2.5px solid var(--ink); border-radius: 11px;
-  box-shadow: var(--shadow-ink-xs);
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px 4px 4px;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border: 1px solid var(--brass-dark);
+  border-radius: 9px;
+  box-shadow: var(--shadow-recessed);
 }
 .pill .gem { width: 30px; height: 30px; }
 .pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
-.pill-l { font-family: var(--font-body); font-weight: 800; font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink); opacity: .72; }
-.pill-v { margin-top: 1px; font-family: var(--font-display); font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
-.pill-v.is-zero { color: var(--red); }
+.pill-l { font-family: var(--font-body); font-weight: 800; font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
+.pill-v { margin-top: 2px; font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--brass-light); font-variant-numeric: tabular-nums; }
+.pill-v.is-zero { color: var(--red); text-shadow: 0 0 6px rgba(141,47,36,.6); }
 .pill--mini { padding: 4px 10px 4px 4px; }
 .pill--mini .pill-v { margin-top: 0; font-size: 13px; }
 
-/* tick chip — cream cartouche with hourglass */
+/* tick chip — metallic slate selector with a gold sandglass */
 .tick {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 4px;
-  background: var(--card); border: 2.5px solid var(--ink); border-radius: 11px;
-  box-shadow: var(--shadow-ink-xs); color: var(--ink);
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px 4px;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border: 1px solid var(--brass-dark);
+  border-radius: 9px;
+  box-shadow: var(--shadow-recessed);
+  color: var(--primary-ink);
 }
-.tick .gly, .tick svg { color: var(--ink); }
-.tick-l { font-family: var(--font-body); font-weight: 800; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); opacity: .72; }
-.tick-v { font-family: var(--font-display); font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tick .gly, .tick svg { color: var(--brass); }
+.tick-l { font-family: var(--font-body); font-weight: 800; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--c-sub); }
+.tick-v { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--brass-light); font-variant-numeric: tabular-nums; }
 
-/* leave button — gold comic */
+/* leave button — stone slab, gold border */
 .leave {
   display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; cursor: pointer;
-  border-radius: 11px; font: inherit;
-  background: var(--yellow); border: 2.5px solid var(--ink); color: var(--ink);
-  box-shadow: var(--shadow-ink-xs);
+  border-radius: 8px; font: inherit;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border: 1px solid var(--brass); color: var(--brass-light);
+  box-shadow: var(--shadow-raised);
   transition: transform .08s, filter .12s;
 }
-.leave .gly, .leave svg { color: var(--ink); }
-.leave:hover { filter: brightness(1.05); }
-.leave:active { transform: translateY(1px); }
-.leave-l { font-family: var(--font-display); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.leave .gly, .leave svg { color: var(--brass-light); }
+.leave:hover { filter: brightness(1.12); }
+.leave:active { transform: translateY(1px); box-shadow: var(--shadow-btn-active); }
+.leave-l { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 
-/* ── Section nav links (scoped to the kingdom nav band) ───────────────────── */
+/* ── Section nav links — formal tabs on the slate band (symmetrical) ─────── */
 
 /* nav link base — shared structure with the home shell nav */
 .nav-link {
   position: relative;
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 11px; border-radius: 9px; text-decoration: none; white-space: nowrap;
-  border: 2px solid transparent; color: var(--c-ink); cursor: pointer;
-  transition: background .12s, border-color .12s, color .12s;
+  padding: 11px 13px 9px; border-radius: 5px 5px 0 0; text-decoration: none; white-space: nowrap;
+  border: 1px solid transparent; border-bottom: none;
+  color: var(--c-sub); cursor: pointer;
+  transition: background .12s, color .12s, box-shadow .12s, border-color .12s;
 }
 .nav-link .gly { color: currentColor; }
-.nav-link-l { font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; }
+.nav-link-l { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
 
-/* comic skin — only inside the red CommandBar nav band, so the home nav is untouched */
-.barB2-nav .nav-link { color: var(--primary-ink); }
-.barB2-nav .nav-link:hover { background: rgba(255, 246, 230, .14); color: #fff; }
+/* codex skin — "metallic slate selector": dim gold caps inactive; active =
+   raised gold-highlighted slate cell with a gold-glow trim. Symmetrical. */
+.barB2-nav .nav-link { color: var(--c-sub); }
+.barB2-nav .nav-link:hover { color: var(--brass-light); background: rgba(230,201,130,.06); }
 .barB2-nav .nav-link.is-on {
-  background: var(--yellow); border-color: var(--ink); color: var(--ink);
-  box-shadow: var(--shadow-ink-xs);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border-color: var(--brass);
+  color: var(--brass-light);
+  box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold);
 }
-.barB2-nav .nav-link-l { font-family: var(--font-body); font-weight: 800; letter-spacing: .06em; }
+.barB2-nav .nav-link.is-on .nav-link-l { color: var(--brass-light); }
 
 .nav-badge {
-  position: absolute; top: -5px; right: -7px;
+  position: absolute; top: 4px; right: 1px;
   min-width: 16px; height: 16px; padding: 0 4px;
   border-radius: 99px;
-  background: var(--yellow); color: var(--ink);
-  border: 2px solid var(--ink); box-shadow: var(--shadow-ink-xs);
-  font-family: var(--font-display); font-size: 8px; letter-spacing: .02em;
-  line-height: 12px; text-align: center; pointer-events: none;
+  background: var(--red); color: var(--primary-ink);
+  border: 1px solid var(--brass); box-shadow: var(--shadow-ink-xs);
+  font-family: var(--font-display); font-weight: 700; font-size: 8px; letter-spacing: .02em;
+  line-height: 14px; text-align: center; pointer-events: none;
 }
-.nav-link.is-alert .nav-badge {
-  animation: badge-glow 2s ease-in-out infinite;
-}
+.nav-link.is-alert .nav-badge { animation: badge-glow 2s ease-in-out infinite; }
 @keyframes badge-glow {
   0%, 100% { box-shadow: var(--shadow-ink-xs); }
-  50%      { box-shadow: var(--shadow-ink-xs), 0 0 8px rgba(255, 210, 90, .9); }
+  50%      { box-shadow: var(--shadow-ink-xs), var(--glow-gold); }
 }
 
 .frame-body--desk { align-items: stretch; }

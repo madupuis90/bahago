@@ -1,49 +1,80 @@
 /* =============================================================================
-   Tokens — COMIC LAB re-skin (Foundation handoff, 2026-06-18)
+   Tokens — Codex (Pathfinder: Kingmaker-inspired) skin, v2
    ---------------------------------------------------------------------------
-   Drop-in replacement for web/css/01-tokens.css.
-   Token NAMES are preserved so no other CSS file has to change; only VALUES are
-   repointed to the Comic Lab palette, fonts are swapped to Lilita One / Nunito,
-   and a heraldic + ink-shadow block is ADDED at the top.
-   Structural tokens (map sizes, card knobs, chrome vars) are kept untouched so
-   not-yet-re-skinned screens keep working until their own handoff lands.
+   The look is an illuminated journal: LIGHT aged-parchment page background,
+   DARK charcoal-slate frame & "metallic slate" selectors, GOLD filigree and
+   bevels. Token NAMES are preserved so feature CSS keeps working; VALUES are
+   repointed and a few dark-slate / gold tokens are added. Fonts are Cinzel
+   (display) + Nunito (body). See docs/design-system/design-language.md.
    ============================================================================= */
 
 :root {
-  /* ── Comic Lab palette (NEW) ───────────────────────────────────────────── */
-  --paper: #f3e3bd;            /* page parchment */
-  --paper-2: #efdcb0;
-  --dot: rgba(40, 28, 12, .10); /* the dotted-paper texture color */
-  --card: #fffaf0;             /* card cream */
-  --card-2: #fff4dd;           /* recessed well / secondary surface */
+  /* ── Slate — the dark charcoal frame & metallic selectors ────────────── */
+  --slate:      #2f2d2b;   /* primary dark charcoal surface (bar, pills, nav) */
+  --slate-2:    #201e1d;   /* deeper recess */
+  --slate-edge: #46423d;   /* lighter bevel edge */
 
-  /* heraldic — the four flat meaning-colors */
-  --red: #d63a2f;              /* realm / danger / destroy */
-  --blue: #2f6fb0;             /* defence / steel / accent */
-  --green: #3f9d51;            /* growth / commit */
-  --yellow: #f4c12e;          /* time / emphasis / warn */
-  --primary-ink: #fff6e6;      /* text on solid heraldic fills */
+  /* legacy leather aliases → slate (kept so older refs still resolve) */
+  --leather:      var(--slate);
+  --leather-2:    var(--slate-2);
+  --leather-edge: var(--slate-edge);
 
-  /* the ink line + its hard offset shadow (the comic signature) */
-  --ink: #20180f;
-  --shadow-ink: 4px 4px 0 var(--ink);
-  --shadow-ink-sm: 3px 3px 0 var(--ink);
-  --shadow-ink-xs: 2px 2px 0 var(--ink);
-  --shadow-ink-lg: 6px 6px 0 var(--ink);
+  /* ── Brass / gold — trim, bevels, active glow, filigree ──────────────── */
+  --brass:       #c69a4a;
+  --brass-light: #e6c982;  /* top inner highlight / engraved gold */
+  --brass-dark:  #7c5a26;  /* bottom inner shadow / gold-brown */
 
-  /* arcane / summon accent (used by Units summon portraits + arcane chips) */
-  --purple: #7a52c8;
+  /* ── Parchment — the LIGHT page background & content cards ──────────── */
+  --paper:   #e8d9b0;     /* base aged parchment (page bg) */
+  --paper-2: #d6c48c;     /* deeper parchment */
+  --card:    #f1e6c8;     /* content panel cream (brighter than page) */
+  --card-2:  #e3d2a4;     /* recessed well / secondary surface */
+  --dot: rgba(60, 42, 18, .07);
 
-  /* resource gems (kept for the Chrome handoff that re-skins .gem) */
-  --gem-tree: #2f9e57;
-  --gem-mountain: #5b7184;
-  --gem-wheat: #e0a51c;
-  --gem-flame: #2f6fb0;
-  --gem-sun: #d8456b;
-  --gem-star: #7a52c8;
+  /* ── Heraldic fills — muted, aged (used sparingly, not as comic flats) ─ */
+  --red:    #8d2f24;      /* realm / danger / destroy (deep rust crimson) */
+  --blue:   #3d5a78;      /* defence / steel / accent (pewter) */
+  --green:  #4a6b3a;      /* growth / commit (muted forest) */
+  --yellow: #d4af6a;      /* time / emphasis / warn (aged gold = brass family) */
+  --purple: #6a4a8e;      /* arcane / summon */
+  --primary-ink: #efe1b4; /* text on dark slate fills (parchment/gold) */
 
-  --brass: #e0a51c;        /* meter brass = "time/ticks" fill (canon default) */
-  --unread: #fbeec0;       /* messages: unread row wash */
+  /* ── Ink — warm dark text/outline on parchment ──────────────────────── */
+  --ink: #2a1f12;
+  --ink-soft: #5a4d36;
+
+  /* shadows — soft, layered (retired: comic hard-offset 4px 4px 0 var(--ink)) */
+  --shadow-ink:    0 3px 8px rgba(40,28,12,.22), 0 1px 2px rgba(40,28,12,.16);
+  --shadow-ink-sm: 0 2px 5px rgba(40,28,12,.20);
+  --shadow-ink-xs: 0 1px 2px rgba(40,28,12,.18);
+  --shadow-ink-lg: 0 6px 16px rgba(40,28,12,.28), 0 2px 4px rgba(40,28,12,.18);
+
+  /* material bevels — the gold frame vocabulary */
+  --shadow-raised:    /* raised gold-edged frame (buttons, raised cards) */
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 0 var(--brass-dark),
+    0 2px 6px rgba(40,28,12,.30);
+  --shadow-recessed:  /* inset well (recessed selectors, slate cells) */
+    inset 0 2px 4px rgba(0,0,0,.45),
+    inset 0 0 0 1px rgba(0,0,0,.30);
+  --shadow-frame:     /* dark slate frame with gold trim (chrome shells) */
+    inset 0 1px 0 rgba(230,201,130,.18),
+    inset 0 -3px 6px rgba(0,0,0,.55),
+    inset 0 0 0 1px var(--brass-dark),
+    0 3px 10px rgba(40,28,12,.30);
+  --glow-gold:        /* active / alert glow */
+    0 0 10px rgba(230, 201, 130, .55), 0 0 2px rgba(230,201,130,.85);
+
+  /* ── Resource medallions (kept mapping, muted to aged metal) ─────────── */
+  --gem-tree:     #5a7a44;
+  --gem-mountain: #6e6a5c;
+  --gem-wheat:    #b8932f;
+  --gem-flame:    #3d5a78;
+  --gem-sun:      #9c3f44;
+  --gem-star:     #5a4474;
+
+  --brass-meter: #c69a4a;   /* meter brass = "time/ticks" fill (canon default) */
+  --unread: #2a1a10;        /* messages: unread row tint on parchment */
 
   /* heraldic map washes — biome fills (terrain "feel") for the World board */
   --bio-p: #bcd089;   /* Plains   */
@@ -54,102 +85,100 @@
   --bio-m: #9cb079;   /* Fen      */
 
   /* diplomacy relation accents — marker fills, own-tile ring, relation dots */
-  --rel-self:    #e8923a;
-  --rel-ally:    #3f9d51;   /* = --green */
-  --rel-neutral: #2f6fb0;   /* = --blue  */
-  --rel-war:     #d63a2f;   /* = --red   */
+  --rel-self:    var(--brass);
+  --rel-ally:    var(--green);
+  --rel-neutral: var(--blue);
+  --rel-war:     var(--red);
 
   /* political "feel" tile tints (muted relation washes for the Political map) */
-  --pol-self:    #e8c88a;
+  --pol-self:    #e6cf94;
   --pol-ally:    #a7cdaf;
   --pol-neutral: #a6c1d6;
   --pol-war:     #dcaaa3;
 
-  /* ── Typography — TWO faces (repointed) ────────────────────────────────── */
-  /* Lilita One: every title, label, numeral, button.  Nunito: body & prose. */
-  --font-display: 'Lilita One', cursive;
-  --font-cinzel:  'Lilita One', cursive;   /* legacy name → poster face */
+  /* ── Typography — Cinzel (display) + Nunito (body) ───────────────────── */
+  --font-display: 'Cinzel', serif;
+  --font-cinzel:  'Cinzel', serif;
   --font-heading: 'Nunito', system-ui, sans-serif;
   --font-body:    'Nunito', system-ui, sans-serif;
-  --font-caps:    'Nunito', system-ui, sans-serif;  /* caps labels: Nunito 900 */
+  --font-caps:    'Nunito', system-ui, sans-serif;
   --font-ui:      'Nunito', system-ui, sans-serif;
 
-  /* ── Links & value colors (repointed) ──────────────────────────────────── */
+  /* ── Links & value colors ────────────────────────────────────────────── */
   --link-color: var(--blue);
-  --link-hover-color: #235a93;
+  --link-hover-color: #2c4258;
   --color-positive: var(--green);
   --color-negative: var(--red);
 
-  /* ── Panels (kept; values nudged to the comic surface) ─────────────────── */
+  /* ── Panels — framed parchment cards with a gold edge ─────────────────── */
   --panel-bg: var(--card);
   --panel-text: var(--ink);
   --panel-link-color: var(--blue);
-  --panel-link-hover-color: #235a93;
-  --panel-radius: 14px;
-  --panel-border: 3px solid var(--ink);
-  --panel-shadow: var(--shadow-ink);
+  --panel-link-hover-color: #2c4258;
+  --panel-radius: 8px;
+  --panel-border: 1px solid var(--brass);
+  --panel-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 0 0 1px rgba(124,90,38,.5),
+    var(--shadow-ink);
 
-  /* ── Buttons (legacy token names kept; values now comic) ───────────────── */
-  --btn-bg: var(--card);
-  --btn-bg-hover: var(--card-2);
-  --btn-color: var(--ink);
-  --shadow-btn: var(--shadow-ink);
-  --shadow-btn-hover: 5px 5px 0 var(--ink);
-  --shadow-btn-active: 0 0 0 var(--ink);
+  /* ── Buttons — modular "heavy stone slab" with a thick gold border ─── */
+  --btn-bg: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  --btn-bg-hover: linear-gradient(180deg, #534e48, var(--slate));
+  --btn-color: var(--brass-light);
+  --shadow-btn: var(--shadow-raised);
+  --shadow-btn-hover:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 0 var(--brass-dark),
+    0 3px 8px rgba(40,28,12,.40);
+  --shadow-btn-active:
+    inset 0 2px 4px rgba(0,0,0,.55),
+    inset 0 0 0 1px var(--brass-dark);
 
-  /* ── World map — must match game.PageSize (unchanged) ──────────────────── */
+  /* ── World map — must match game.PageSize (unchanged) ────────────────── */
   --map-page-size: 8;
   --map-cell-size: 4rem;
   --map-wall-size: 3rem;
   --map-axis-label-size: 2rem;
   --map-minimap-cell-size: 1rem;
 
-  /* ── Legacy chrome / surface tokens — KEPT until their handoffs land ────── *
-   * Not-yet-re-skinned screens (chrome, pages, cards) still reference these.   *
-   * Do not delete in this handoff; later handoffs retire them.                 */
-  --red-darker: #5f1212;
-  --wood: #7d5132;
-  --wood-dark: #5a3820;
-  --parchment: #f7eed5;
-  --parchment-deep: #ebdfb6;
-  --ink-soft: #5a4d36;
-  --accent: var(--blue);          /* repointed: focus glow is now steel blue */
-  --accent-dark: #1d3a26;
-  --highlight: #7a3018;
-  --edge: #b8a26a;
-  --c-ink-strong: #f7eed5;
-  --parchment-shadow: rgba(75, 55, 25, .18);
-  --chrome-border: #4d2f1c;
-  --chrome-accent: #c89a4a;
-  --chrome-accent-light: #e8c478;
-  --card-alpha: 0.55;
+  /* ── Legacy chrome / surface tokens (repointed to codex) ─────────────── *
+   * The chrome now uses --slate directly; these aliases keep older feature *
+   * files resolving until their handoffs. Retire with their handoffs.       */
+  --red-darker: #5a1510;
+  --wood: var(--slate);
+  --wood-dark: var(--slate-2);
+  --parchment: var(--paper);
+  --parchment-deep: var(--paper-2);
+  --accent: var(--brass);
+  --highlight: var(--brass-dark);
+  --edge: #8a6f3e;
+  --c-ink-strong: #efe1b4;
+  --parchment-shadow: rgba(40,28,12,.20);
+  --chrome-border: var(--brass);
+  --chrome-accent: var(--brass);
+  --chrome-accent-light: var(--brass-light);
+  --card-alpha: 1;
   --card-blur: 0px;
   --card-lit: 1;
-  --card-border-w: 1.5px;
+  --card-border-w: 1px;
 
-  /* Carried over from the parchment tokens — still referenced by not-yet-re-skinned
-     screens (chrome topbar/nav, world map, .card surface). Retire with their handoffs. */
+  /* dark-slate frame background for the chrome shells */
   --chrome-bg:
-    linear-gradient(180deg, rgba(255, 235, 200, .18) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, .20) 100%),
-    linear-gradient(180deg,
-      transparent 0,
-      transparent calc(62% - 1px),
-      rgba(0, 0, 0, .22) calc(62% - 1px),
-      rgba(0, 0, 0, .22) 62%,
-      rgba(255, 235, 200, .07) 62%,
-      rgba(255, 235, 200, .07) calc(62% + 1px),
-      transparent calc(62% + 1px)),
-    linear-gradient(180deg, #8c5e3d 0%, #6b4226 100%);
-  --card-fill-flat: rgb(255 250 236 / var(--card-alpha));
+    linear-gradient(180deg, rgba(230,201,130,.06) 0%, transparent 20%, transparent 80%, rgba(0,0,0,.30) 100%),
+    linear-gradient(180deg, var(--slate) 0%, var(--slate-2) 100%);
+  --card-fill-flat: var(--card);
   --card-fill-lit:
     linear-gradient(180deg,
-      rgb(255 250 236 / calc(var(--card-alpha) + 0.10)) 0%,
-      rgb(235 223 182 / calc(var(--card-alpha) - 0.05)) 100%);
+      color-mix(in srgb, var(--card) 100%, #fff 6%) 0%,
+      var(--card-2) 100%);
   --parchment-noise:
-    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.08 0 0 0 0.10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
-  /* Page background — flat dotted parchment (replaces the sky gradient) */
+  /* Page background — LIGHT aged parchment with a soft vignette + texture */
   --page-bg:
-    radial-gradient(var(--dot) 1.6px, transparent 1.7px) 0 0 / 17px 17px,
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.30), transparent 65%),
+    radial-gradient(ellipse at 50% 120%, rgba(60,42,18,.10), transparent 60%),
+    var(--parchment-noise),
     var(--paper);
 }

@@ -30,54 +30,76 @@
    Card surface
    ============================================================================= */
 
-/* The base surface: warm cream, a 3px ink line, generous radius, and a hard
-   offset ink shadow that lifts it off the dotted paper. Flat — no gradients. */
+/* The base surface: framed parchment panel with a gold edge + inset bevel,
+   lifted off the page by a soft shadow. Matches the codex chrome kit. */
 .card {
   position: relative;
-  background: var(--card);
-  border: 3px solid var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--shadow-ink);
+  background: var(--card-fill-lit);
+  border: 1px solid var(--brass);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 0 0 1px rgba(124,90,38,.35),
+    var(--shadow-ink);
   color: var(--ink);
 
-  /* Parchment-era modifiers are neutralized — the flat cream IS the surface now
-     (the ink border + offset shadow already give every card its "frame", and the
-     page is flat dotted paper so there is no busy art to frost over). Kept as
-     no-op aliases so current templates don't break; drop them per-screen. */
+  /* Legacy modifier aliases — neutralised; the framed parchment IS the
+     surface now. Kept as no-ops so current templates don't break; drop
+     them per-screen. */
   &.is-lit,
   &.is-frost,
-  &.is-framed { background: var(--card); }
+  &.is-framed { background: var(--card-fill-lit); }
 }
 
-/* Padding hull — card content sits inside this, clear of the inked border. */
+/* Padding hull — card content sits inside this, clear of the gold edge. */
 .card-inner { padding: 20px 22px 18px; }
 
-/* Heraldic tab — a short, colour-coded category sticker straddling the top-left
-   edge. Use INSTEAD of a .card-title when several cards share a page; never both
-   saying the same words. Colour carries meaning, not decoration. */
+/* Chapter tab — a gold-bordered dark-slate plaque pinned to the top-left
+   edge, engraved gold caps, with a thin heraldic accent stripe on the left
+   keyed by the variant. Use INSTEAD of a .card-title when several cards share
+   a page; never both saying the same words. The accent carries meaning, not
+   decoration. */
 .card-tab {
+  --card-accent: var(--blue);
   position: absolute;
-  top: -15px;
+  top: -14px;
   left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 12px;
   line-height: 1;
-  letter-spacing: .05em;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--primary-ink);
-  background: var(--blue);
-  border: 3px solid var(--ink);
-  border-radius: 9px;
-  padding: 4px 12px 3px;
-  box-shadow: var(--shadow-ink-sm);
+  color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border: 1px solid var(--brass);
+  border-radius: 5px;
+  padding: 5px 12px 4px 9px;
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 3px rgba(0,0,0,.4),
+    var(--shadow-ink-xs);
 }
-.card-tab--red    { background: var(--red); }
-.card-tab--green  { background: var(--green); }
-.card-tab--blue   { background: var(--blue); }
-.card-tab--yellow { background: var(--yellow); color: var(--ink); }
-.card-tab--summon { background: var(--purple); }   /* arcane — matches .unit-portrait--summon */
+/* the heraldic accent stripe on the left of the plaque */
+.card-tab::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--card-accent);
+  box-shadow: 0 0 4px var(--card-accent);
+  flex: none;
+}
+.card-tab--red    { --card-accent: var(--red); }
+.card-tab--green  { --card-accent: var(--green); }
+.card-tab--blue   { --card-accent: var(--blue); }
+.card-tab--yellow { --card-accent: var(--brass); color: var(--brass-light); }
+.card-tab--summon { --card-accent: var(--purple); }
 /* alias — retire once templates migrate .card-tab--wood → .card-tab--blue */
-.card-tab--wood   { background: var(--blue); }
+.card-tab--wood   { --card-accent: var(--blue); }
 
 /* Card title block — the in-card heading. A card is named by EITHER a
    .card-title OR a .card-tab, never both. Use .card-header-row when a control or
@@ -92,10 +114,14 @@
 }
 .card-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 21px;
   line-height: 1.05;
-  color: var(--ink);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--brass-dark);
   margin: 0 0 6px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
 }
 .card-subtitle,
 .card-flavour {

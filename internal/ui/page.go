@@ -5,11 +5,12 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-// PageHeader renders the page title plate (a single rotated red plate). All
-// pages share this one loud title treatment (Design Reference §3). actions is
-// optional; when present the title is wrapped in .page-header-text and the
-// header becomes a flex row (the actions sit right, aligned to the plate's
-// bottom — see 41-kingdom-overview.css).
+// PageHeader renders the engraved codex page title: a formal symmetrical
+// Cinzel caps title engraved in gold-brown on the parchment, followed by a
+// gold filigree divider. All pages share this one title treatment (Design
+// Reference §3). actions is optional; when present the title is wrapped in
+// .page-header-text and the header becomes a flex row (the actions sit right,
+// aligned to the title's bottom — see 41-kingdom-overview.css).
 func PageHeader(title string, actions ...Node) Node {
 	titleNode := H1(Class("page-header-title"), Text(title))
 	if len(actions) == 0 {
