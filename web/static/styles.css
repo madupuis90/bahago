@@ -1278,6 +1278,34 @@ input.field:focus, select.field:focus {
 }
 
 /* =============================================================================
+   Roster token — a unit portrait + its held-count badge (Units muster roll,
+   Army roster strip). Shared so both pages share one codex badge: a
+   bottom-centered dark-slate value tablet framed in gold (matches the slider
+   thumb), not a comic ink chip. The wrapping token shrinks to the portrait so
+   the absolute badge anchors to the portrait's bottom edge.
+   Markup: <span/div class="unit-token"> (.unit-portrait | .portrait) + .unit-tally
+   ============================================================================= */
+.unit-token { position: relative; display: inline-flex; flex: none; justify-self: start; }
+.unit-tally {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 42%);
+  min-width: 30px;
+  padding: 2px 9px 1px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass);
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
+  white-space: nowrap;
+}
+
+/* =============================================================================
    Empty state — centered crest + title + hint (Messages, Guild).
    Markup: .empty-state [.empty-state--row] > (.crest | .icon) + .empty-state-title
            + (.empty-state-hint | <p>) [.btn]
@@ -2922,15 +2950,12 @@ input.field:focus, select.field:focus {
 .detail-note { font-family: var(--font-body); font-weight: 700; font-size: 12.5px; text-align: center; opacity: .65; text-wrap: pretty; }
 .detail-note.is-warn { color: var(--red); opacity: 1; }
 /* =============================================================================
-   Units screen — COMIC LAB re-skin (Units handoff, 2026-06-19)
+   Units screen — Codex re-skin (Pathfinder: Kingmaker-inspired)
    ---------------------------------------------------------------------------
-   Re-skins every Units component to the comic vocabulary (flat fills, 3px ink
-   outlines, hard offset shadows, Lilita/Nunito) AND applies the two
-   flavour→semantic renames:
-       .kattr*  → .attribute*
-       .kmeter* → .meter*   (extracted to 20-shared.css — see meter.css)
-
-   The tick meter is NO LONGER defined here — it ships shared via 20-shared.css.
+   Feature-local Units components rendered in the codex vocabulary: framed
+   parchment surfaces with gold edges, dark-slate value badges, brass bevels,
+   Cinzel caps + Nunito body. Semantic class names and markup are unchanged;
+   only CSS values move. The shared tick meter ships via 20-shared.css (.meter).
    ============================================================================= */
 
 /* --- host cards — roster cards (Units + Summons) stacked with a gap -------- */
@@ -2948,8 +2973,9 @@ input.field:focus, select.field:focus {
   display: flex;
   margin-top: 22px;
   background: var(--card);
-  border: 3px solid var(--ink);
-  border-radius: 12px;
+  border: 1px solid var(--brass);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
   overflow: hidden;
 }
 .units-summary-stat {
@@ -2960,14 +2986,14 @@ input.field:focus, select.field:focus {
   gap: 10px;
   padding: 9px 18px 10px;
 }
-.units-summary-stat + .units-summary-stat { border-left: 3px solid var(--ink); }
+.units-summary-stat + .units-summary-stat { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
 .units-summary-label {
   font-family: var(--font-display);
   letter-spacing: .05em;
   text-transform: uppercase;
   font-size: 11px;
-  color: var(--ink);
-  opacity: .62;
+  color: var(--brass-dark);
+  opacity: .9;
   white-space: nowrap;
 }
 .units-summary-val { display: flex; align-items: baseline; gap: 6px; }
@@ -2984,20 +3010,18 @@ input.field:focus, select.field:focus {
   letter-spacing: .04em;
   text-transform: uppercase;
   font-size: 11px;
-  color: var(--ink);
-  opacity: .6;
+  color: var(--ink-soft);
 }
 
-/* --- unit portrait token (held-count badge lives on .unit-token/.unit-tally) */
-.unit-token { position: relative; display: inline-flex; flex: none; justify-self: start; }
+/* --- unit portrait token (held-count badge .unit-token/.unit-tally live shared in 20-shared.css) */
 .unit-portrait {
   width: 64px;
   height: 64px;
   display: grid;
   place-items: center;
   border-radius: 12px;
-  border: 3px solid var(--ink);
-  box-shadow: var(--shadow-ink-sm);
+  border: 2px solid var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-ink-sm);
   background: var(--blue);
 }
 .unit-portrait svg { stroke: #fff; display: block; }
@@ -3008,26 +3032,7 @@ input.field:focus, select.field:focus {
   background-image: repeating-linear-gradient(45deg, transparent 0 7px, color-mix(in srgb, var(--ink) 7%, transparent) 7px 14px);
 }
 .unit-portrait--lg { width: 84px; height: 84px; }
-.unit-portrait--sm { width: 46px; height: 46px; border-width: 2.5px; border-radius: 9px; }
-
-.unit-tally {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translate(-50%, 42%);
-  min-width: 30px;
-  padding: 2px 9px 1px;
-  font-family: var(--font-display);
-  font-size: 14px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  background: var(--yellow);
-  border: 2.5px solid var(--ink);
-  border-radius: 7px;
-  box-shadow: var(--shadow-ink-xs);
-  white-space: nowrap;
-}
+.unit-portrait--sm { width: 46px; height: 46px; border-radius: 9px; }
 
 /* --- attribute chips (was .kattr) ----------------------------------------- */
 .attribute-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
@@ -3039,7 +3044,7 @@ input.field:focus, select.field:focus {
   text-transform: uppercase;
   color: var(--ink);
   padding: 3px 8px 2px;
-  border: 2px solid var(--ink);
+  border: 1px solid var(--brass-dark);
   border-radius: 7px;
   background: var(--card-2);
 }
@@ -3057,8 +3062,8 @@ input.field:focus, select.field:focus {
   padding: 5px 11px 4px;
   border-radius: 99px;
   background: var(--card-2);
-  border: 2.5px solid var(--ink);
-  box-shadow: var(--shadow-ink-xs);
+  border: 1px solid var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.25), var(--shadow-ink-xs);
   font-family: var(--font-display);
   font-size: 15px;
   color: var(--ink);
@@ -3088,8 +3093,8 @@ input.field:focus, select.field:focus {
   letter-spacing: .05em;
   text-transform: uppercase;
   font-size: 11px;
-  color: var(--ink);
-  opacity: .6;
+  color: var(--brass-dark);
+  opacity: .85;
 }
 .muster-roll-col--r { text-align: right; }
 .unit-row {
@@ -3104,7 +3109,7 @@ input.field:focus, select.field:focus {
 
 .muster-roll-foot {
   padding: 13px 4px 2px;
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--brass);
   align-items: baseline;
 }
 .muster-roll-foot-num {
@@ -3138,10 +3143,10 @@ input.field:focus, select.field:focus {
   gap: 11px;
   padding: 12px 15px;
   margin-bottom: 16px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--purple) 13%, var(--card));
-  border: 3px solid var(--ink);
-  box-shadow: var(--shadow-ink);
+  border: 1px solid var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
   font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
@@ -3159,8 +3164,7 @@ input.field:focus, select.field:focus {
   { width: 46px; height: 46px; display: grid; place-items: center; }
 .progress-banner-gem.progress-banner-gem--summon
   { width: 46px; height: 46px; display: grid; place-items: center; }
-.progress-banner-gem .unit-portrait { width: 46px; height: 46px; }
-/* =============================================================================
+.progress-banner-gem .unit-portrait { width: 46px; height: 46px; }/* =============================================================================
    World map — web/css/45-world-map.css   ·   COMIC LAB re-skin
    ---------------------------------------------------------------------------
    REPLACE the whole file. Brings the World screen (flat 8×8 board + command
@@ -3413,13 +3417,8 @@ input.field:focus, select.field:focus {
 .portrait__initial {
   font-family: var(--font-display); font-size: 1.3em; line-height: 1; color: var(--ink);
 }
-.unit-token { position: relative; display: inline-flex; }
-.unit-tally {
-  position: absolute; bottom: -8px; right: -8px;
-  font-family: var(--font-display); font-size: 13px; color: #fff;
-  background: var(--ink); border: 2.5px solid var(--card); border-radius: 8px;
-  padding: 1px 7px 0; box-shadow: var(--shadow-ink-xs);
-}
+/* .unit-token + .unit-tally now live shared in 20-shared.css (codex slate badge) *
+ * Defined here originally; this file's comic-leftover conversion is pending. */
 
 .roster-strip { display: flex; flex-wrap: wrap; gap: 18px 20px; align-items: flex-start; padding: 4px 2px 10px; }
 .roster-item { display: flex; flex-direction: column; align-items: center; gap: 9px; }
