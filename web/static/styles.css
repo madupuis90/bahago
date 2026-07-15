@@ -3369,7 +3369,7 @@ input.field:focus, select.field:focus {
 .status-pill--war     .status-dot { background: #fff; border-color: #fff; animation: relBlip 1.1s ease-in-out infinite; }
 @keyframes relBlip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
 /* =============================================================================
-   Army — Command Tent (Comic Lab)
+   Army — Command Tent (Codex)
    Page title plate accent: --red (default .page-header-title — no modifier).
    Depends on shared .card / .card-inner / .card-title / .btn / .field / .select /
    .eyebrow / .section-header / .page-header* (20-shared.css, 41-kingdom-overview.css).
@@ -3378,21 +3378,22 @@ input.field:focus, select.field:focus {
 /* ── Command summary strip ─────────────────────────────────────────────── */
 .summary {
   display: flex; margin: 0 0 26px;
-  background: var(--card); border: 3.5px solid var(--ink); border-radius: 16px;
-  box-shadow: var(--shadow-ink-lg); overflow: hidden;
+  background: var(--card); border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  overflow: hidden;
 
   @media (max-width: 760px) { flex-wrap: wrap; }
 }
 .summary-stat {
   flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 15px 20px 17px;
 
-  & + & { border-left: 3px solid var(--ink); }
+  & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
   @media (max-width: 760px) { flex: 1 0 45%; }
-  @media (max-width: 760px) & + & { border-left: 3px solid var(--ink); }
+  @media (max-width: 760px) & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
 }
 .ss-label {
-  font-family: var(--font-caps); font-weight: 900; letter-spacing: .05em;
-  text-transform: uppercase; font-size: 11px; opacity: .62;
+  font-family: var(--font-display); font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; font-size: 11px; color: var(--brass-dark); opacity: .9;
 }
 .ss-val { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
 .ss-num {
@@ -3402,34 +3403,37 @@ input.field:focus, select.field:focus {
   &.is-muted { color: color-mix(in srgb, var(--ink) 40%, transparent); }
 }
 .ss-sub {
-  font-family: var(--font-caps); font-weight: 800; font-size: 10.5px;
-  letter-spacing: .05em; text-transform: uppercase; opacity: .62; white-space: nowrap;
+  font-family: var(--font-body); font-weight: 800; font-size: 10.5px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap;
 }
 
 /* ── Unit token · roster · strength line ───────────────────────────────── */
 .portrait {
   flex: none; display: grid; place-items: center; position: relative;
-  background: var(--card-2); border: 3px solid var(--ink); border-radius: 12px;
-  box-shadow: var(--shadow-ink-xs);
+  background: var(--card-2); border: 2px solid var(--brass); border-radius: 12px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-ink-sm);
 
-  &.is-summon { background: color-mix(in srgb, var(--yellow) 28%, var(--card-2)); }
+  &.is-summon { background: color-mix(in srgb, var(--purple) 26%, var(--card-2)); }
 }
 .portrait__initial {
   font-family: var(--font-display); font-size: 1.3em; line-height: 1; color: var(--ink);
 }
-/* .unit-token + .unit-tally now live shared in 20-shared.css (codex slate badge) *
- * Defined here originally; this file's comic-leftover conversion is pending. */
+/* .unit-token + .unit-tally live shared in 20-shared.css — the codex slate badge.
+ * Roster badge bleed verified: .roster-item gap is widened so the centered
+ * tally overhang clears the .roster-name caption below it. */
 
 .roster-strip { display: flex; flex-wrap: wrap; gap: 18px 20px; align-items: flex-start; padding: 4px 2px 10px; }
-.roster-item { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.roster-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .roster-name {
-  font-family: var(--font-caps); font-weight: 800; font-size: 10.5px;
-  letter-spacing: .03em; text-transform: uppercase; opacity: .68; text-align: center;
+  font-family: var(--font-body); font-weight: 800; font-size: 10.5px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); text-align: center;
 }
 .roster-more {
-  align-self: center; font-family: var(--font-display); font-size: 16px;
-  padding: 7px 12px 5px; border: 3px solid var(--ink); border-radius: 11px;
-  background: var(--card-2); box-shadow: var(--shadow-ink-xs);
+  align-self: center; font-family: var(--font-display); font-size: 14px;
+  padding: 6px 12px 4px; border: 1px solid var(--brass); border-radius: 8px;
+  color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
 }
 .roster-empty {
   font-family: var(--font-body); font-weight: 700; font-style: italic;
@@ -3438,7 +3442,7 @@ input.field:focus, select.field:focus {
 
 .strength-line {
   display: inline-flex; align-items: center; gap: 9px;
-  font-family: var(--font-caps); font-weight: 800; font-size: 13.5px;
+  font-family: var(--font-body); font-weight: 800; font-size: 13.5px;
 }
 .sl-item { display: inline-flex; align-items: baseline; gap: 6px; }
 .sl-item b { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
@@ -3452,7 +3456,7 @@ input.field:focus, select.field:focus {
 }
 .qm-strip {
   display: flex; flex-wrap: wrap; gap: 20px 26px; padding: 8px 2px 18px; margin-bottom: 4px;
-  border-bottom: 3px dotted color-mix(in srgb, var(--ink) 26%, transparent);
+  border-bottom: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent);
 }
 .qm-form-head { margin: 16px 0 12px; }
 .xfer-grid {
@@ -3469,82 +3473,122 @@ input.field:focus, select.field:focus {
 .legion-stack { display: flex; flex-direction: column; gap: 20px; }
 
 .legion-card {
-  background: var(--card); border: 3.5px solid var(--ink); border-radius: 20px;
-  box-shadow: var(--shadow-ink); padding: 20px 22px 22px; position: relative;
+  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  padding: 20px 22px 22px; position: relative;
 
-  &.is-afield { background: var(--card-2); }
+  &.is-afield {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--brass) 8%, var(--card)) 0%,
+      var(--card-2) 100%);
+  }
 }
 .legion-card-head { display: flex; align-items: center; gap: 15px; margin-bottom: 16px; }
 .legion-card-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-.legion-name { font-family: var(--font-display); font-size: 22px; line-height: 1; color: var(--ink); }
+.legion-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1;
+  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5);
+  margin: 0;
+}
 
 .legion-crest {
   flex: none; width: 52px; height: 60px; display: grid; place-items: center;
-  background: var(--card-2); border: 3px solid var(--ink); box-shadow: var(--shadow-ink-xs);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
   border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
 
-  &.is-afield { background: var(--yellow); }
+  &.is-afield {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--brass-light) 35%, var(--slate-edge)),
+      var(--slate-2));
+    box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--glow-gold);
+  }
 }
 .crest-num {
   font-family: var(--font-display); font-size: 23px; line-height: 1; padding-bottom: 8px;
-  color: var(--ink);
+  color: var(--brass-light);
 }
 
 /* Status pill (reused for legion state). */
 .status-pill {
   display: inline-flex; align-items: center; gap: 7px;
-  font-family: var(--font-caps); font-weight: 900; font-size: 11px;
-  letter-spacing: .04em; text-transform: uppercase; color: var(--ink);
-  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: var(--shadow-ink-xs);
-  padding: 4px 11px 3px; background: var(--card-2); width: max-content;
+  font-family: var(--font-display); font-weight: 600; font-size: 11px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
+  border: 1px solid var(--brass); border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  padding: 4px 10px 3px; background: var(--card-2); width: max-content;
 }
-.status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink); background: var(--ink); flex: none; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--brass-dark); background: var(--brass-dark); flex: none; }
 .status-pill--home   { background: var(--card-2); }
-.status-pill--march  { background: var(--yellow); }
-.status-pill--march  .status-dot { background: var(--ink); }
-.status-pill--combat { background: var(--red); color: #fff; }
-.status-pill--combat .status-dot { background: #fff; border-color: #fff; animation: blip 1.1s ease-in-out infinite; }
-.status-pill--guard  { background: #d6e6f4; color: #1f4f7a; }
-.status-pill--guard  .status-dot { background: var(--blue); border-color: var(--ink); }
-.status-pill--return { background: #cdebd3; color: #1c5b2c; }
-.status-pill--return .status-dot { background: var(--green); border-color: var(--ink); }
+.status-pill--march  {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--brass) 30%, var(--card)),
+    color-mix(in srgb, var(--brass) 16%, var(--card-2)));
+  color: var(--brass-dark);
+}
+.status-pill--march  .status-dot { background: var(--brass); border-color: var(--brass-dark); }
+.status-pill--combat {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--red) 30%, var(--card)),
+    color-mix(in srgb, var(--red) 16%, var(--card-2)));
+  color: color-mix(in srgb, var(--red) 78%, var(--ink) 22%);
+}
+.status-pill--combat .status-dot { background: var(--red); border-color: var(--red); animation: blip 1.1s ease-in-out infinite; }
+.status-pill--guard  {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--blue) 22%, var(--card)),
+    color-mix(in srgb, var(--blue) 12%, var(--card-2)));
+  color: color-mix(in srgb, var(--blue) 70%, var(--ink) 30%);
+}
+.status-pill--guard  .status-dot { background: var(--blue); border-color: var(--brass-dark); }
+.status-pill--return {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--green) 22%, var(--card)),
+    color-mix(in srgb, var(--green) 12%, var(--card-2)));
+  color: color-mix(in srgb, var(--green) 68%, var(--ink) 32%);
+}
+.status-pill--return .status-dot { background: var(--green); border-color: var(--brass-dark); }
 @keyframes blip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
 
 /* Afield order readout (sits right in the card head). */
 .legion-head-order { margin-left: auto; }
 .afield-order {
-  display: inline-flex; align-items: center; gap: 10px; background: var(--card);
-  border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow-ink-xs);
-  padding: 8px 14px;
+  display: inline-flex; align-items: center; gap: 10px; background: var(--card-fill-lit);
+  border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  padding: 7px 13px;
 }
-.afield-arrow { font-family: var(--font-display); font-size: 18px; opacity: .6; }
+.afield-arrow { font-family: var(--font-display); font-size: 18px; color: var(--brass-dark); opacity: .75; }
 .afield-target { font-family: var(--font-display); font-size: 16px; color: var(--ink); }
 
 /* Action tag (attack/defend chip) + action toggle segments. */
 .action-tag {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-display); font-size: 13px; letter-spacing: .02em;
-  text-transform: uppercase; color: #fff;
-  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: var(--shadow-ink-xs);
-  padding: 5px 12px 4px;
+  font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--brass-light);
+  border: 1px solid var(--brass); border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-ink-xs);
+  padding: 5px 11px 4px;
 }
 .action-tag--attack { background: var(--red); }
 .action-tag--defend { background: var(--blue); }
-.action-tag--sm { font-size: 11px; padding: 3px 9px 2px; box-shadow: none; }
+.action-tag--sm { font-size: 11px; padding: 3px 9px 2px; box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark); }
 
 .action-toggle {
-  display: inline-flex; border: 3px solid var(--ink); border-radius: 12px;
-  overflow: hidden; box-shadow: var(--shadow-ink-xs); width: max-content;
+  display: inline-flex; border: 1px solid var(--brass); border-radius: 8px;
+  overflow: hidden; box-shadow: var(--shadow-raised); width: max-content;
 }
 .seg {
   display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
-  font-family: var(--font-display); font-size: 14px; letter-spacing: .02em;
-  text-transform: uppercase; color: var(--ink); background: var(--card);
+  font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: none; padding: 9px 16px 8px;
 
-  & + & { border-left: 3px solid var(--ink); }
-  &.seg--attack.is-on { background: var(--red); color: #fff; }
-  &.seg--defend.is-on { background: var(--blue); color: #fff; }
+  & + & { border-left: 1px solid var(--brass-dark); }
+  &.seg--attack.is-on { background: var(--red); color: var(--brass-light); box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold); }
+  &.seg--defend.is-on { background: var(--blue); color: var(--brass-light); box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold); }
 }
 
 /* At-home legion: muster column | dispatch column. */
@@ -3556,11 +3600,11 @@ input.field:focus, select.field:focus {
 .legion-muster { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 .legion-dispatch {
   display: flex; flex-direction: column; gap: 12px;
-  border-left: 3px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-left: 24px;
+  border-left: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-left: 24px;
 
   @media (max-width: 760px) {
     border-left: none; padding-left: 0;
-    border-top: 3px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-top: 18px;
+    border-top: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-top: 18px;
   }
 }
 .dispatch-empty {
@@ -3577,25 +3621,31 @@ input.field:focus, select.field:focus {
   gap: 8px; text-align: center;
 }
 .tl-dot {
-  width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--ink);
-  background: var(--card); box-shadow: var(--shadow-ink-xs); z-index: 1;
+  width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--brass);
+  background: var(--card-2);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs);
+  z-index: 1;
 }
 .tl-line {
-  position: absolute; top: 8px; right: 50%; width: 100%; height: 4px;
-  background: color-mix(in srgb, var(--ink) 28%, transparent);
+  position: absolute; top: 8px; right: 50%; width: 100%; height: 2px;
+  background: var(--brass-dark);
 }
 .tl-label {
-  font-family: var(--font-caps); font-weight: 800; font-size: 11px;
-  letter-spacing: .03em; text-transform: uppercase;
+  font-family: var(--font-display); font-weight: 600; font-size: 11px;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
 .tl-stop--done .tl-dot { background: var(--green); }
 .tl-stop--done .tl-line { background: var(--green); }
-.tl-stop--now .tl-dot { background: var(--yellow); animation: pulseDot 1.4s ease-in-out infinite; }
+.tl-stop--now .tl-dot {
+  background: var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold);
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
 .tl-stop--now .tl-line { background: var(--green); }
 .tl-stop--todo .tl-label { opacity: .5; }
 @keyframes pulseDot {
-  0%,100% { box-shadow: var(--shadow-ink-xs); }
-  50% { box-shadow: var(--shadow-ink-xs), 0 0 0 4px color-mix(in srgb, var(--yellow) 55%, transparent); }
+  0%,100% { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold); }
+  50%     { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), 0 0 0 5px color-mix(in srgb, var(--brass) 40%, transparent); }
 }
 
 .cc-body {
@@ -3606,27 +3656,28 @@ input.field:focus, select.field:focus {
 .cc-roster { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .cc-label { display: block; }
 .cc-eta {
-  display: flex; flex-direction: column; gap: 11px; background: var(--card);
-  border: 3px solid var(--ink); border-radius: 13px; padding: 13px 16px;
-  box-shadow: var(--shadow-ink-sm);
+  display: flex; flex-direction: column; gap: 11px; background: var(--card-fill-lit);
+  border: 1px solid var(--brass); border-radius: 8px; padding: 13px 16px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
 }
 .cc-eta-row { display: flex; flex-direction: column; gap: 3px; }
-.cc-eta-row--total { border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent); padding-top: 10px; }
+.cc-eta-row--total { border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); padding-top: 10px; }
 .cc-eta-lbl {
-  font-family: var(--font-caps); font-weight: 800; font-size: 9.5px;
-  letter-spacing: .05em; text-transform: uppercase; opacity: .6;
+  font-family: var(--font-body); font-weight: 800; font-size: 9.5px;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
 .cc-eta-val {
   font-family: var(--font-display); font-size: 27px; line-height: 1; color: var(--ink);
   font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 5px;
 }
 .cc-eta-unit {
-  font-family: var(--font-caps); font-weight: 800; font-size: 11px;
-  letter-spacing: .03em; text-transform: uppercase; opacity: .55;
+  font-family: var(--font-body); font-weight: 800; font-size: 11px;
+  letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft);
 }
 .cc-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  flex-wrap: wrap; margin-top: 18px; padding-top: 15px; border-top: 3px solid var(--ink);
+  flex-wrap: wrap; margin-top: 18px; padding-top: 15px;
+  border-top: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent);
 }
 .cc-foot-note {
   font-family: var(--font-body); font-weight: 700; font-style: italic;
@@ -3637,37 +3688,41 @@ input.field:focus, select.field:focus {
 .legion-slot {
   display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
   cursor: pointer; font: inherit; color: inherit;
-  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 18px;
+  border: 1px dashed color-mix(in srgb, var(--brass) 70%, transparent); border-radius: 10px;
   padding: 18px 20px; background:
     repeating-linear-gradient(45deg, transparent 0 10px,
-      color-mix(in srgb, var(--ink) 4%, transparent) 10px 20px),
-    var(--card);
-  transition: border-color .12s, transform .08s;
+      color-mix(in srgb, var(--brass-dark) 6%, transparent) 10px 20px),
+    var(--card-fill-lit);
+  transition: border-color .12s, box-shadow .12s;
 
-  &:hover { border-color: var(--ink); transform: translate(-1px, -1px); }
-  &:active { transform: translate(1px, 1px); }
+  &:hover { border-color: var(--brass); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 45%, transparent), var(--glow-gold); }
+  &:active { filter: brightness(.97); }
 }
 .slot-crest {
   flex: none; width: 50px; height: 58px; display: grid; place-items: center;
   font-family: var(--font-display); font-size: 21px;
-  color: color-mix(in srgb, var(--ink) 55%, transparent); background: var(--card);
-  border: 3px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  color: var(--brass-dark); background: var(--card-2);
+  border: 1px dashed color-mix(in srgb, var(--brass) 60%, transparent);
   border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
 }
 .slot-copy { flex: 1; min-width: 0; }
-.slot-h { font-family: var(--font-display); font-size: 18px; color: var(--ink); display: block; }
+.slot-h {
+  font-family: var(--font-display); font-weight: 700; font-size: 18px; line-height: 1.1;
+  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); display: block;
+}
 .slot-sub {
   font-family: var(--font-body); font-weight: 700; font-size: 13px; opacity: .7;
   margin-top: 3px; text-wrap: pretty;
 }
 .slot-cta {
   display: inline-flex; align-items: center; gap: 7px; flex: none;
-  font-family: var(--font-display); font-size: 13px; letter-spacing: .03em;
-  text-transform: uppercase; color: var(--ink); background: var(--yellow);
-  border: 2.5px solid var(--ink); border-radius: 10px; box-shadow: var(--shadow-ink-xs);
+  font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--glow-gold);
   padding: 7px 13px 6px;
-}
-/* =============================================================================
+}/* =============================================================================
    Home (flip card)
    ============================================================================= */
 
