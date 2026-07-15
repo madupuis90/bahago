@@ -3170,19 +3170,25 @@ input.field:focus, select.field:focus {
 .progress-banner-gem.progress-banner-gem--summon
   { width: 46px; height: 46px; display: grid; place-items: center; }
 .progress-banner-gem .unit-portrait { width: 46px; height: 46px; }/* =============================================================================
-   World map — web/css/45-world-map.css   ·   COMIC LAB re-skin
+   World map — web/css/45-world-map.css   ·   CODEX re-skin
    ---------------------------------------------------------------------------
-   REPLACE the whole file. Brings the World screen (flat 8×8 board + command
-   panel) to the ligne-claire / Astérix vocabulary: ink outlines, flat heraldic
-   biome fills, hard offset shadows, Lilita One poster type. Semantic class names
-   are UNCHANGED from the parchment file — pure re-skin.
+   Brings the World screen (flat 8×8 parchment board + command panel) to the
+   dark-fantasy codex vocabulary: framed parchment panels with a gold edge,
+   engraved Cinzel caps, gold-rimmed slate medallions as map markers, and
+   muted heraldic relation accents (brass/green/blue/red) on a slate ground.
+   Semantic class names are UNCHANGED from the comic file — pure re-skin
+   (values only; no markup churn).
 
    Reuses (already live — do NOT redefine):
-     .card · .btn (+ --danger / --accent / --sm) · .gem / .gem-* ·
-     .status-pill base (this file only ADDS the diplomacy relation variants).
-   New tokens: --bio-* (biome washes) + --rel-* (relation accents). They land in
-   01-tokens.css — see tokens-patch.css in this folder. (Fallback literals are
-   inlined below so the board still paints if the patch hasn't landed yet.)
+     .btn (+ --danger / --accent / --sm) · .field vocabulary (20-shared.css).
+   Consumes (from 01-tokens.css): --bio-* (biome washes), --rel-* (relation
+   accents), --slate* / --brass* / --shadow-ink* / --glow-gold / --card-fill-lit.
+
+   Dead comic blocks dropped this pass (no markup counterpart in
+   internal/handlers/worldmap/worldmap.go): the .ht halftone wash, the
+   .map-marker--plate pin variant, the .kd-stats/.kd-odds stat bands, the
+   .kd-crest.is-war modifier, and the .status-pill--self/ally/neutral/war
+   diplomacy variants (only home/march/... are rendered, in 46-army.css).
    ============================================================================= */
 
 /* ── Main layout — map column | command panel ───────────────────────────────── */
@@ -3193,52 +3199,47 @@ input.field:focus, select.field:focus {
   gap: 16px; align-items: stretch;
 }
 
-/* ── Left: map board (a card) ───────────────────────────────────────────────── */
+/* ── Left: map board (a framed parchment card) ────────────────────────────── */
 .world-board {
   position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0;
   padding: 16px 18px 18px; overflow: hidden;
-  background: var(--card); border: 3.5px solid var(--ink); border-radius: 20px;
-  box-shadow: 8px 8px 0 var(--ink);
-}
-/* optional halftone wash, top-right corner — toggled by .ht on an ancestor */
-.ht .world-board::before {
-  content: ''; position: absolute; top: 0; right: 0; width: 300px; height: 200px; z-index: 0;
-  background-image: radial-gradient(var(--ink) 2.3px, transparent 2.5px); background-size: 13px 13px; opacity: .09;
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(225deg, #000 18%, transparent 64%);
-          mask-image: linear-gradient(225deg, #000 18%, transparent 64%);
+  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
 }
 .board-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
-.board-headings { display: flex; flex-direction: column; align-items: flex-start; gap: 11px; }
-/* board title — chunky red plate (matches the live .page-header-title treatment) */
+/* board title — engraved Cinzel caps (matches .page-header-title) */
 .board-name {
-  display: inline-block; white-space: nowrap;
-  font-family: var(--font-display); font-size: 26px; line-height: 1; color: #fff;
-  -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill;
-  background: var(--red); border: 3px solid var(--ink); border-radius: 11px;
-  box-shadow: 5px 5px 0 var(--ink); padding: 5px 16px 11px; transform: rotate(-1.5deg);
+  display: inline-block; white-space: nowrap; margin: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1.1;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--brass-dark);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
 }
+/* region chip — a small gold-edged parchment eyebrow */
 .board-region {
   display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
-  font-family: var(--font-display); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink);
-  background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: 2px 2px 0 var(--ink); padding: 4px 11px 3px;
+  font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--brass-dark);
+  background: var(--card-2); border: 1px solid var(--brass); border-radius: 5px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.3), var(--shadow-ink-xs);
+  padding: 4px 11px 3px;
 }
-.board-region svg { width: 14px; height: 14px; stroke: var(--ink); }
 .board-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 
 /* ── Nav layout helpers ─────────────────────────────────────────────────────── */
 .map-grid-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .map-grid-middle    { display: flex; align-items: center; gap: 10px; }
 
-/* N/S/E/W nav stones — chunky ink buttons */
+/* N/S/E/W nav stones — small slate slabs with a gold bevel (rhymes .btn--sm) */
 .map-nav-btn {
   display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0 0 2px; cursor: pointer;
-  font-size: 15px; line-height: 1; color: var(--ink); background: var(--card-2);
-  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: 2px 2px 0 var(--ink);
-  transition: transform .07s, box-shadow .07s, background .12s;
+  font-size: 15px; line-height: 1; color: var(--brass-light);
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
+  border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 3px rgba(40,28,12,.30);
+  transition: box-shadow .08s, background .12s, filter .1s;
 }
-.map-nav-btn:hover  { background: var(--yellow); }
-.map-nav-btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+.map-nav-btn:hover  { filter: brightness(1.08); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 6px rgba(40,28,12,.40); }
+.map-nav-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); }
 
 /* ── Flat board ─────────────────────────────────────────────────────────────── */
 .map-flat {
@@ -3249,131 +3250,125 @@ input.field:focus, select.field:focus {
 .map-flat-corner { grid-area: 1 / 1; }
 .map-flat-cols { grid-area: 1 / 2; display: grid; grid-auto-flow: column; grid-template-columns: repeat(8, var(--map-cell-size)); }
 .map-flat-rows { grid-area: 2 / 1; display: grid; grid-template-rows: repeat(8, var(--map-cell-size)); }
-.map-flat-axis { display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 14px; color: var(--ink); opacity: .7; }
+.map-flat-axis { display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--brass-dark); opacity: .8; }
 .map-flat-grid {
   grid-area: 2 / 2; display: grid;
   grid-template-columns: repeat(8, var(--map-cell-size)); grid-template-rows: repeat(8, var(--map-cell-size));
-  /* the ink gap BETWEEN tiles = the board's grout lines */
-  gap: 1.5px; background: var(--ink);
-  border: 3px solid var(--ink); border-radius: 4px; overflow: visible; box-shadow: 4px 4px 0 var(--ink);
+  /* the slate gap BETWEEN tiles = the board's grout lines */
+  gap: 1.5px; background: var(--slate-2);
+  border: 1px solid var(--brass); border-radius: 6px; overflow: visible;
+  box-shadow: var(--shadow-ink);
 }
 
 /* ── Shared tile language ───────────────────────────────────────────────────── */
 .map-cell { position: relative; background: var(--tile); overflow: visible; }
 .map-cell--clickable { cursor: pointer; }
-.map-cell:hover { box-shadow: inset 0 0 0 3px var(--ink); z-index: 2; }
-.map-cell--own  { box-shadow: inset 0 0 0 3px var(--rel-self, #e8923a); z-index: 1; }
+.map-cell:hover { box-shadow: inset 0 0 0 3px var(--brass); z-index: 2; }
+.map-cell--own  { box-shadow: inset 0 0 0 3px var(--rel-self); z-index: 1; }
 .map-cell--selected,
 .map-cell--selected:hover { box-shadow: inset 0 0 0 4px var(--red); z-index: 3; }
 .map-cell-content { width: 100%; height: 100%; display: grid; place-items: center; overflow: visible; }
 
 /* ── Markers ────────────────────────────────────────────────────────────────── */
 .map-marker { position: relative; display: inline-flex; }
-.marker-rel-dot { position: absolute; top: -5px; right: -6px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--ink); background: var(--ink); z-index: 3; }
-/* A · crest sticker (default) */
+.marker-rel-dot { position: absolute; top: -5px; right: -6px; width: 11px; height: 11px; border-radius: 50%; border: 1px solid var(--brass-dark); background: var(--rel-neutral); z-index: 3; }
+/* crest sticker — a small gold-rimmed slate medallion (rhymes .legion-crest/.unit-tally) */
 .map-marker--crest .marker-crest {
-  width: 32px; height: 32px; display: grid; place-items: center; background: var(--yellow);
-  border: 2.5px solid var(--ink); border-radius: 9px; box-shadow: 2px 2px 0 var(--ink);
+  width: 32px; height: 32px; display: grid; place-items: center;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass); border-radius: 9px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
 }
-.map-marker--crest .marker-crest svg { width: 18px; height: 18px; stroke: var(--ink); }
-.rel-self .marker-crest { background: var(--rel-self, #e8923a); }
-.rel-war  .marker-crest { background: var(--red); }
-.rel-war  .marker-crest svg { stroke: #fff; }
-/* B · diamond nameplate pin */
-.map-marker--plate .marker-pin { width: 18px; height: 18px; background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 5px; box-shadow: 2px 2px 0 var(--ink); transform: rotate(45deg); }
-.rel-self .marker-pin { background: var(--rel-self, #e8923a); }
-.rel-war  .marker-pin { background: var(--red); }
+.map-marker--crest .marker-crest svg { width: 18px; height: 18px; stroke: var(--brass-light); }
+/* own tile — a bright brass seal with glow + engraved-dark crown */
+.rel-self .marker-crest {
+  background: linear-gradient(180deg, var(--brass-light), var(--brass));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 3px var(--brass-dark), var(--glow-gold);
+}
+.rel-self .marker-crest svg { stroke: var(--brass-dark); }
+.rel-self .marker-rel-dot { background: var(--rel-self); }
+/* at war — red-tinted slate medallion, light crown */
+.rel-war .marker-crest {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 38%, var(--slate-edge)), var(--slate-2));
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
+}
+.rel-war .marker-crest svg { stroke: #fff; }
+.rel-war .marker-rel-dot { background: var(--rel-war); }
 /* hover tooltip */
 .map-marker[data-tip]::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); white-space: nowrap;
-  font-family: var(--font-display); font-size: 12px; letter-spacing: .02em; color: var(--ink);
-  background: var(--card); border: 2.5px solid var(--ink); border-radius: 8px; padding: 3px 9px 2px; box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--brass-dark);
+  background: var(--card); border: 1px solid var(--brass); border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  padding: 3px 9px 2px;
   pointer-events: none; opacity: 0; transition: opacity .1s; z-index: 20;
 }
 .map-cell:hover .map-marker[data-tip]::after { opacity: 1; }
 
-/* ── Right: command panel (a card) ──────────────────────────────────────────── */
+/* ── Right: command panel (a framed parchment card) ────────────────────────── */
 .world-cmd {
   position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  background: var(--card); border: 3.5px solid var(--ink); border-radius: 20px; box-shadow: 8px 8px 0 var(--ink);
+  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
 }
-.cmd-nav { padding: 14px 16px 14px; border-bottom: 3px solid var(--ink); background: var(--card-2); }
+.cmd-nav { padding: 14px 16px 14px; border-bottom: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent); background: var(--card-2); }
 .cmd-nav-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
-.cmd-section-title { font-family: var(--font-display); font-size: 15px; letter-spacing: .02em; }
-.cmd-coords { font-family: var(--font-display); font-size: 12px; font-variant-numeric: tabular-nums; opacity: .65; }
+.cmd-section-title { font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); }
+.cmd-coords { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); opacity: .8; font-variant-numeric: tabular-nums; }
 .cmd-minimap-wrap { display: flex; justify-content: center; }
-.cmd-nav-hint { margin: 9px 0 0; text-align: center; font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: 12.5px; opacity: .7; }
-.cmd-search { display: flex; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 2px dotted color-mix(in srgb, var(--ink) 30%, transparent); }
-.cmd-search-input {
-  flex: 1; min-width: 0; height: 34px; padding: 0 10px; font-family: var(--font-body); font-weight: 700; font-size: 13px; color: var(--ink);
-  background: #fff; border: 2.5px solid var(--ink); border-radius: 9px;
-  box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent); outline: none;
-}
-.cmd-search-input::placeholder { color: color-mix(in srgb, var(--ink) 45%, transparent); font-weight: 600; }
-.cmd-search-input:focus { border-color: var(--blue); box-shadow: inset 0 0 0 2px var(--blue); }
+.cmd-nav-hint { margin: 9px 0 0; text-align: center; font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 12.5px; color: var(--ink-soft); opacity: .8; }
 
-/* minimap — 8×8 region grid on an ink ground */
-.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: 2.5px; padding: 6px; background: var(--ink); border: 2.5px solid var(--ink); border-radius: 8px; box-shadow: 2px 2px 0 var(--ink); }
+/* find bar — the search input reuses the shared .field well vocabulary */
+.cmd-search { display: flex; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); }
+.cmd-search-input {
+  flex: 1; min-width: 0; height: 34px; padding: 0 10px;
+  font-family: var(--font-body); font-weight: 700; font-size: 13px; color: var(--paper);
+  background: var(--slate-edge); border: 1px solid var(--brass-dark); border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.45); outline: none;
+  transition: box-shadow .1s, border-color .1s;
+}
+.cmd-search-input::placeholder { color: color-mix(in srgb, var(--brass-light) 60%, transparent); font-weight: 600; }
+.cmd-search-input:focus { border-color: var(--brass); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.55), 0 0 0 2px color-mix(in srgb, var(--brass) 55%, transparent); }
+
+/* minimap — 8×8 region grid on a slate ground */
+.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: 2.5px; padding: 6px; background: var(--slate-2); border: 1px solid var(--brass); border-radius: 8px; box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
 .map-minimap-cell { height: 18px; background: var(--tile); border-radius: 1px; cursor: pointer; }
-.map-minimap-cell:hover { box-shadow: inset 0 0 0 2px var(--card); }
-.map-minimap-cell--current { box-shadow: inset 0 0 0 3px var(--yellow); }
+.map-minimap-cell:hover { box-shadow: inset 0 0 0 2px var(--brass-light); }
+.map-minimap-cell--current { box-shadow: inset 0 0 0 2px var(--brass-light), 0 0 6px rgba(230,201,130,.5); }
 
 /* detail scroller */
 .cmd-detail { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; }
 .cmd-detail::-webkit-scrollbar { width: 7px; }
-.cmd-detail::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 30%, transparent); border-radius: 4px; }
+.cmd-detail::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--brass-dark) 60%, transparent); border-radius: 4px; }
 
 /* empty state */
 .cmd-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 12px 12px; }
-.cmd-empty-rose { color: color-mix(in srgb, var(--ink) 30%, transparent); margin-bottom: 14px; }
-.cmd-empty-h { font-family: var(--font-display); font-size: 17px; }
-.cmd-empty-sub { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: 13px; opacity: .7; margin-top: 5px; text-wrap: pretty; max-width: 28ch; }
+.cmd-empty-rose { color: var(--brass-dark); opacity: .5; margin-bottom: 14px; }
+.cmd-empty-h { font-family: var(--font-display); font-weight: 600; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); }
+.cmd-empty-sub { font-family: var(--font-body); font-weight: 600; font-size: 13px; font-style: italic; color: var(--ink-soft); opacity: .85; margin-top: 5px; text-wrap: pretty; max-width: 28ch; }
 
 /* ── Kingdom detail panel ───────────────────────────────────────────────────── */
+.kd-panel { }
 .kd-head { display: flex; align-items: flex-start; gap: 12px; }
 .kd-crest {
-  flex: none; width: 50px; height: 50px; display: grid; place-items: center; background: var(--yellow);
-  border: 3px solid var(--ink); border-radius: 13px; box-shadow: 3px 3px 0 var(--ink);
+  flex: none; width: 50px; height: 50px; display: grid; place-items: center;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass); border-radius: 11px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
 }
-.kd-crest svg { width: 28px; height: 28px; stroke: var(--ink); }
-.kd-crest.is-self { background: var(--rel-self, #e8923a); }
-.kd-crest.is-war  { background: var(--red); }
-.kd-crest.is-war svg { stroke: #fff; }
-.kd-name { font-family: var(--font-display); font-size: 21px; line-height: 1.05; }
-.kd-sub  { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: 13px; opacity: .7; margin-top: 2px; }
+.kd-crest svg { width: 28px; height: 28px; stroke: var(--brass-light); }
+.kd-crest.is-self {
+  background: linear-gradient(180deg, var(--brass-light), var(--brass));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 3px var(--brass-dark), var(--glow-gold);
+}
+.kd-crest.is-self svg { stroke: var(--brass-dark); }
+.kd-name { font-family: var(--font-display); font-weight: 700; font-size: 21px; line-height: 1.05; letter-spacing: .06em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); margin: 0; }
+.kd-sub  { font-family: var(--font-body); font-weight: 700; font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
 
-/* stat band */
-.kd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 14px 0; padding: 13px 0; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); }
-.kd-stat { display: flex; flex-direction: column; gap: 4px; }
-.kd-stat + .kd-stat { border-left: 2px dotted color-mix(in srgb, var(--ink) 30%, transparent); padding-left: 14px; }
-.kd-stat dt { font-family: var(--font-body); font-weight: 900; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin: 0; }
-.kd-stat dd { font-family: var(--font-display); font-size: 26px; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 4px; }
-.kd-stat dd small { font-family: var(--font-body); font-weight: 800; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; opacity: .6; }
-
-/* odds chip */
-.kd-odds { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); font-weight: 900; font-size: 11px; letter-spacing: .03em; text-transform: uppercase; border: 2.5px solid var(--ink); border-radius: 8px; box-shadow: 2px 2px 0 var(--ink); padding: 3px 10px 2px; margin-bottom: 14px; }
-.kd-odds--good { background: #cdebd3; color: #1c5b2c; }
-.kd-odds--even { background: var(--yellow); color: var(--ink); }
-.kd-odds--bad  { background: #f6d4cf; color: #8e2418; }
-
+/* action buttons stack */
 .kd-actions { display: flex; flex-direction: column; gap: 9px; }
 .kd-actions .btn { width: 100%; }
-.kd-self-note { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: 13px; opacity: .75; text-wrap: pretty; margin: 12px 0 0; padding: 11px 13px; border-radius: 11px; background: var(--card-2); border: 2.5px dashed color-mix(in srgb, var(--ink) 40%, transparent); }
-
-/* ── Diplomacy relation pills — ADD to the live shared .status-pill base ─────── *
-   The base .status-pill + .status-dot are already live (Tags). World adds the
-   four DIPLOMACY relation variants. Self-contained colours so they paint even
-   if the base hasn't been re-skinned yet.                                       */
-.status-pill--self    { background: var(--card-2); color: var(--ink); }
-.status-pill--self    .status-dot { background: var(--rel-self, #e8923a); border-color: var(--ink); }
-.status-pill--ally    { background: #cdebd3; color: #1c5b2c; }
-.status-pill--ally    .status-dot { background: var(--green); border-color: var(--ink); }
-.status-pill--neutral { background: #d6e6f4; color: #1f4f7a; }
-.status-pill--neutral .status-dot { background: var(--blue); border-color: var(--ink); }
-.status-pill--war     { background: var(--red); color: #fff; }
-.status-pill--war     .status-dot { background: #fff; border-color: #fff; animation: relBlip 1.1s ease-in-out infinite; }
-@keyframes relBlip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
-/* =============================================================================
+.kd-self-note { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 13px; color: var(--ink-soft); opacity: .85; text-wrap: pretty; margin: 12px 0 0; padding: 11px 13px; border-radius: 8px; background: var(--card-2); border: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); }/* =============================================================================
    Army — Command Tent (Codex)
    Page title plate accent: --red (default .page-header-title — no modifier).
    Depends on shared .card / .card-inner / .card-title / .btn / .field / .select /
