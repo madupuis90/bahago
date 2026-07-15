@@ -337,7 +337,6 @@ func allocationHead() Node {
 		Div(),
 		Div(Class("alloc-col-header"), Text("Craft")),
 		Div(Class("alloc-col-header"), Text("Allocation")),
-		Div(Class("alloc-col-header alloc-col-header--right"), Text("Share")),
 		Div(Class("alloc-col-header alloc-col-header--right"), Text("Net/tick")),
 	)
 }
@@ -374,7 +373,7 @@ func allocationRow(gemID, roleName, key, savedKey, resourceLabel string, initial
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.min(100, $%s + 1)", key, key)), Text("+")),
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.min(100, $%s + 5)", key, key)), Text("+5")),
 		),
-		Div(Class("alloc-share"), ds.Text(fmt.Sprintf("$%s+'%%'", key))),
+
 		Div(
 			Class("alloc-net-cell"),
 			ds.Class("'is-pending'", pendingExpr),
@@ -407,7 +406,7 @@ func idleRow(net int) Node {
 			Div(Class("alloc-role-name"), Text("Idle")),
 		),
 		P(Class("alloc-assign-note"), Text("An untasked realm breeds faster — idle hands speed your growth.")),
-		Div(Class("alloc-share"), ds.Text("$idle_pct+'%'")),
+
 		Div(
 			Class("alloc-net-cell"),
 			ds.Class("'is-pending'", "$alloc_dirty"),

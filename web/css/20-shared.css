@@ -287,15 +287,15 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(40,28,12,.40);
   z-index: 1;
 }
-/* left cap — arrowhead pointing right, into the track */
+/* left cap — arrowhead pointing left, outward (away from the track) */
 .slider-wrap::before {
   left: 0;
-  clip-path: polygon(0 0, 100% 50%, 0 100%, 22% 50%);
+  clip-path: polygon(0 50%, 100% 0, 78% 50%, 100% 100%);
 }
-/* right cap — arrowhead pointing left, into the track */
+/* right cap — arrowhead pointing right, outward (away from the track) */
 .slider-wrap::after {
   right: 0;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%, 78% 50%);
+  clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%);
 }
 
 .slider-track {
@@ -319,15 +319,17 @@
 
 .slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; z-index: 2; }
 
-/* rectangular value-badge thumb — engraved gold caps numeral on a slate slab */
+/* rectangular value-badge thumb — engraved gold caps numeral on a slate
+   slab. Oversized vs. a generic thumb because it carries the allocation %,
+   the row's primary readout. */
 .v-diamond .slider-thumb {
   display: inline-grid; place-items: center;
-  min-width: 30px; height: 22px; padding: 0 7px;
-  border-radius: 5px;
+  min-width: 40px; height: 28px; padding: 0 9px;
+  border-radius: 6px;
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.5), var(--shadow-ink-xs);
-  font-family: var(--font-display); font-weight: 600; font-size: 12px; line-height: 1;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-sm);
+  font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1;
   color: var(--brass-light);
   font-variant-numeric: tabular-nums;
   letter-spacing: .02em;

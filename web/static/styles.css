@@ -888,15 +888,15 @@ code {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(40,28,12,.40);
   z-index: 1;
 }
-/* left cap — arrowhead pointing right, into the track */
+/* left cap — arrowhead pointing left, outward (away from the track) */
 .slider-wrap::before {
   left: 0;
-  clip-path: polygon(0 0, 100% 50%, 0 100%, 22% 50%);
+  clip-path: polygon(0 50%, 100% 0, 78% 50%, 100% 100%);
 }
-/* right cap — arrowhead pointing left, into the track */
+/* right cap — arrowhead pointing right, outward (away from the track) */
 .slider-wrap::after {
   right: 0;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%, 78% 50%);
+  clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%);
 }
 
 .slider-track {
@@ -920,15 +920,17 @@ code {
 
 .slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; z-index: 2; }
 
-/* rectangular value-badge thumb — engraved gold caps numeral on a slate slab */
+/* rectangular value-badge thumb — engraved gold caps numeral on a slate
+   slab. Oversized vs. a generic thumb because it carries the allocation %,
+   the row's primary readout. */
 .v-diamond .slider-thumb {
   display: inline-grid; place-items: center;
-  min-width: 30px; height: 22px; padding: 0 7px;
-  border-radius: 5px;
+  min-width: 40px; height: 28px; padding: 0 9px;
+  border-radius: 6px;
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.5), var(--shadow-ink-xs);
-  font-family: var(--font-display); font-weight: 600; font-size: 12px; line-height: 1;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-sm);
+  font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1;
   color: var(--brass-light);
   font-variant-numeric: tabular-nums;
   letter-spacing: .02em;
@@ -2515,8 +2517,10 @@ input.field:focus, select.field:focus {
   background-image: repeating-linear-gradient(90deg, var(--ink) 0 13px, transparent 13px 21px);
 }
 
+/* Live allocation % now rides inside the slider thumb, so the dedicated
+   Share column is retired. Grid drops from 5 → 4 tracks. */
 .alloc-grid {
-  --cols: 60px minmax(150px, 1.1fr) minmax(230px, 2fr) 56px 116px;
+  --cols: 60px minmax(150px, 1.1fr) minmax(230px, 2fr) 116px;
 }
 
 .alloc-head,
@@ -2580,15 +2584,6 @@ input.field:focus, select.field:focus {
   margin-top: 3px;
 }
 
-.alloc-share {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 1.4rem;
-  color: var(--ink);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
 .alloc-net-cell {
   text-align: right;
 
@@ -2633,23 +2628,28 @@ input.field:focus, select.field:focus {
   }
 }
 
-/* idle row — a recessed disc with the zzz glyph */
+/* idle row — a brass-rimmed slate medallion, sized to match the resource
+   gems (36px) so the idle glyph reads at the same scale as the other icons. */
 .idle-gem {
-  width: 52px;
-  height: 52px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--card-2);
-  border: 2.5px solid var(--ink);
-  box-shadow: var(--shadow-ink-xs);
-  color: var(--ink);
+  background: radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass);
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    0 1px 3px rgba(40,28,12,.30);
+  color: var(--brass-light);
 }
 
 .idle-gem svg {
-  width: 24px;
-  height: 24px;
-  stroke: var(--ink);
+  width: 21px;
+  height: 21px;
+  stroke: var(--brass-light);
+  color: var(--brass-light);
 }
 
 .alloc-row.idle .alloc-assign-note {
@@ -2726,23 +2726,24 @@ input.field:focus, select.field:focus {
   text-wrap: pretty;
 }
 
-/* optional — wrap an over-allocation warning in a tilted red badge instead of
-   plain text (the mockup's `.alloc-alarm`; needs a <span class="alloc-alarm">). */
+/* optional — wrap an over-allocation warning in a red heraldic plaque.
+   (Needs a <span class="alloc-alarm">.) Codex: gold-edged red slab, engraved
+   gold caps — no comic rotation, no ink outline. */
 .alloc-alarm {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-family: var(--font-display);
+  font-weight: 600;
   font-size: 13px;
-  letter-spacing: .02em;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  color: #fff;
-  background: var(--red);
-  border: 3px solid var(--ink);
-  border-radius: 10px;
-  box-shadow: var(--shadow-ink-sm);
-  padding: 7px 13px 6px;
-  transform: rotate(-2deg);
+  color: var(--brass-light);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 92%, #fff 8%), var(--red));
+  border: 1px solid var(--brass);
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-ink-xs);
+  padding: 6px 13px 5px;
   white-space: nowrap;
 }
 
