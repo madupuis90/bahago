@@ -269,7 +269,7 @@
 .slider-wrap {
   position: relative; flex: 1; min-width: 0; height: 30px;
   display: flex; align-items: center;
-  padding: 0 9px;            /* room for the end caps */
+  padding: 0;              /* caps + track inset are positioned, no flow padding */
   box-sizing: border-box;
 }
 
@@ -298,14 +298,23 @@
   clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%);
 }
 
+/* The track is inset from the wrap by half-thumb + cap clearance so the
+   thumb (a child of the track, positioned via left:%) never overhangs the
+   wrap into the flanking step buttons at 0/100%, and rests just inside the
+   gold end caps rather than on top of them. The thumb's 0..100% travel
+   maps 1:1 onto the track, so fill and thumb stay aligned without any
+   clamping calc in the datastar expression.
+   Inset = .5*thumb(~25px for a 3-digit value) + cap(11px) + hair ≈ 36px. */
 .slider-track {
-  position: relative; width: 100%; height: 6px; overflow: hidden;
+  position: relative; width: auto; flex: 1; height: 6px; overflow: visible;
+  margin: 0 36px;
   background: var(--slate-2); border: 1px solid var(--brass-dark); border-radius: 4px;
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.6);
 }
 
 .slider-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 3px 0 0 3px;     /* track no longer clips, so round the fill's left end to match */
   background: linear-gradient(180deg, color-mix(in srgb, var(--slider-fill, var(--brass)) 100%, #fff 28%), var(--slider-fill, var(--brass)));
   border-right: 1px solid var(--brass-dark);
   box-shadow: inset 0 1px 0 var(--brass-light);
@@ -335,8 +344,9 @@
   letter-spacing: .02em;
 }
 
-.slider-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.slider-input:focus-visible + .slider-track .slider-thumb,
+/* the invisible range input overlays the inset track (not the full wrap) so
+   the cursor maps 1:1 onto the thumb's travel; matches the track's 36px inset. */
+.slider-input { position: absolute; inset: 0 36px; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .slider-wrap:focus-within .slider-thumb { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 
 /* the row label + readout that flank the control */
