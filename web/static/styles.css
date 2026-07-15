@@ -862,17 +862,52 @@ code {
   display: flex; align-items: center;
 }
 
-/* Allocation slider — a recessed parchment groove with a brass inlay fill
-   and a slate thumb. No comic ink border or hard offset shadow. */
+/* Allocation slider — a thin metallic inset bar between two ornamental
+   gold gem/arrowhead end caps, with a rectangular slate value-badge thumb
+   that displays the live percentage. No comic ink border or offset shadow.
+   (.v-diamond stays as the variant hook for this thumb shape; the name is
+   a legacy carry-over — it no longer renders a diamond.) */
+.slider-wrap {
+  position: relative; flex: 1; min-width: 0; height: 30px;
+  display: flex; align-items: center;
+  padding: 0 9px;            /* room for the end caps */
+  box-sizing: border-box;
+}
+
+/* ornamental gold gem/arrowhead end caps at the far-left / far-right */
+.slider-wrap::before,
+.slider-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px; height: 14px;
+  background:
+    linear-gradient(180deg, var(--brass-light), var(--brass) 55%, var(--brass-dark));
+  border: 1px solid var(--brass-dark);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(40,28,12,.40);
+  z-index: 1;
+}
+/* left cap — arrowhead pointing right, into the track */
+.slider-wrap::before {
+  left: 0;
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 22% 50%);
+}
+/* right cap — arrowhead pointing left, into the track */
+.slider-wrap::after {
+  right: 0;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%, 78% 50%);
+}
+
 .slider-track {
-  position: relative; width: 100%; height: 16px; overflow: hidden;
-  background: var(--slate-2); border: 1px solid var(--brass-dark); border-radius: 8px;
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.45);
+  position: relative; width: 100%; height: 6px; overflow: hidden;
+  background: var(--slate-2); border: 1px solid var(--brass-dark); border-radius: 4px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.6);
 }
 
 .slider-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--slider-fill, var(--brass)) 100%, #fff 22%), var(--slider-fill, var(--brass)));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--slider-fill, var(--brass)) 100%, #fff 28%), var(--slider-fill, var(--brass)));
   border-right: 1px solid var(--brass-dark);
   box-shadow: inset 0 1px 0 var(--brass-light);
   transition: width .12s ease;
@@ -880,17 +915,23 @@ code {
 
 .slider-ticks {
   position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(to right, rgba(0,0,0,.32) 0 1px, transparent 1px 10%);
+  background: repeating-linear-gradient(to right, rgba(0,0,0,.30) 0 1px, transparent 1px 10%);
 }
 
-.slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; }
+.slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; z-index: 2; }
 
+/* rectangular value-badge thumb — engraved gold caps numeral on a slate slab */
 .v-diamond .slider-thumb {
-  width: 22px; height: 22px; border-radius: 5px;
-  transform: translate(-50%, -50%) rotate(45deg);
+  display: inline-grid; place-items: center;
+  min-width: 30px; height: 22px; padding: 0 7px;
+  border-radius: 5px;
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   border: 1px solid var(--brass);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.5), var(--shadow-ink-xs);
+  font-family: var(--font-display); font-weight: 600; font-size: 12px; line-height: 1;
+  color: var(--brass-light);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
 }
 
 .slider-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }

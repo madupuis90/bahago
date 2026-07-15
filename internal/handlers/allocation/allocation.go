@@ -365,7 +365,7 @@ func allocationRow(gemID, roleName, key, savedKey, resourceLabel string, initial
 					Div(Class("slider-fill"), ds.Style("width", fmt.Sprintf("$%s+'%%'", key))),
 					Div(Class("slider-ticks")),
 				),
-				Div(Class("slider-thumb"), ds.Style("left", fmt.Sprintf("$%s+'%%'", key))),
+				Div(Class("slider-thumb"), ds.Style("left", fmt.Sprintf("$%s+'%%'", key)), ds.Text(fmt.Sprintf("$%s", key))),
 				Input(Class("slider-input"), Type("range"), Min("0"), Max("100"),
 					Value(fmt.Sprintf("%d", initialValue)),
 					ds.Bind(key),
