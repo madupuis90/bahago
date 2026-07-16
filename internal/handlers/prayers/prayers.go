@@ -297,19 +297,19 @@ func prayersContent(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
 	}
 	sort.Strings(prayerKeys)
 
-	return Group([]Node{
-		Div(ds.Init(GetSSENoSignals(routes.KingdomPrayersRefreshPath))),
+	return Div(
 		ds.Signals(map[string]any{
 			"prayer_type":    game.PrayerManaPrayer,
 			"prayer_ticks":   8,
 			"target_kingdom": kingdom.Name,
 		}, ds.ModifierIfMissing),
+		Div(ds.Init(GetSSENoSignals(routes.KingdomPrayersRefreshPath))),
 		prayerAlert(nil),
 		PageHeader("Prayers"),
 		devotionLedger(kingdom, prayers),
 		sanctumSection(kingdom, prayers, prayerKeys),
 		availablePrayersSection(prayers, prayerKeys),
-	})
+	)
 }
 
 // devotionLedger is the altar's reckoning strip: the kingdom's current devotion
