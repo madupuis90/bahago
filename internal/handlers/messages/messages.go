@@ -766,10 +766,10 @@ func messagesList(groups []MsgGroup, selectedMessageID int) Node {
 			ds.Class("'is-managing'", "$managing"),
 			Div(Class("messages-list-toolbar"),
 				filterTabs(groups),
-				Span(Class("messages-list-spacer")),
 				Button(
 					Type("button"),
-					Class("btn-text"),
+					Classes{"btn": true, "btn--sm": true, "messages-manage-toggle": true},
+					ds.Class("'is-on'", "$managing"),
 					ds.Text("$managing ? 'Done' : 'Select'"),
 					ds.On("click", "$managing = !$managing; if (!$managing) { document.querySelectorAll('.msg-check:checked').forEach(el => { el.checked = false; }); $selected_count = 0; }"),
 				),

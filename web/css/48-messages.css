@@ -65,7 +65,17 @@
   display: flex; align-items: center; gap: 10px; padding: 14px 16px;
   border-bottom: 1px solid var(--brass); background: var(--card-2);
 }
-.messages-list-spacer { flex: 1; }
+/* the manage-toggle sits next to the filter tabs as a small codex button;
+ * when engaged ("Done") it lifts to the brass active fill, mirroring the
+ * segmented filter-tab active state. */
+.messages-manage-toggle.is-on {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--brass) 30%, var(--card)),
+    color-mix(in srgb, var(--brass) 16%, var(--card-2)));
+  color: var(--brass-dark);
+  border-color: var(--brass);
+  box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold);
+}
 
 /* filter tabs — codex segmented control (rhymes .action-toggle/.seg in 46) */
 .filter-tabs {
