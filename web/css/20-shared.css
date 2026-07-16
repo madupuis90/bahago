@@ -264,8 +264,8 @@
 /* Allocation slider — a thin metallic inset bar between two ornamental
    gold gem/arrowhead end caps, with a rectangular slate value-badge thumb
    that displays the live percentage. No comic ink border or offset shadow.
-   (.v-diamond stays as the variant hook for this thumb shape; the name is
-   a legacy carry-over — it no longer renders a diamond.) */
+   (.v-badge is the variant hook for this thumb shape — a rectangular value
+   badge carrying the live allocation %, reused by the prayers duration rod.) */
 .slider-wrap {
   position: relative; flex: 1; min-width: 0; height: 30px;
   display: flex; align-items: center;
@@ -331,9 +331,9 @@
 .slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; z-index: 2; }
 
 /* rectangular value-badge thumb — engraved gold caps numeral on a slate
-   slab. Oversized vs. a generic thumb because it carries the allocation %,
-   the row's primary readout. */
-.v-diamond .slider-thumb {
+   slab. Oversized vs. a generic thumb because it carries the live value
+   (allocation %, duration ticks) as the row's primary readout. */
+.v-badge .slider-thumb {
   display: inline-grid; place-items: center;
   min-width: 40px; height: 28px; padding: 0 9px;
   border-radius: 6px;

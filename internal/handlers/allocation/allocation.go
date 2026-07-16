@@ -356,7 +356,7 @@ func allocationRow(gemID, roleName, key, savedKey, resourceLabel string, initial
 			Div(Class("alloc-role-name"), Text(roleName)),
 			Div(Class("alloc-role-res"), Text(resourceLabel)),
 		),
-		Div(Class("slider-controls v-diamond"),
+		Div(Class("slider-controls v-badge"),
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 5)", key, key)), Text("−5")),
 			Button(Type("button"), Class("btn btn--sm"), ds.On("click", fmt.Sprintf("$%s = Math.max(0, $%s - 1)", key, key)), Text("−")),
 			Div(Class("slider-wrap"),

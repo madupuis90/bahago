@@ -866,8 +866,8 @@ code {
 /* Allocation slider — a thin metallic inset bar between two ornamental
    gold gem/arrowhead end caps, with a rectangular slate value-badge thumb
    that displays the live percentage. No comic ink border or offset shadow.
-   (.v-diamond stays as the variant hook for this thumb shape; the name is
-   a legacy carry-over — it no longer renders a diamond.) */
+   (.v-badge is the variant hook for this thumb shape — a rectangular value
+   badge carrying the live allocation %, reused by the prayers duration rod.) */
 .slider-wrap {
   position: relative; flex: 1; min-width: 0; height: 30px;
   display: flex; align-items: center;
@@ -933,9 +933,9 @@ code {
 .slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: left .12s ease; z-index: 2; }
 
 /* rectangular value-badge thumb — engraved gold caps numeral on a slate
-   slab. Oversized vs. a generic thumb because it carries the allocation %,
-   the row's primary readout. */
-.v-diamond .slider-thumb {
+   slab. Oversized vs. a generic thumb because it carries the live value
+   (allocation %, duration ticks) as the row's primary readout. */
+.v-badge .slider-thumb {
   display: inline-grid; place-items: center;
   min-width: 40px; height: 28px; padding: 0 9px;
   border-radius: 6px;
@@ -2466,34 +2466,35 @@ input.field:focus, select.field:focus {
 }
 
 /* =============================================================================
-   Allocation — COMIC LAB re-skin
+   Allocation — Codex re-skin
    ---------------------------------------------------------------------------
-   Drop-in replacement for web/css/42-allocation.css.
-   Semantic class names are UNCHANGED — only values move to the Comic Lab
-   vocabulary (thick ink outlines, flat fills, hard offset shadows, Lilita One
-   numerals/titles). Reads Foundation tokens (--ink, --card, --gem-*, --shadow-ink*).
+   Semantic class names UNCHANGED — only CSS values move to the codex
+   vocabulary (dark-slate + brass + parchment, soft layered shadows). The
+   slider control itself is shared (20-shared.css, .slider-wrap / .v-badge).
 
-   Companion changes shipped with this handoff (separate files):
-     · shared-patch.css  → .slider-fill colour override + meter variants + stepper
-     · page-title.css    → .page-header* comic plate (41-kingdom-overview.css)
-     · sprite-resources.svg → the 6 redrawn resource glyphs
+   Companion changes shipped with the codex sweep:
+     · 20-shared.css     → .slider-fill colour override + .v-badge thumb
+                            (was .v-diamond; renamed to reflect the
+                            rectangular value-badge it actually renders).
+     · 41-kingdom-overview.css → .page-header* codex plate.
+     · sprite-resources.svg  → the 6 redrawn resource glyphs.
    ============================================================================= */
 
-/* Allocation summary bar — the muster, a single ink-outlined band of segments */
+/* Allocation summary bar — a framed parchment band of resource segments */
 .allocation-bar {
   display: flex;
   height: 26px;
-  border-radius: 9px;
+  border-radius: 7px;
   overflow: hidden;
-  border: 3px solid var(--ink);
-  box-shadow: var(--shadow-ink-sm);
-  background: var(--card-2);
+  border: 1px solid var(--brass-dark);
+  box-shadow: var(--shadow-frame);
+  background: var(--card-fill-lit);
 
   &>span {
     display: block;
     height: 100%;
     transition: width .18s ease;
-    border-right: 2px solid var(--ink);
+    border-right: 1px solid var(--brass-dark);
   }
 
   &>span:last-child {
@@ -2512,47 +2513,31 @@ input.field:focus, select.field:focus {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-body);
   font-weight: 800;
   font-size: 11px;
   letter-spacing: .03em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: var(--slate);
 }
 
 .allocation-dot {
   width: 13px;
   height: 13px;
   border-radius: 4px;
-  border: 2px solid var(--ink);
+  border: 1px solid var(--brass-dark);
 }
 
 /* resource colours — the gem palette (also drive the per-row slider fill below) */
-.allocation-wood {
-  background: var(--gem-tree);
-}
-
-.allocation-stone {
-  background: var(--gem-mountain);
-}
-
-.allocation-food {
-  background: var(--gem-wheat);
-}
-
-.allocation-mana {
-  background: var(--gem-flame);
-}
-
-.allocation-devotion {
-  background: var(--gem-sun);
-}
-
-.allocation-knowledge {
-  background: var(--gem-star);
-}
+.allocation-wood      { background: var(--gem-tree); }
+.allocation-stone     { background: var(--gem-mountain); }
+.allocation-food      { background: var(--gem-wheat); }
+.allocation-mana      { background: var(--gem-flame); }
+.allocation-devotion  { background: var(--gem-sun); }
+.allocation-knowledge { background: var(--gem-star); }
 
 .allocation-idle {
-  background: repeating-linear-gradient(45deg, var(--ink) 0 3px, transparent 3px 9px);
+  background: repeating-linear-gradient(45deg, var(--slate-edge) 0 3px, transparent 3px 9px);
 }
 
 /* Roster grid */
@@ -2560,7 +2545,7 @@ input.field:focus, select.field:focus {
   height: 4px;
   margin: 18px 0 4px;
   border-radius: 4px;
-  background-image: repeating-linear-gradient(90deg, var(--ink) 0 13px, transparent 13px 21px);
+  background-image: repeating-linear-gradient(90deg, var(--brass-dark) 0 13px, transparent 13px 21px);
 }
 
 /* Live allocation % now rides inside the slider thumb, so the dedicated
@@ -2583,11 +2568,11 @@ input.field:focus, select.field:focus {
 
 .alloc-col-header {
   font-family: var(--font-display);
+  font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
   font-size: 11px;
-  color: var(--ink);
-  opacity: .65;
+  color: var(--brass-dark);
 
   &.alloc-col-header--right {
     text-align: right;
@@ -2596,7 +2581,7 @@ input.field:focus, select.field:focus {
 
 .alloc-row {
   padding: 11px 4px;
-  border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);
+  border-top: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
   min-height: 58px;
 }
 
@@ -2612,21 +2597,21 @@ input.field:focus, select.field:focus {
 
 .alloc-role-name {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 600;
   font-size: 1.18rem;
-  color: var(--ink);
+  color: var(--slate);
   line-height: 1.05;
 }
 
 /* optional — the resource the craft yields, beneath the role name (new; needs a
    <div class="alloc-role-res"> in the template). Harmless if unused. */
 .alloc-role-res {
+  font-family: var(--font-body);
   font-weight: 800;
   font-size: 10px;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--ink);
-  opacity: .6;
+  color: var(--brass-dark);
   margin-top: 3px;
 }
 
@@ -2644,7 +2629,7 @@ input.field:focus, select.field:focus {
 
 .alloc-net {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 600;
   font-size: 1.32rem;
   line-height: 1;
   color: var(--color-positive);
@@ -2655,22 +2640,21 @@ input.field:focus, select.field:focus {
   }
 
   &.zero {
-    color: color-mix(in srgb, var(--ink) 45%, transparent);
+    color: color-mix(in srgb, var(--slate) 50%, transparent);
   }
 }
 
 .alloc-rate {
+  font-family: var(--font-body);
   font-weight: 700;
   font-size: 11px;
   letter-spacing: .02em;
-  color: var(--ink);
-  opacity: .65;
+  color: var(--brass-dark);
   margin-top: 4px;
 
   &.is-pending {
-    color: var(--accent);
+    color: var(--brass);
     font-style: italic;
-    opacity: 1;
   }
 }
 
@@ -2699,10 +2683,11 @@ input.field:focus, select.field:focus {
 }
 
 .alloc-row.idle .alloc-assign-note {
+  font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
   font-size: .92rem;
-  color: var(--ink);
+  color: var(--slate);
   opacity: .75;
   text-wrap: pretty;
 }
@@ -2715,7 +2700,7 @@ input.field:focus, select.field:focus {
   gap: 18px;
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--brass-dark);
   flex-wrap: wrap;
 }
 
@@ -2727,18 +2712,18 @@ input.field:focus, select.field:focus {
 
 .alloc-total-label {
   font-family: var(--font-display);
+  font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
   font-size: 13px;
-  color: var(--ink);
-  opacity: .7;
+  color: var(--brass-dark);
 }
 
 .alloc-total-val {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 600;
   font-size: 1.85rem;
-  color: var(--accent);
+  color: var(--brass-dark);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 
@@ -2748,10 +2733,11 @@ input.field:focus, select.field:focus {
 }
 
 .alloc-total-note {
+  font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
   font-size: .92rem;
-  color: var(--ink);
+  color: var(--slate);
   opacity: .7;
 }
 
@@ -2762,6 +2748,7 @@ input.field:focus, select.field:focus {
 }
 
 .alloc-error {
+  font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
   font-size: 13px;
@@ -2773,8 +2760,9 @@ input.field:focus, select.field:focus {
 }
 
 /* optional — wrap an over-allocation warning in a red heraldic plaque.
-   (Needs a <span class="alloc-alarm">.) Codex: gold-edged red slab, engraved
-   gold caps — no comic rotation, no ink outline. */
+   (Needs a <span class="alloc-alarm">.) Codex: a red-tinted slate medallion
+   slab with engraved brass caps — tint --slate-edge with --red rather than a
+   flat heraldic fill, per the kit's medallion rule. */
 .alloc-alarm {
   display: inline-flex;
   align-items: center;
@@ -2785,10 +2773,10 @@ input.field:focus, select.field:focus {
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--brass-light);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 92%, #fff 8%), var(--red));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 42%, var(--slate-edge)), color-mix(in srgb, var(--red) 52%, var(--slate-2)));
   border: 1px solid var(--brass);
-  border-radius: 7px;
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-ink-xs);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-recessed);
   padding: 6px 13px 5px;
   white-space: nowrap;
 }
@@ -2800,8 +2788,7 @@ input.field:focus, select.field:focus {
 
 .alloc-row .slider-wrap {
   min-width: 150px;
-}
-/* =============================================================================
+}/* =============================================================================
    Buildings — web/css/43-buildings.css   ·   CODEX re-skin
    ---------------------------------------------------------------------------
    Brings the Buildings (dependency-tree) screen to the dark-fantasy codex
