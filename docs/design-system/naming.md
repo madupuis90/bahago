@@ -62,5 +62,5 @@ These class names pre-date the rule and are slated for replacement — do not us
 
 > **Not offenders (confirmed allowed):** `.allocation-stone` is part of the `.allocation-<resource>` family (wood/stone/food/mana/devotion/knowledge) keyed by resource name — `stone` is the game-mechanic resource key, not flavor. `allocation-stone` stays.
 | `letter-*` (`letter-sheet`, `letter-body`, `letter-subject`, `letter-rule`, `letter-corner-mark`, `letter-action`, `letter-action-note`) | `message-detail-*` (`-sheet`→`-card`/`-wrap`, `-body`, `-subject`→`-title`, `-rule`→`-divider`, `-corner-mark`→`-badge`, `-action`, `-action-note`) | messages (the single-message read view) |
-| `rite-*` (`rite-list`, `rite-body`, `rite-text`, `rite-note`, `rite-name`) | `steps-*` (`-list`, `-body`, `-text`, `-note`, `-name`) or `found-steps-*` | guild (the ordered founding steps) |
+| ~~`rite-*`~~ (`rite-list`, `rite-body`, `rite-text`, `rite-note`, `rite-name`) | `steps-*` (`-list`, `-num`, `-name`, `-text`, `-meter`, `-note`) | guild (the ordered founding steps) — **resolved** |
 | `door`, `doors`, `door-inner`, `door-title`, `door-text`, `door-meta`, `door-crest`, `doors-seam` | `choice` / `choices`, `choice-inner`, `choice-title`, `choice-text`, `choice-meta`, `choice-icon`, `choices-divider` | guild (the two Find/Found choice cards) |

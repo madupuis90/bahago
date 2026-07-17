@@ -402,6 +402,15 @@ ds.Bind("signalName")
 > ds.On("change", "doSomething($event.target.checked)")
 > ```
 
+> **Space around `-` and `.` operators that touch a `$signal`.** Datastar's signal-reference parser treats `-` and `.` as **path separators** inside a signal name (it supports dashed/dotted signal paths). So `$prayer_ticks-1` is read as a single reference to a signal literally named `prayer_ticks-1` (→ `undefined` → `NaN`), not `$prayer_ticks` minus `1`. `/` is not a separator, so `$wood_pct/100` is fine; the bug only bites `-` and `.`. The failure is silent — invalid CSS / `NaN` with no console error. Always surround `-`/`.` with whitespace (or isolate the signal in parentheses) when you mean arithmetic:
+> ```go
+> // Wrong — parsed as signal path "$['prayer_ticks-1']", yields NaN
+> ds.Style("left", "'calc(20px + ('+($prayer_ticks-1)/47+' * (100% - 40px)))'")
+>
+> // Correct — spaces force arithmetic
+> ds.Style("left", "'calc(20px + ('+($prayer_ticks - 1)/47+' * (100% - 40px)))'")
+> ```
+
 ```go
 // Wrong — email/password are initialized to "" by ds.Bind; ds.Signals is redundant
 ds.Signals(map[string]any{

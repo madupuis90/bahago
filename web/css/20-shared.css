@@ -261,58 +261,31 @@
   display: flex; align-items: center;
 }
 
-/* Allocation slider — a thin metallic inset bar between two ornamental
-   gold gem/arrowhead end caps, with a rectangular slate value-badge thumb
-   that displays the live percentage. No comic ink border or offset shadow.
-   (.v-badge is the variant hook for this thumb shape — a rectangular value
-   badge carrying the live allocation %, reused by the prayers duration rod.) */
+/* Allocation slider — a thin metallic inset bar with a rectangular slate
+   value-badge thumb that displays the live percentage. No comic ink border
+   or offset shadow. (.v-badge is the variant hook for this thumb shape — a
+   rectangular value badge carrying the live allocation %, reused by the
+   prayers duration rod.) */
 .slider-wrap {
   position: relative; flex: 1; min-width: 0; height: 30px;
   display: flex; align-items: center;
-  padding: 0;              /* caps + track inset are positioned, no flow padding */
+  padding: 0;              /* track inset is positioned, no flow padding */
   box-sizing: border-box;
 }
 
-/* ornamental gold gem/arrowhead end caps at the far-left / far-right */
-.slider-wrap::before,
-.slider-wrap::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 11px; height: 14px;
-  background:
-    linear-gradient(180deg, var(--brass-light), var(--brass) 55%, var(--brass-dark));
-  border: 1px solid var(--brass-dark);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(40,28,12,.40);
-  z-index: 1;
-}
-/* left cap — arrowhead pointing left, outward (away from the track) */
-.slider-wrap::before {
-  left: 0;
-  clip-path: polygon(0 50%, 100% 0, 78% 50%, 100% 100%);
-}
-/* right cap — arrowhead pointing right, outward (away from the track) */
-.slider-wrap::after {
-  right: 0;
-  clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%);
-}
-
-/* The track is inset from the wrap by half-thumb + cap clearance so the
-   thumb never overhangs into the flanking step buttons at 0/100%, and rests
-   just inside the gold end caps. The thumb's 0..100% travel maps onto the
-   INNER track (20px..trackWidth-20px) via a calc in the datastar style, so the
-   thumb stays fully inside the track — meaning the range input (which covers
-   the track) always sits under it and the whole thumb is clickable.
-   Inset = .5*thumb(~25px for a 3-digit value) + cap(11px) + hair ≈ 36px. */
+/* The track is inset from the wrap by half-thumb clearance so the thumb
+   never overhangs into the flanking step buttons at 0/100%. The thumb's
+   0..100% travel maps onto the INNER track (20px..trackWidth-20px) via a
+   calc in the datastar style, so the thumb stays fully inside the track —
+   meaning the range input (which covers the track) always sits under it and
+   the whole thumb is clickable.
+   Inset = .5*thumb(~25px for a 3-digit value). */
 .slider-track {
   position: relative; width: auto; flex: 1; height: 6px; overflow: visible;
-  margin: 0 36px;
+  margin: 0 25px;
   background: var(--slate-2); border: 1px solid var(--brass-dark); border-radius: 4px;
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.6);
 }
-
-/* The gap between each end cap and the inset track is left empty by design. */
 
 .slider-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
@@ -347,8 +320,8 @@
 }
 
 /* the invisible range input overlays the inset track (not the full wrap) so
-   the cursor maps 1:1 onto the thumb's travel; matches the track's 36px inset. */
-.slider-input { position: absolute; inset: 0 36px; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+   the cursor maps 1:1 onto the thumb's travel; matches the track's 25px inset. */
+.slider-input { position: absolute; inset: 0 25px; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .slider-wrap:focus-within .slider-thumb { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 
 /* the row label + readout that flank the control */
@@ -540,7 +513,7 @@ input.field:focus, select.field:focus {
   background: linear-gradient(180deg, color-mix(in srgb, var(--green) 100%, #fff 24%), var(--green));   /* pledges / positive accrual (Guild support) */
 }
 .meter-fill--foreign {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--gem-mountain) 100%, #fff 24%), var(--gem-mountain));   /* steel — another kingdom's effect (incoming rites) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gem-mountain) 100%, #fff 24%), var(--gem-mountain));   /* steel — another kingdom's effect (incoming prayers) */
 }
 .meter-fill--danger {
   background: linear-gradient(180deg, color-mix(in srgb, var(--red) 100%, #fff 24%), var(--red));   /* shortfall / overdue / over-cap */

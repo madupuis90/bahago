@@ -1,76 +1,51 @@
 /* =============================================================================
    Prayers — The Sanctum (Codex)
    ---------------------------------------------------------------------------
-   Reuses: .page-header*, .card, .card-inner, .card-header-row, .card-title,
+   Reuses: .page-header*, .card, .card-inner,
            .btn, .field, .select, .slider-wrap / .slider-track / .slider-fill /
            .slider-thumb / .slider-input / .v-badge (20-shared.css),
            .meter (+ .meter-fill brass), .stat-pill, .slot-gauge,
            .section-header, .gem (via ResourceGem), .icon, .alert--*.
 
    The duration control is the shared slider rod (.v-badge thumb carries the
-   live tick count); preset chips below are quick-set shortcuts.
+   live tick count).
 
    Deferred (Option C — visual structure now, data wiring later):
-     • "Upon Your Realm" incoming-rites section (needs
+     • "Upon Your Realm" incoming-prayers section (needs
        ListPrayersTargetingKingdom query) — omitted until the query lands.
      • Cross-kingdom targeting (perk-gated) — shown as a locked .target-perk.
      • Live total-cost recompute uses a fixed 20/tick multiplier (every current
-       rite costs 20/tick); update .offer-cost-val expression if a future rite
-       changes that.
+       prayer costs 20/tick); update .offer-cost-val expression if a future
+       prayer changes that.
    ============================================================================= */
 
-/* ── devotion ledger — the altar's reckoning strip ───────────────────────── */
-.devotion-ledger {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: var(--card-fill-lit); border: 1px solid var(--brass-dark);
-  border-radius: 8px; box-shadow: var(--shadow-frame); padding: 9px 16px; margin: 0 2px 22px;
-}
-.ledger-item { display: inline-flex; align-items: center; gap: 8px; }
-.ledger-val {
-  font-family: var(--font-display); font-weight: 600; font-size: 18px; line-height: 1;
-  color: var(--slate);
-  font-variant-numeric: tabular-nums;
-}
-.ledger-val.is-drain { color: var(--red); }
-.ledger-lbl {
-  font-family: var(--font-body); font-weight: 800; font-size: 10px;
-  letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
-}
-.ledger-sep {
-  width: 0; align-self: stretch;
-  border-left: 1px solid color-mix(in srgb, var(--brass-dark) 70%, transparent);
-  margin: 0 2px;
-}
-
 /* ── The Sanctum — altar card ────────────────────────────────────────────── */
-.sanctum .card-header-row { margin-bottom: 18px; }
-
-/* the burning rite */
-.rite-active { display: flex; flex-direction: column; gap: 4px; }
-.rite-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-.rite-id { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
-.rite-target {
+/* the active (burning) prayer */
+.active-prayer { display: flex; flex-direction: column; gap: 4px; }
+.active-prayer-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.active-prayer-id { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.active-prayer-target {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--font-body); font-weight: 800; font-size: 11px;
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
-.rite-target .icon { stroke: var(--brass-dark); }
-.rite-name { font-family: var(--font-display); font-weight: 600; font-size: 28px; line-height: 1; color: var(--slate); }
-.rite-effect { font-family: var(--font-body); font-weight: 700; font-size: 14.5px; color: var(--slate); text-wrap: pretty; }
-.rite-effect b { color: var(--brass); font-weight: 800; }
-.rite-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.rite-drain { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-.rite-drain-lbl {
+.active-prayer-target .icon { stroke: var(--brass-dark); }
+.active-prayer-name { font-family: var(--font-display); font-weight: 600; font-size: 28px; line-height: 1; color: var(--slate); }
+.active-prayer-effect { font-family: var(--font-body); font-weight: 700; font-size: 14.5px; color: var(--slate); text-wrap: pretty; }
+.active-prayer-effect b { color: var(--brass); font-weight: 800; }
+.active-prayer-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.active-prayer-drain { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.active-prayer-drain-lbl {
   font-family: var(--font-body); font-weight: 800; font-size: 9.5px;
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
-.rite-active .meter { margin-bottom: 4px; }
+.active-prayer .meter { margin-bottom: 4px; }
 
-.rite-foot {
+.active-prayer-foot {
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 18px; margin-top: 18px; flex-wrap: wrap;
 }
-.rite-foot-note {
+.active-prayer-foot-note {
   font-family: var(--font-body); font-weight: 600; font-size: 12.5px;
   line-height: 1.5; max-width: 56ch; opacity: .72; text-wrap: pretty;
   color: var(--slate);
@@ -79,11 +54,6 @@
 
 /* ── offering form (altar free) ──────────────────────────────────────────── */
 .offering { display: flex; flex-direction: column; gap: 4px; }
-.offering-lede {
-  font-family: var(--font-body); font-weight: 700; font-size: 15px;
-  line-height: 1.55; margin: 0 0 18px; max-width: 64ch; text-wrap: pretty;
-  color: var(--slate);
-}
 .offering-form {
   display: grid; grid-template-columns: 1.1fr 1.1fr; gap: 18px 26px;
   align-items: start;
@@ -97,7 +67,7 @@
 
 /* Duration rod — a shared slider-row .slider-wrap tied to devotion/gold.
    The .v-badge thumb carries the live tick count in its engraved numeral.
-   The "ticks" label sits beside the rod; presets below are quick shortcuts. */
+   The "ticks" label sits beside the rod. */
 .dur-rod {
   display: flex;
   align-items: center;
@@ -107,28 +77,16 @@
   --slider-fill: var(--brass);
   flex: 1; min-width: 0;
 }
+/* The rod has no flanking step buttons (unlike the allocation slider), so the
+   shared 25px track/input left inset only offsets the bar from the “Duration”
+   field-label. Zero the left side so the track's start aligns with the label;
+   keep the right inset so the thumb clears the “ticks” unit label. */
+.dur-rod .slider-track { margin-left: 0; }
+.dur-rod .slider-input { left: 0; }
 .dur-unit {
   font-family: var(--font-body); font-weight: 800; font-size: 11px;
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
   flex: none;
-}
-.dur-presets { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* codex preset chips — small slate medallion slabs, brass-rimmed. */
-.dur-chip {
-  cursor: pointer;
-  font-family: var(--font-display); font-weight: 600; font-size: 13px;
-  color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
-  border: 1px solid var(--brass);
-  border-radius: 6px;
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), var(--shadow-recessed);
-  padding: 5px 13px 4px;
-  transition: filter .1s, box-shadow .1s;
-}
-.dur-chip:hover {
-  filter: brightness(1.08);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--glow-gold);
 }
 
 /* perk-gated target notice */
@@ -200,14 +158,14 @@
 
 .prayer-card-foot { margin-top: auto; }
 .prayer-card-foot .btn { width: 100%; }
-.rite-burning {
+.prayer-burning {
   display: inline-flex; align-items: center; gap: 8px; justify-content: center;
   font-family: var(--font-display); font-weight: 600; font-size: 14px;
   color: var(--brass-light);
   text-shadow: var(--glow-gold);
   width: 100%; padding: 8px 10px;
 }
-.rite-burning .icon { stroke: var(--brass-light); flex: none; }
+.prayer-burning .icon { stroke: var(--brass-light); flex: none; }
 .cap-note {
   display: block; font-family: var(--font-body); font-weight: 700; font-style: italic;
   font-size: 12.5px; line-height: 1.5; opacity: .7; text-wrap: pretty;

@@ -1,3 +1,10 @@
+<!--
+  This file is an unstructured brain dump / scratchpad of design ideas.
+  Do NOT edit, refactor, or "clean up" its contents from the agent — it is
+  the project owner's running notation, kept deliberately raw. Notes here are
+  not committed decisions; surface questions in conversation instead.
+-->
+
 # Summary
 
 Bahago (name to be changed) is a game inspired by Bahagon. 

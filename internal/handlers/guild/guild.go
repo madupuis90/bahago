@@ -954,36 +954,36 @@ func guildNewContent() Node {
 					guildAlert(nil),
 				),
 			)),
-			foundingRiteCard(),
+			foundingStepsCard(),
 		),
 	)
 }
 
-func foundingRiteCard() Node {
+func foundingStepsCard() Node {
 	return Div(Class("card"), Div(Class("card-inner"),
 		Span(Class("eyebrow"), Text("How a guild is founded")),
-		El("ol", Class("rite-list"),
-			riteStep("1", "Draft the charter",
+		El("ol", Class("steps-list"),
+			foundingStep("1", "Draft the charter",
 				"A name and a purpose, set down for the realm to read.", nil),
-			riteStep("2", "Gather the seals",
+			foundingStep("2", "Gather the seals",
 				"Four other kingdoms pledge their support. Your own seal is the first.",
 				supportMeterNode(1, 5)),
-			riteStep("3", "The founding",
+			foundingStep("3", "The founding",
 				"At the fifth seal the guild enters the roll, with you as its leader.", nil),
 		),
-		P(Class("rite-note"),
+		P(Class("steps-note"),
 			Text("A charter that fails to gather its seals lapses and is struck from the roll.")),
 	))
 }
 
-func riteStep(num, name, text string, meter Node) Node {
+func foundingStep(num, name, text string, meter Node) Node {
 	children := []Node{
-		Span(Class("rite-num"), Text(num)),
-		Div(Span(Class("rite-name"), Text(name))),
-		Div(Class("rite-text"), Text(text)),
+		Span(Class("steps-num"), Text(num)),
+		Div(Span(Class("steps-name"), Text(name))),
+		Div(Class("steps-text"), Text(text)),
 	}
 	if meter != nil {
-		children = append(children, Div(Class("rite-step-meter"), meter))
+		children = append(children, Div(Class("steps-meter"), meter))
 	}
 	return El("li", Group(children))
 }

@@ -306,87 +306,32 @@ func prayersContent(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
 		Div(ds.Init(GetSSENoSignals(routes.KingdomPrayersRefreshPath))),
 		prayerAlert(nil),
 		PageHeader("Prayers"),
-		devotionLedger(kingdom, prayers),
 		sanctumSection(kingdom, prayers, prayerKeys),
 		availablePrayersSection(prayers, prayerKeys),
 	)
 }
 
-// devotionLedger is the altar's reckoning strip: the kingdom's current devotion
-// stock (sun gem) and, while a rite burns, its per-tick drain.
-func devotionLedger(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
-	items := []Node{
-		Span(Class("ledger-item"),
-			ResourceGem("sun", 22),
-			Span(Class("ledger-val"), Text(strconv.Itoa(kingdom.Devotion))),
-			Span(Class("ledger-lbl"), Text("Devotion")),
-		),
-	}
-	if len(prayers) > 0 {
-		drain := 0
-		for _, p := range prayers {
-			if def, ok := game.PrayerDefs[p.PrayerType]; ok {
-				drain += def.DevotionUpkeep
-			}
-		}
-		items = append(items,
-			Span(Class("ledger-sep")),
-			Span(Class("ledger-item"),
-				Icon("sandglass", 18, false),
-				Span(Class("ledger-val is-drain"), Text(fmt.Sprintf("−%d", drain))),
-				Span(Class("ledger-lbl"), Text("Per tick")),
-			),
-		)
-	}
-	return Div(Class("devotion-ledger"), Group(items))
-}
-
-// sanctumSection is the altar card. When a rite is burning it shows the active
-// rite with a brass tick meter and a cancel button; when the altar is free it
-// shows the offering form (rite · duration stepper · cost · Pray).
+// sanctumSection is the altar card. When a prayer is burning it shows the
+// active prayer with a brass tick meter and a cancel button; when the altar
+// is free it shows the offering form (prayer · duration stepper · cost · Pray).
 func sanctumSection(kingdom db.Kingdom, prayers []db.KingdomPrayer, prayerKeys []string) Node {
 	busy := len(prayers) > 0
-	used := len(prayers)
-	if used > maxPrayers {
-		used = maxPrayers
-	}
 
-	body := Iff(busy, func() Node { return activeRiteView(prayers[0]) })
+	body := Iff(busy, func() Node { return activePrayerView(prayers[0]) })
 	if !busy {
 		body = offeringForm(kingdom, prayerKeys)
 	}
 
 	return Div(Class("card sanctum"),
 		Div(Class("card-inner"),
-			Div(Class("card-header-row"),
-				P(Class("card-title"), Text("The Sanctum")),
-				Div(Class("slot-gauge"),
-					Div(Class("slot-gauge-dots"),
-						Range(maxPrayers, func(i int) Node {
-							return Div(Classes{"slot-gauge-dot": true, "is-on": i < used})
-						}),
-					),
-					Span(Class("slot-gauge-label"),
-						Text(fmt.Sprintf("%d/%d in use", used, maxPrayers))),
-				),
-			),
 			body,
 		),
 	)
 }
 
-// Range emits n zero-indexed child nodes via fn.
-func Range(n int, fn func(i int) Node) Group {
-	nodes := make([]Node, 0, n)
-	for i := range n {
-		nodes = append(nodes, fn(i))
-	}
-	return Group(nodes)
-}
-
-// activeRiteView renders the single burning rite: glyph + name/effect + drain,
-// a brass tick meter, and a cancel footer.
-func activeRiteView(p db.KingdomPrayer) Node {
+// activePrayerView renders the single burning prayer: glyph + name/effect +
+// drain, a brass tick meter, and a cancel footer.
+func activePrayerView(p db.KingdomPrayer) Node {
 	def, ok := game.PrayerDefs[p.PrayerType]
 	name, effect, upkeep := p.PrayerType, "", 0
 	gemID := "sun"
@@ -406,22 +351,22 @@ func activeRiteView(p db.KingdomPrayer) Node {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 
-	return Div(Class("rite-active"),
-		Div(Class("rite-top"),
+	return Div(Class("active-prayer"),
+		Div(Class("active-prayer-top"),
 			ResourceGem(gemID, 44),
-			Div(Class("rite-id"),
-				Span(Class("rite-target"),
+			Div(Class("active-prayer-id"),
+				Span(Class("active-prayer-target"),
 					Icon("crown", 13, false),
 					Text("Upon your realm"),
 				),
-				Span(Class("rite-name"), Text(name)),
+				Span(Class("active-prayer-name"), Text(name)),
 				Iff(effect != "", func() Node {
-					return Span(Class("rite-effect"), Raw(effectHTML(def)))
+					return Span(Class("active-prayer-effect"), Raw(effectHTML(def)))
 				}),
 			),
-			Div(Class("rite-aside"),
-				Div(Class("rite-drain"),
-					Span(Class("rite-drain-lbl"), Text("Devotion drain")),
+			Div(Class("active-prayer-aside"),
+				Div(Class("active-prayer-drain"),
+					Span(Class("active-prayer-drain-lbl"), Text("Devotion drain")),
 					Span(Class("stat-pill"),
 						Span(Classes{"pill-neg": true}, Text(fmt.Sprintf("−%d", upkeep))),
 						Text("/tick"),
@@ -440,12 +385,12 @@ func activeRiteView(p db.KingdomPrayer) Node {
 				Div(Class("meter-notches"), Group(notches)),
 			),
 		),
-		Div(Class("rite-foot"),
-			P(Class("rite-foot-note"),
-				Text("The rite drains devotion each tick and ends when it runs dry or the ticks elapse.")),
+		Div(Class("active-prayer-foot"),
+			P(Class("active-prayer-foot-note"),
+				Text("The prayer drains devotion each tick and ends when it runs dry or the ticks elapse.")),
 			Button(Class("btn btn--danger"),
 				ds.On("click", datastar.PostSSE("%s", cancelPrayerPath(p.ID))),
-				Text("Cancel rite"),
+				Text("Cancel prayer"),
 			),
 		),
 	)
@@ -453,17 +398,14 @@ func activeRiteView(p db.KingdomPrayer) Node {
 
 // offeringForm renders the cast form when the altar is free. The duration
 // stepper is driven by the $prayer_ticks signal; the total-cost readout is a
-// datastar expression (every current rite costs 20 devotion/tick, so the
-// multiplier is fixed — update here if a future rite changes that).
+// datastar expression (every current prayer costs 20 devotion/tick, so the
+// multiplier is fixed — update here if a future prayer changes that).
 func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
 	return Div(Class("offering"),
-		P(Class("offering-lede"),
-			Text("The altar stands open. Choose a rite and the devotion you will spend per tick."),
-		),
 		Form(Class("offering-form"),
 			ds.On("submit", datastar.PostSSE(routes.KingdomPrayerCastPath)),
 			Div(Class("field-group"),
-				Label(For("prayer_type"), Class("field-label"), Text("Rite")),
+				Label(For("prayer_type"), Class("field-label"), Text("Prayer")),
 				Select(ID("prayer_type"), Class("select"), ds.Bind("prayer_type"),
 					Group(Map(prayerKeys, func(key string) Node {
 						return Option(Value(key), Text(game.PrayerDefs[key].Name))
@@ -476,10 +418,10 @@ func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
 					Div(Class("slider-wrap v-badge"),
 						Div(Class("slider-track"),
 							Div(Class("slider-fill"),
-								ds.Style("width", "'calc(20px + ('+($prayer_ticks-1)/47+' * (100% - 40px)))'")),
+								ds.Style("width", "'calc(20px + ('+($prayer_ticks - 1)/47+' * (100% - 40px)))'")),
 							Div(Class("slider-ticks")),
 							Div(Class("slider-thumb"),
-								ds.Style("left", "'calc(20px + ('+($prayer_ticks-1)/47+' * (100% - 40px)))'"),
+								ds.Style("left", "'calc(20px + ('+($prayer_ticks - 1)/47+' * (100% - 40px)))'"),
 								ds.Text("$prayer_ticks")),
 						),
 						Input(ID("prayer_ticks"), Class("slider-input"),
@@ -488,15 +430,12 @@ func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
 					),
 					Span(Class("dur-unit"), Text("ticks")),
 				),
-				Div(Class("dur-presets"),
-					presetChip(8), presetChip(16), presetChip(24), presetChip(48),
-				),
 			),
 			Div(Class("field-group target-perk-group"),
 				Label(Class("field-label"), Text("Target")),
 				Div(Class("target-perk"),
 					Icon("crown", 14, false),
-					Text("Cross-kingdom targeting awaits a perk — rites fall upon your own realm."),
+					Text("Cross-kingdom targeting awaits a perk — prayers fall upon your own realm."),
 				),
 			),
 			Input(Type("hidden"), ds.Bind("target_kingdom"), Value(kingdom.Name)),
@@ -505,21 +444,13 @@ func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
 					Span(Class("offer-cost-lbl"), Text("Total devotion")),
 					Span(Class("offer-cost-val"),
 						ResourceGem("sun", 20),
-						// 20 = current per-tick upkeep for every rite; see func comment.
+						// 20 = current per-tick upkeep for every prayer; see func comment.
 						ds.Text("$prayer_ticks * 20"),
 					),
 				),
-				Button(Type("submit"), Class("btn btn--primary"), Text("Offer rite")),
+				Button(Type("submit"), Class("btn btn--primary"), Text("Offer prayer")),
 			),
 		),
-	)
-}
-
-func presetChip(ticks int) Node {
-	return Span(Classes{"dur-chip": true},
-		ds.On("click", fmt.Sprintf("$prayer_ticks = %d", ticks)),
-		Role("button"),
-		Text(strconv.Itoa(ticks)),
 	)
 }
 
@@ -541,7 +472,7 @@ func availablePrayersSection(active []db.KingdomPrayer, prayerKeys []string) Nod
 			Span(Class("section-title"), Text("Available Prayers")),
 			Span(Class("section-rule")),
 			Span(Class("section-meta"),
-				Text(fmt.Sprintf("%d rites", len(prayerKeys)))),
+				Text(fmt.Sprintf("%d prayers", len(prayerKeys)))),
 		),
 		Div(Class("prayer-grid"), Group(cards)),
 	})
@@ -559,20 +490,21 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 	switch {
 	case isActive:
 		foot = Div(Class("prayer-card-foot"),
-			Span(Class("rite-burning"),
+			Span(Class("prayer-burning"),
 				Icon("sandglass", 16, false),
 				Text("Burning in the Sanctum"),
 			),
 		)
 	case capReached:
 		foot = Div(Class("prayer-card-foot"),
-			Span(Class("cap-note"), Text("The altar holds one rite at a time — cancel the burning rite to offer another.")),
+			Span(Class("cap-note"), Text("The altar holds one prayer at a time — cancel the burning prayer to offer another.")),
 		)
 	default:
-		expr := fmt.Sprintf("$prayer_type='%s';$prayer_ticks=8;%s",
-			key, datastar.PostSSE(routes.KingdomPrayerCastPath))
+		// Selecting a card sets the offering form's dropdown to that prayer
+		// (and resets the duration) so the user confirms via the Sanctum form.
+		expr := fmt.Sprintf("$prayer_type='%s';$prayer_ticks=8", key)
 		foot = Div(Class("prayer-card-foot"),
-			Button(Class("btn btn--primary"), ds.On("click", expr), Text("Offer rite")),
+			Button(Class("btn"), ds.On("click", expr), Text("Select prayer")),
 		)
 	}
 
