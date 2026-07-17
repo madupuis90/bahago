@@ -153,22 +153,14 @@
   margin-top: 22px;
 }
 
+/* the inline "Already have an account?" prompt sitting next to the green
+   Register CTA. Its Sign-in is a codex .btn (slate slab), so the prompt wraps
+   text + button. */
 .home-signin-prompt {
   font-family: var(--font-body);
   font-weight: 800;
   font-size: 14px;
   color: var(--ink-soft);
-
-  a {
-    font-style: normal;
-    font-family: var(--font-body);
-    font-weight: 800;
-    color: var(--link-color, var(--blue));
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 3px;
-    cursor: pointer;
-  }
 }
 
 /* gold filigree rule (kept for compat) — thin gold line + centered diamond,
