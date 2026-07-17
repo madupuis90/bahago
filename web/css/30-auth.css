@@ -1,10 +1,13 @@
 /* =============================================================================
-   Auth — COMIC LAB re-skin (Home & Auth handoff, 2026-06-20)
+   Auth — Codex skin (Pathfinder: Kingmaker-inspired)
    ---------------------------------------------------------------------------
-   Drop-in replacement for web/css/30-auth.css.
-   Pure re-skin: every live semantic class keeps its name + markup. Inputs use
-   the SHARED .field / .field-group / .field-label (already comic from
-   Foundation) — they are NOT redefined here.
+   The auth screens (login, register, forgot/reset password, verify): a single
+   framed parchment card centered on the aged-parchment page, with a brass
+   medallion crest, an engraved Cinzel wordmark, and a gold filigree divider.
+   Inputs use the shared codex .field / .field-group / .field-label (already
+   codex in 20-shared.css) — they are NOT redefined here.
+   Semantic class names + markup are preserved; only styling changes.
+   See docs/design-system/design-language.md.
 
    NOTE: the crest shield is scoped `.auth-crest .crest` so it beats the kingdom
    identity `.crest` coin in 40-kingdom-chrome.css (which loads later). The
@@ -21,19 +24,22 @@
   z-index: 1;
 }
 
+/* the auth card is a wide framed parchment panel (shares the codex .card
+   surface; only the max-width + a heavier "lifted slab" shadow is tuned). */
 .auth-wrap {
   width: 100%;
   max-width: 420px;
 
-  /* the auth card is the comic surface, slightly rounder + deeper shadow */
   .card {
-    background: var(--card);
-    border: 3px solid var(--ink);
-    border-radius: 22px;
-    box-shadow: 8px 8px 0 var(--ink);
+    background: var(--card-fill-lit);
+    border: 1px solid var(--brass);
+    border-radius: 10px;
+    box-shadow:
+      inset 0 1px 0 var(--brass-light),
+      inset 0 0 0 1px rgba(124,90,38,.35),
+      var(--shadow-ink-lg);
   }
-  /* .is-lit is a no-op alias since the Card re-skin — flat cream is the surface */
-  .card.is-lit { background: var(--card); }
+  .card.is-lit { background: var(--card-fill-lit); }
 }
 
 .auth-wrap--wide { max-width: 444px; }
@@ -50,25 +56,29 @@
   text-align: center;
 }
 
-/* crest — chunky yellow shield sticker, line-art glyph.
+/* crest — brass-rimmed slate medallion, embossed gold glyph.
    Rendered by the shared authCrest() Go helper as .crest.crest-lg, nested
    inside .auth-crest. Scoped `.auth-crest .crest` (0,2,0) to override the
-   kingdom `.crest` coin (border-radius:50% + token fill). */
+   kingdom `.crest` coin (border-radius:50% + token fill) from
+   40-kingdom-chrome.css. */
 .auth-crest .crest {
   flex: none;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 11px;
-  background: var(--yellow);
-  border: 3px solid var(--ink);
-  box-shadow: var(--shadow-ink-sm);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));
+  border: 1px solid var(--brass);
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    var(--shadow-ink-sm);
 
-  svg { width: 22px; height: 22px; display: block; }
+  svg { width: 22px; height: 22px; display: block; color: var(--brass-light); }
   svg [stroke], svg path, svg polyline {
-    stroke: var(--ink);
-    stroke-width: 2.2;
+    stroke: var(--brass-light);
+    stroke-width: 2;
     fill: none;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -77,29 +87,28 @@
   &.crest-lg {
     width: 78px;
     height: 78px;
-    border-radius: 18px;
-    box-shadow: 6px 6px 0 var(--ink);
+    background: radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));
+    box-shadow:
+      inset 0 1px 0 var(--brass-light),
+      inset 0 -3px 6px rgba(0,0,0,.55),
+      var(--shadow-ink);
 
     svg { width: 44px; height: 44px; }
   }
 }
 
-/* wordmark — red sticker, white ink-stroked Lilita, tilted */
+/* wordmark — engraved Cinzel caps title in dark gold, no sticker/rotation. */
 .auth-wordmark {
   display: inline-block;
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 34px;
   line-height: 1;
-  letter-spacing: .03em;
-  color: #fff;
-  -webkit-text-stroke: 2.4px var(--ink);
-  paint-order: stroke fill;
-  background: var(--red);
-  border: 3px solid var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--shadow-ink);
-  padding: 7px 20px 11px;
-  transform: rotate(-2deg);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--brass-dark);
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
+  padding: 0;
 }
 
 .auth-tagline {
@@ -107,17 +116,20 @@
   font-weight: 700;
   font-style: normal;
   font-size: 15px;
-  color: var(--ink);
-  opacity: .85;
+  color: var(--ink-soft);
+  opacity: .9;
   margin-top: -2px;
 }
 
-/* dashed ink divider */
+/* gold filigree divider — a thin gold line with a centered diamond, echoing
+   the shared .section-rule / .rule-filigree motif. No comic dashed ink. */
 .auth-divider {
-  height: 4px;
-  background: var(--ink);
-  background-image: repeating-linear-gradient(90deg, var(--ink) 0 14px, transparent 14px 22px);
-  border-radius: 4px;
+  height: 12px;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3px, var(--brass) 3px 4px, transparent 4.1px) center / 12px 12px no-repeat,
+    linear-gradient(90deg, transparent, var(--brass) 6%, var(--brass) 94%, transparent) center / 100% 1px no-repeat;
   margin: 0 0 22px;
 }
 
@@ -127,7 +139,10 @@
   gap: 15px;
 }
 
-/* password reveal — comic chip toggle inside the .field well */
+/* password reveal — small gold-edged slate chip toggle inside the .field well
+   (the dark slate recessed-control tone). A pure link (shared .btn-text) reads
+   as an underlined blue link, which fights the slate well; this chip matches
+   the codex metal vocabulary instead. */
 .password-field {
   position: relative;
 
@@ -139,22 +154,23 @@
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 11px;
-  letter-spacing: .04em;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  background: var(--card-2);
-  color: var(--ink);
-  border: 2.5px solid var(--ink);
-  border-radius: 8px;
-  padding: 4px 8px 3px;
+  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  color: var(--brass-light);
+  border: 1px solid var(--brass);
+  border-radius: 6px;
+  padding: 3px 8px 2px;
   cursor: pointer;
-  box-shadow: var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.45), var(--shadow-ink-xs);
 
-  &:active { transform: translateY(-50%) translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+  &:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); }
 }
 
-/* "Forgot your password?" — quiet blue link, right aligned */
+/* "Forgot your password?" — quiet aged-gold link, right aligned */
 .auth-quiet {
   align-self: flex-end;
   display: block;
@@ -167,10 +183,12 @@
   text-decoration: none;
   cursor: pointer;
 
-  &:hover { color: var(--link-hover-color, #235a93); text-decoration: underline; text-decoration-thickness: 2.5px; }
+  &:hover { color: var(--link-hover-color, #2c4258); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 }
 
-/* submit — full-width comic primary (self-contained) */
+/* submit — full-width codex primary slab, green heraldic "commit" fill with a
+   gold frame + raised brass bevel (mirrors the shared .btn.btn--primary). No
+   comic offset lift. Used by auth forms AND the home CTA. */
 .auth-btn {
   display: inline-flex;
   align-items: center;
@@ -178,20 +196,26 @@
   width: 100%;
   margin-top: 6px;
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 19px;
-  letter-spacing: .03em;
+  letter-spacing: .08em;
   text-transform: uppercase;
   padding: 14px 26px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
-  border: 3px solid var(--ink);
-  background: var(--primary, var(--red));
-  color: var(--primary-ink);
-  box-shadow: var(--shadow-ink);
-  transition: transform .08s ease, box-shadow .08s ease;
+  border: 1px solid var(--brass);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--green) 92%, #fff 8%), var(--green));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 -2px 0 var(--brass-dark),
+    var(--shadow-raised);
+  transition: box-shadow .1s ease, background .15s ease, filter .12s ease;
+  text-decoration: none;
 
-  &:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
-  &:active { transform: translate(4px,4px); box-shadow: 0 0 0 var(--ink); }
+  &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 3px 8px rgba(40,28,12,.40); filter: brightness(1.06); }
+  &:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); filter: brightness(.95); }
+  &:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 }
 
 /* footer link group */
@@ -202,7 +226,7 @@
   gap: 6px;
   margin-top: 22px;
   padding-top: 18px;
-  border-top: 3px dotted color-mix(in srgb, var(--ink) 30%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--brass) 50%, transparent);
   text-align: center;
 }
 
@@ -210,26 +234,28 @@
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 14px;
-  color: var(--ink);
-  opacity: .85;
+  color: var(--ink-soft);
+  opacity: .9;
 }
 
 .auth-foot-link {
   font-family: var(--font-display);
+  font-weight: 600;
   font-size: 14px;
-  letter-spacing: .03em;
-  color: var(--red);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--brass-dark);
   text-decoration: none;
   cursor: pointer;
 
-  &:hover { text-decoration: underline; text-decoration-thickness: 2.5px; text-underline-offset: 3px; }
+  &:hover { color: var(--blue); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 }
 
 .auth-foot-link--muted {
-  color: var(--ink);
-  opacity: .7;
+  color: var(--ink-soft);
+  opacity: .85;
 
-  &:hover { color: var(--red); opacity: 1; }
+  &:hover { color: var(--blue); opacity: 1; }
 }
 
 /* recovery-page instruction line */
@@ -238,34 +264,40 @@
   font-weight: 600;
   font-style: normal;
   font-size: 14px;
-  color: var(--ink);
-  opacity: .85;
+  color: var(--ink-soft);
+  opacity: .9;
   line-height: 1.55;
   margin-bottom: 16px;
   text-wrap: pretty;
 }
 
-/* success / notice alert (recovery sent) */
+/* success / notice alert (recovery sent) — gold-edged parchment banner with a
+   gently green-tinted recessed well, mirroring the shared .alert--success. */
 .auth-alert {
-  padding: 14px 16px;
-  border: 3px solid var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--shadow-ink);
+  padding: 12px 14px;
+  border: 1px solid var(--brass);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 var(--brass-light),
+    inset 0 0 0 1px rgba(124,90,38,.35),
+    var(--shadow-ink-xs);
   font-family: var(--font-body);
+  font-weight: 700;
   font-size: 14px;
   line-height: 1.45;
 }
 
 .auth-alert--success {
-  background: var(--green);
-  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--green) 22%, var(--card)), color-mix(in srgb, var(--green) 12%, var(--card-2)));
+  color: color-mix(in srgb, var(--green) 70%, var(--ink) 30%);
 
   strong {
     font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 17px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: .04em;
     display: block;
     margin-bottom: 3px;
-    color: #fff;
+    color: color-mix(in srgb, var(--green) 75%, var(--ink) 25%);
   }
 }
