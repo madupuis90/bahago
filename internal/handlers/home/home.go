@@ -49,7 +49,7 @@ func homeContent() Node {
 			H1(Class("home-title"), Text("Bahago")),
 			P(Class("home-sub"), Text("Command a kingdom. Gather ancient resources, raise mighty armies, forge alliances in guilds, and carve your name into the annals of the realm.")),
 			Div(Class("home-cta"),
-				A(Class("auth-btn"), Style("width:auto"), Href(routes.RegisterPath), Text("Found a Kingdom")),
+				A(Class("auth-btn"), Style("width:auto"), Href(routes.RegisterPath), Text("Register")),
 				Span(Class("home-signin-prompt"),
 					Text("Already a ruler? "),
 					A(Href(routes.LoginPath), Text("Sign in →")),
@@ -66,7 +66,6 @@ func homeContent() Node {
 
 // homeHeroScene is the additive decorative SVG band for the hero: a flat
 // ligne-claire landscape (meadow + castle + banners) with a sun, distant
-// birds, and a "FREE to play" starburst. Verbatim from the Comic Lab proof;
 // the hero reads fine without it. All strokes inherit var(--ink) via the
 // .home-hero-* CSS.
 func homeHeroScene() Node {
@@ -84,15 +83,6 @@ func homeHeroScene() Node {
   <path d="M4 16 Q12 6 20 16 Q28 6 36 16"></path>
   <path d="M50 26 Q56 18 62 26 Q68 18 74 26"></path>
 </svg>`),
-		Div(Class("home-hero-burst"),
-			Raw(`<svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
-  <path d="M50 3 L59 20 L78 13 L74 33 L94 38 L80 52 L95 66 L75 70 L78 90 L60 81 L50 98 L40 81 L22 90 L25 70 L5 66 L20 52 L6 38 L26 33 L22 13 L41 20 Z" fill="#3f9d51" stroke-width="3" stroke-linejoin="round"></path>
-</svg>`),
-			Span(Class("home-hero-burst-txt"),
-				El("b", Text("FREE")),
-				Span(Text("to play")),
-			),
-		),
 		Raw(`<svg class="home-hero-scene" viewBox="0 0 1200 230" fill="none" aria-hidden="true">
   <path d="M0 150 C 180 116 360 132 560 124 C 780 116 1000 142 1200 116 L1200 230 L0 230 Z" fill="#9ad29a" stroke-width="3"></path>
   <path d="M0 188 C 240 166 420 198 700 176 C 940 158 1080 190 1200 168 L1200 230 L0 230 Z" fill="#4aa85d" stroke-width="3"></path>

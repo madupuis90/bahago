@@ -65,7 +65,7 @@ func registerContent() Node {
 					),
 				),
 				Button(Class("auth-btn"),
-					Text("Found a Kingdom · Register"),
+					Text("Create Account"),
 					ds.On("click", datastar.PostSSE(routes.RegisterPath)),
 				),
 				authAlert(nil),
