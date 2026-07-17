@@ -71,7 +71,7 @@ func registerContent() Node {
 				authAlert(nil),
 				Div(Class("auth-foot"),
 					Span(Class("auth-foot-text"), Text("Already have an account?")),
-					A(Class("btn"), Href(routes.LoginPath), Text("Sign in")),
+					A(Class("auth-foot-link"), Href(routes.LoginPath), Text("Sign In")),
 				),
 			),
 		),

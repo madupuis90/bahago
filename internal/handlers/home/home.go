@@ -52,7 +52,7 @@ func homeContent() Node {
 				A(Class("auth-btn"), Style("width:auto"), Href(routes.RegisterPath), Text("Register")),
 				Span(Class("home-signin-prompt"),
 					Text("Already have an account? "),
-					A(Class("btn btn--sm"), Href(routes.LoginPath), Text("Sign in")),
+					A(Href(routes.LoginPath), Text("Sign in →")),
 				),
 			),
 			homeHeroScene(),
