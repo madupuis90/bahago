@@ -82,6 +82,7 @@
   --content-max:        1160px;  /* main content shell (.content-area)        */
   --content-max-narrow: 420px;   /* auth card — narrow form                    */
   --content-max-wide:   444px;   /* auth card — wide form                      */
+  --content-max-kingdom: 1100px;  /* kingdom main content cap (centered column) */
 
   --white:      #fff;     /* highlights, white glyphs on saturated chips */
   --ink-deep:   #1a1008;  /* near-black recessed background (flipcard)     */

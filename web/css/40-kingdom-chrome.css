@@ -12,7 +12,7 @@
   & main {
     min-height: 0;
     overflow-y: auto;
-    padding: var(--space-6) max(var(--space-8), calc((100% - var(--space-9)) / 2)) var(--space-4);
+    padding: var(--space-6) max(var(--space-8), calc((100% - var(--content-max-kingdom)) / 2)) var(--space-4);
     background: transparent;
     position: relative;
     z-index: 1;

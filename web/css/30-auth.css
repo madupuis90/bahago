@@ -146,7 +146,7 @@
   align-self: flex-end;
   display: block;
   text-align: right;
-  margin-top: -var(--space-1);
+  margin-top: calc(var(--space-1) * -1);
   font-family: var(--font-body);
   font-weight: 800;
   font-size: var(--fs-sm);
