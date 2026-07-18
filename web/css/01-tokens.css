@@ -1,23 +1,8 @@
-/* =============================================================================
-   Tokens — Codex (Pathfinder: Kingmaker-inspired) skin, v2
-   ---------------------------------------------------------------------------
-   The look is an illuminated journal: LIGHT aged-parchment page background,
-   DARK charcoal-slate frame & "metallic slate" selectors, GOLD filigree and
-   bevels. Token NAMES are preserved so feature CSS keeps working; VALUES are
-   repointed and a few dark-slate / gold tokens are added. Fonts are Cinzel
-   (display) + Nunito (body). See docs/design-system/design-language.md.
-   ============================================================================= */
-
 :root {
   /* ── Slate — the dark charcoal frame & metallic selectors ────────────── */
   --slate:      #2f2d2b;   /* primary dark charcoal surface (bar, pills, nav) */
   --slate-2:    #201e1d;   /* deeper recess */
   --slate-edge: #46423d;   /* lighter bevel edge */
-
-  /* legacy leather aliases → slate (kept so older refs still resolve) */
-  --leather:      var(--slate);
-  --leather-2:    var(--slate-2);
-  --leather-edge: var(--slate-edge);
 
   /* ── Brass / gold — trim, bevels, active glow, filigree ──────────────── */
   --brass:       #c69a4a;
@@ -26,10 +11,8 @@
 
   /* ── Parchment — the LIGHT page background & content cards ──────────── */
   --paper:   #e8d9b0;     /* base aged parchment (page bg) */
-  --paper-2: #d6c48c;     /* deeper parchment */
   --card:    #f1e6c8;     /* content panel cream (brighter than page) */
   --card-2:  #e3d2a4;     /* recessed well / secondary surface */
-  --dot: rgba(60, 42, 18, .07);
 
   /* ── Heraldic fills — muted, aged (used sparingly, not as comic flats) ─ */
   --red:    #8d2f24;      /* realm / danger / destroy (deep rust crimson) */
@@ -65,6 +48,47 @@
   --glow-gold:        /* active / alert glow */
     0 0 10px rgba(230, 201, 130, .55), 0 0 2px rgba(230,201,130,.85);
 
+  /* ── Type scale (rem) — Cinzel/Nunito driven, snapped to clean fractions ─ */
+  --fs-2xs:  .625rem;   /* 10px — tiny meta / superscripts              */
+  --fs-xs:   .75rem;    /* 12px — captions, meta, nav-group names       */
+  --fs-sm:   .875rem;   /* 14px — secondary labels, small body          */
+  --fs-base: 1rem;      /* 16px — body                                   */
+  --fs-md:   1.125rem;  /* 18px — emphasis body                          */
+  --fs-lg:   1.25rem;   /* 20px — section labels                         */
+  --fs-xl:   1.5rem;    /* 24px — card / page titles                     */
+  --fs-2xl:  1.75rem;   /* 28px — page headlines                         */
+  --fs-3xl:  2.25rem;   /* 36px — hero numerals                          */
+
+  /* ── Spacing scale (rem) — shared gutters, paddings, gaps            ── */
+  --space-1: .25rem;    /* 4px  */
+  --space-2: .5rem;     /* 8px  */
+  --space-3: .75rem;   /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-7: 2rem;     /* 32px */
+  --space-8: 2.5rem;   /* 40px */
+  --space-9: 3rem;     /* 48px */
+
+  /* ── Radius scale (px — hairline-safe) ─────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 99px;
+
+  /* ── Shared accent colors (named by use where it fits) ────────────── */
+  /* ── Content max-widths — shared layout column caps ────────────────── */
+  --content-max:        1160px;  /* main content shell (.content-area)        */
+  --content-max-narrow: 420px;   /* auth card — narrow form                    */
+  --content-max-wide:   444px;   /* auth card — wide form                      */
+
+  --white:      #fff;     /* highlights, white glyphs on saturated chips */
+  --ink-deep:   #1a1008;  /* near-black recessed background (flipcard)     */
+  --gold-line:  #c9a84c;  /* engraved gold lines (flipcard grid)          */
+  --red-deep:   #6e2418;  /* darker realm red for crimson gradients        */
+  --ink-gold:   #b89a5e;  /* muted gold sub-text on the slate chrome       */
+
   /* ── Resource medallions (kept mapping, muted to aged metal) ─────────── */
   --gem-tree:     #5a7a44;
   --gem-mountain: #6e6a5c;
@@ -73,7 +97,6 @@
   --gem-sun:      #9c3f44;
   --gem-star:     #5a4474;
 
-  --brass-meter: #c69a4a;   /* meter brass = "time/ticks" fill (canon default) */
   --unread: #e8dcc0;        /* messages: warm parchment-unread row tint on the page */
 
   /* heraldic map washes — biome fills (terrain "feel") for the World board */
@@ -86,15 +109,8 @@
 
   /* diplomacy relation accents — marker fills, own-tile ring, relation dots */
   --rel-self:    var(--brass);
-  --rel-ally:    var(--green);
   --rel-neutral: var(--blue);
   --rel-war:     var(--red);
-
-  /* political "feel" tile tints (muted relation washes for the Political map) */
-  --pol-self:    #e6cf94;
-  --pol-ally:    #a7cdaf;
-  --pol-neutral: #a6c1d6;
-  --pol-war:     #dcaaa3;
 
   /* ── Typography — Cinzel (display) + Nunito (body) ───────────────────── */
   --font-display: 'Cinzel', serif;
@@ -123,8 +139,6 @@
     var(--shadow-ink);
 
   /* ── Buttons — modular "heavy stone slab" with a thick gold border ─── */
-  --btn-bg: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  --btn-bg-hover: linear-gradient(180deg, #534e48, var(--slate));
   --btn-color: var(--brass-light);
   --shadow-btn: var(--shadow-raised);
   --shadow-btn-hover:
@@ -135,39 +149,13 @@
     inset 0 2px 4px rgba(0,0,0,.55),
     inset 0 0 0 1px var(--brass-dark);
 
-  /* ── World map — must match game.PageSize (unchanged) ────────────────── */
-  --map-page-size: 8;
+  /* ── World map — must match game.PageSize ─────────────────────────────── */
   --map-cell-size: 4rem;
-  --map-wall-size: 3rem;
-  --map-axis-label-size: 2rem;
-  --map-minimap-cell-size: 1rem;
-
-  /* ── Legacy chrome / surface tokens (repointed to codex) ─────────────── *
-   * The chrome now uses --slate directly; these aliases keep older feature *
-   * files resolving until their handoffs. Retire with their handoffs.       */
-  --red-darker: #5a1510;
-  --wood: var(--slate);
-  --wood-dark: var(--slate-2);
-  --parchment: var(--paper);
-  --parchment-deep: var(--paper-2);
-  --accent: var(--brass);
-  --highlight: var(--brass-dark);
-  --edge: #8a6f3e;
-  --c-ink-strong: #efe1b4;
-  --parchment-shadow: rgba(40,28,12,.20);
-  --chrome-border: var(--brass);
-  --chrome-accent: var(--brass);
-  --chrome-accent-light: var(--brass-light);
-  --card-alpha: 1;
-  --card-blur: 0px;
-  --card-lit: 1;
-  --card-border-w: 1px;
 
   /* dark-slate frame background for the chrome shells */
   --chrome-bg:
     linear-gradient(180deg, rgba(230,201,130,.06) 0%, transparent 20%, transparent 80%, rgba(0,0,0,.30) 100%),
     linear-gradient(180deg, var(--slate) 0%, var(--slate-2) 100%);
-  --card-fill-flat: var(--card);
   --card-fill-lit:
     linear-gradient(180deg,
       color-mix(in srgb, var(--card) 100%, #fff 6%) 0%,

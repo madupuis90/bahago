@@ -703,7 +703,14 @@ func kind(m db.ListInboxMessagesRow) string {
 // disc for guild, brass square for decree) with a crown glyph on decrees. lg
 // selects the larger size used in the reading pane + compose headers.
 func messageMark(k string, lg bool) Node {
-	cls := "message-mark message-mark--" + k
+	// The "decree" kind label is user-facing domain language, but the CSS
+	// variant is named message-mark--official (see docs/design-system/naming.md:
+	// "decree" is flavour, not a game-mechanic noun).
+	suffix := k
+	if k == "decree" {
+		suffix = "official"
+	}
+	cls := "message-mark message-mark--" + suffix
 	if lg {
 		cls += " message-mark--lg"
 	}
@@ -774,7 +781,7 @@ func messagesList(groups []MsgGroup, selectedMessageID int) Node {
 					ds.On("click", "$managing = !$managing; if (!$managing) { document.querySelectorAll('.msg-check:checked').forEach(el => { el.checked = false; }); $selected_count = 0; }"),
 				),
 			),
-			Div(Class("msg-list-scroll"),
+			Div(Class("message-list-scroll"),
 				If(len(groups) == 0, Div(Class("messages-list-empty"),
 					P(Text("No messages have arrived yet.")))),
 				Group(Map(groups, func(grp MsgGroup) Node {
@@ -889,17 +896,17 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 				),
 				P(Class("detail-date"), Text("Received "+m.CreatedAt.Format("2 Jan 2006, 15:04"))),
 			),
-			Div(Class("letter-sheet"),
+			Div(Class("message-detail-wrap"),
 				Iff(m.IsGuildMessage || hasAction, func() Node {
-					return Span(Class("letter-corner"), messageMark(k, false))
+					return Span(Class("message-detail-badge"), messageMark(k, false))
 				}),
-				H2(Class("letter-subject"), Text(m.Subject)),
-				Hr(Class("letter-rule")),
-				P(Class("letter-body"), Text(m.Body)),
+				H2(Class("message-detail-title"), Text(m.Subject)),
+				Hr(Class("message-detail-divider")),
+				P(Class("message-detail-body"), Text(m.Body)),
 				Iff(hasAction, func() Node {
-					return Div(Class("letter-action"),
+					return Div(Class("message-detail-action"),
 						A(Href(m.ActionUrl), Class("btn btn--primary"), Text(m.ActionText)),
-						P(Class("letter-action-note"), Text("The seal carries you to the matter at hand.")),
+						P(Class("message-detail-action-note"), Text("The seal carries you to the matter at hand.")),
 					)
 				}),
 			),

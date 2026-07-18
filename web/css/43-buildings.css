@@ -1,41 +1,19 @@
-/* =============================================================================
-   Buildings — web/css/43-buildings.css   ·   CODEX re-skin
-   ---------------------------------------------------------------------------
-   Brings the Buildings (dependency-tree) screen to the dark-fantasy codex
-   vocabulary: a framed parchment tree board with gold-edged slate medallion
-   nodes, brass "filled-pipe" connectors that light gold when a prerequisite is
-   met, and a detail panel rhyming the army .legion-card / .status-pill kit.
-   Semantic class names are UNCHANGED from the comic file — pure re-skin
-   (values only; no markup churn).
-
-   Reuses (all already live — do NOT redefine here):
-     .card / .card-inner (+ .is-lit) · .btn (+ states) · .gem / .gem-* ·
-     .meter (+ .meter-notches) · .progress-banner · .page-header* / .section-rule
-   Consumes (from 01-tokens.css): --card / --card-2 / --card-fill-lit ·
-     --slate / --slate-2 / --slate-edge · --brass / --brass-light / --brass-dark ·
-     --shadow-ink* / --glow-gold · --green / --red (heraldic, already muted).
-   ============================================================================= */
-
 /* ── Page wrapper ───────────────────────────────────────────────────────────── */
 .builds { width: 100%; display: flex; flex-direction: column; min-height: 0; }
-
-/* ── Construction progress banner lives above the title (shared
-   .progress-banner in 20-shared.css). The page-header plate overlaps the
-   .builds-stage below it (global -12px bottom margin). ──────────────────── */
 
 /* ── Stage: tree board left, detail panel right ─────────────────────────────── */
 .builds-stage {
   display: grid; grid-template-columns: 1fr minmax(320px, 380px);
-  gap: 24px; align-items: start;
+  gap: var(--space-6); align-items: start;
 }
 @media (max-width: 940px) { .builds-stage { grid-template-columns: 1fr; } }
 
 /* the tree board — a framed parchment card (rhymes .world-board) */
 .tree-scroll {
   position: relative; overflow-x: auto; overscroll-behavior-x: contain;
-  padding: 18px;
+  padding: var(--space-5);
   background: var(--card-fill-lit);
-  border: 1px solid var(--brass); border-radius: 8px;
+  border: 1px solid var(--brass); border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
   /* faint engraved grid wash on the parchment */
   background-image: radial-gradient(color-mix(in srgb, var(--brass-dark) 12%, transparent) 1.4px, transparent 1.5px);
@@ -43,12 +21,6 @@
 }
 .tree-wrap { position: relative; margin: 0 auto; }
 
-/* ── Connector layer — "filled pipe" ───────────────────────────────────────── *
-   Each connector is a <g class="tree-link"> holding TWO stacked paths: a thick
-   slate stroke (.tree-link-ink) under a thin dashed core (.tree-link-core). When
-   the prerequisite is met, add .is-lit: the core goes solid BRASS — the pipe
-   "fills with gold". Joints are small gold-rimmed slate discs that become a
-   bright brass seal when lit.                                              */
 .tree-links { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .tree-link-ink  { fill: none; stroke: var(--slate-edge); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
 .tree-link-core { fill: none; stroke: var(--brass-light); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round;
@@ -65,10 +37,10 @@
 /* ── Node — a small framed parchment card with a gold rim ─────────────────── */
 .node {
   position: absolute; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 10px 8px 11px; text-align: center; user-select: none;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-3); text-align: center; user-select: none;
   background: var(--card-fill-lit);
-  border: 1px solid var(--brass); border-radius: 8px;
+  border: 1px solid var(--brass); border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
   transition: transform .08s ease, box-shadow .08s ease, background .12s;
 }
@@ -86,7 +58,7 @@
 .node.is-building { background: color-mix(in srgb, var(--brass-light) 18%, var(--card)); }
 .node.is-building::after {
   content: ""; position: absolute; inset: -4px;
-  border: 1px solid var(--brass-light); border-radius: 10px;
+  border: 1px solid var(--brass-light); border-radius: var(--radius-lg);
   box-shadow: var(--glow-gold);
   animation: nodePulse 1.1s ease-in-out infinite; pointer-events: none;
 }
@@ -104,15 +76,15 @@
 
 /* medallion — non-resource works (e.g. Armory) get a square slate badge, not a gem */
 .node-medallion {
-  flex: none; display: grid; place-items: center; border-radius: 8px;
+  flex: none; display: grid; place-items: center; border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   border: 1px solid var(--brass);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
 }
 .node-medallion svg { stroke: var(--brass-light); }
 
-.node-name  { font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1; }
-.node-count { font-family: var(--font-body); font-weight: 800; font-size: 11px; font-variant-numeric: tabular-nums; opacity: .7; }
+.node-name  { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); line-height: 1; }
+.node-count { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; opacity: .7; }
 .node-count .full   { color: var(--green); }
 .node-count .at-max { color: var(--brass-dark); }
 
@@ -123,54 +95,54 @@
 .node.is-building .pip.on { background: var(--brass-light); }
 
 /* ── Detail / build panel (a .card) ─────────────────────────────────────────── */
-.detail { padding: 22px 24px 24px; position: sticky; top: 18px; }
+.detail { padding: var(--space-6) var(--space-6) var(--space-6); position: sticky; top: 18px; }
 
-.detail-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 12px; }
+.detail-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); padding: var(--space-8) var(--space-3); }
 .detail-empty > svg { stroke: var(--brass-dark); opacity: .5; }
-.detail-empty-title { font-family: var(--font-display); font-weight: 600; font-size: 19px; color: var(--brass-dark); }
-.detail-empty-text  { font-family: var(--font-body); font-weight: 700; font-size: 13.5px; opacity: .65; max-width: 28ch; text-wrap: pretty; }
+.detail-empty-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-md); color: var(--brass-dark); }
+.detail-empty-text  { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); opacity: .65; max-width: 28ch; text-wrap: pretty; }
 
-.detail-head  { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.detail-head  { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-3); }
 .detail-title {
-  font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 1;
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1;
   color: var(--brass-dark);
   text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
 }
-.detail-tally { font-family: var(--font-body); font-weight: 800; font-size: 12px; letter-spacing: .02em; opacity: .65; margin-top: 3px; }
-.detail .pips { margin-bottom: 14px; }
-.detail .pip  { width: 14px; height: 14px; border-radius: 4px; }
-.detail-flavour { font-family: var(--font-body); font-weight: 600; font-size: 14px; line-height: 1.55; margin: 0; text-wrap: pretty; opacity: .85; }
+.detail-tally { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); letter-spacing: .02em; opacity: .65; margin-top: 3px; }
+.detail .pips { margin-bottom: var(--space-4); }
+.detail .pip  { width: 14px; height: 14px; border-radius: var(--radius-sm); }
+.detail-flavour { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-sm); line-height: 1.55; margin: 0; text-wrap: pretty; opacity: .85; }
 
-.detail-rule { height: 0; border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); margin: 18px 0; }
+.detail-rule { height: 0; border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); margin: var(--space-5) 0; }
 
-.detail-spec { display: flex; flex-direction: column; gap: 16px; }
-.spec-row   { display: grid; grid-template-columns: 78px 1fr; gap: 12px; align-items: start; }
-.spec-label { font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--brass-dark); opacity: .9; padding-top: 3px; }
-.spec-val   { font-family: var(--font-body); font-weight: 700; font-size: 14px; line-height: 1.45; }
+.detail-spec { display: flex; flex-direction: column; gap: var(--space-4); }
+.spec-row   { display: grid; grid-template-columns: 78px 1fr; gap: var(--space-3); align-items: start; }
+.spec-label { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .04em; text-transform: uppercase; color: var(--brass-dark); opacity: .9; padding-top: 3px; }
+.spec-val   { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); line-height: 1.45; }
 
-.bonus-val   { font-family: var(--font-display); font-size: 15px; color: var(--gem-tree); }
-.bonus-total { font-family: var(--font-body); font-weight: 800; font-size: 12px; opacity: .7; margin-top: 4px; }
-.bonus-none  { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: 13px; opacity: .6; }
+.bonus-val   { font-family: var(--font-display); font-size: var(--fs-base); color: var(--gem-tree); }
+.bonus-total { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); opacity: .7; margin-top: var(--space-1); }
+.bonus-none  { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: var(--fs-sm); opacity: .6; }
 
-.cost-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cost-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .cost-chip {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-family: var(--font-display); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); font-variant-numeric: tabular-nums;
   color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
-  border: 1px solid var(--brass); border-radius: 6px;
+  border: 1px solid var(--brass); border-radius: var(--radius-md);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
-  padding: 3px 11px 3px 4px;
+  padding: 3px var(--space-3) 3px var(--space-1);
 }
 .cost-chip.is-short {
   background: linear-gradient(180deg, color-mix(in srgb, var(--red) 38%, var(--slate-edge)), var(--slate-2));
 }
 
-.req-list { display: flex; flex-direction: column; gap: 7px; }
-.req-item { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-weight: 800; font-size: 13.5px; }
+.req-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.req-item { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-body); font-weight: 800; font-size: var(--fs-sm); }
 .req-item.unmet { opacity: .65; }
 .req-mark {
-  flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 5px;
+  flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   border: 1px solid var(--brass);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
@@ -179,7 +151,7 @@
 .req-mark.unmet { color: var(--brass-dark); }
 .req-mark svg   { width: 12px; height: 12px; stroke: currentColor; }
 
-.detail-foot { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+.detail-foot { margin-top: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
 .detail-foot .btn { width: 100%; }
-.detail-note { font-family: var(--font-body); font-weight: 700; font-size: 12.5px; text-align: center; opacity: .65; text-wrap: pretty; }
+.detail-note { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-xs); text-align: center; opacity: .65; text-wrap: pretty; }
 .detail-note.is-warn { color: var(--red); opacity: 1; }

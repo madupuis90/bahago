@@ -1,31 +1,14 @@
-/* =============================================================================
-   Home — Codex skin (Pathfinder: Kingmaker-inspired)
-   ---------------------------------------------------------------------------
-   The landing/home page content: a framed parchment hero banner carrying the
-   wordmark + pitch + CTA, with the optional decorative illustration band muted
-   to parchment tone; two framed parchment info cards with gold-edged slate
-   plaque titles; a recessed stat trio; and gold-edged parchment dispatch rows.
-   Semantic class names + markup preserved; only styling changes.
-   See docs/design-system/design-language.md.
-
-   The hero banner keeps the additive decorative SVG scene; the SVG's literal
-   comic palette (#3f9d51, #f4c12e, #d63a2f, #cdd3d8…) is painted in markup
-   (internal/handlers/home/home.go) and is out of scope for this CSS sweep —
-   CSS mutes it with a soft filter. Re-painting the illustration is a markup
-   follow-up.
-   ============================================================================= */
-
 /* ── Hero — framed parchment banner with a muted illustrated scene ──────── */
 .home-hero {
   position: relative;
   overflow: hidden;
   min-height: 388px;
-  margin-bottom: 26px;
-  padding: 30px 34px 168px;
+  margin-bottom: var(--space-6);
+  padding: var(--space-7) var(--space-7) var(--space-9);
   background: var(--card-fill-lit);
   color: var(--ink);
   border: 1px solid var(--brass);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 0 0 1px rgba(124,90,38,.35),
@@ -39,10 +22,7 @@
 .home-cta { position: relative; z-index: 2; }
 
 /* ── Hero illustration (optional inline SVG decoration) ────────────────── */
-/* The home scene art carries literal comic fills painted in the Go markup;
-   muted here with a parchment-toned veil + desaturation so it reads as a faint
-   illuminated margin rather than a flat BD landscape. Re-painting the SVG is a
-   markup follow-up. */
+
 .home-hero-scene {
   position: absolute;
   left: 0;
@@ -89,24 +69,23 @@
 }
 
 /* ── Hero copy ────────────────────────────────────────────────────────── */
-/* eyebrow — small gold-edged slate plaque with a brass accent stripe (mirrors
-   the shared .eyebrow / .card-tab vocabulary). */
+
 .home-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass);
-  border-radius: 6px;
-  padding: 5px 12px 4px 9px;
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.4), var(--shadow-ink-xs);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   white-space: nowrap;
 }
 .home-kicker::before {
@@ -128,7 +107,7 @@
   line-height: 1;
   letter-spacing: .12em;
   text-transform: uppercase;
-  margin: 2px 0 14px;
+  margin: 2px 0 var(--space-4);
   color: var(--brass-dark);
   text-shadow: 0 1px 0 rgba(255,255,255,.45);
   padding: 0;
@@ -139,7 +118,7 @@
   margin: 0;
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--ink-soft);
   text-wrap: pretty;
@@ -148,15 +127,15 @@
 .home-cta {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: 22px;
+  margin-top: var(--space-6);
 }
 
 .home-signin-prompt {
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--ink-soft);
 
   a {
@@ -171,8 +150,6 @@
   }
 }
 
-/* gold filigree rule (kept for compat) — thin gold line + centered diamond,
-   echoing the shared .section-rule / .auth-divider motif. */
 .home-rule {
   height: 12px;
   border: 0;
@@ -180,30 +157,23 @@
   background:
     radial-gradient(circle at 50% 50%, var(--brass-light) 0 3px, var(--brass) 3px 4px, transparent 4.1px) center / 12px 12px no-repeat,
     linear-gradient(90deg, transparent, var(--brass) 6%, var(--brass) 94%, transparent) center / 100% 1px no-repeat;
-  margin: 4px 0 18px;
+  margin: var(--space-1) 0 var(--space-5);
 }
 
 /* ── Info cards ──────────────────────────────────────────────────────── */
 .home-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 22px;
+  gap: var(--space-6);
 
   @media (max-width: 680px) { grid-template-columns: 1fr; }
 }
 
-/* the .panel surface comes from shared (codex framed parchment). Here it just
-   needs relative positioning + padding for the corner plaque. */
 .home-cards .panel {
   position: relative;
-  padding: 26px 22px 22px;
+  padding: var(--space-6) var(--space-6) var(--space-6);
 }
 
-/* panel title — corner gold-edged slate plaque with a heraldic accent stripe
-   down the left (mirrors the shared .card-tab). The accent stripe carries the
-   colour meaning; the plaque surface (slate + brass frame) is the constant
-   vocabulary. The generic .panel-title--* modifiers (0,1,0) repoint only the
-   --card-accent stripe token (clean override). */
 .home-cards .panel-title {
   --card-accent: var(--blue);
   position: absolute;
@@ -212,17 +182,17 @@
   margin: 0;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass);
-  border-radius: 5px;
-  padding: 5px 12px 4px 9px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.4), var(--shadow-ink-xs);
 }
 .home-cards .panel-title::before {
@@ -246,40 +216,38 @@
   font-weight: 800;
   letter-spacing: .12em;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--brass-dark);
   opacity: .85;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .c-hed {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 22px;
+  font-size: var(--fs-xl);
   line-height: 1.05;
   color: var(--brass-dark);
   text-shadow: 0 1px 0 rgba(255,255,255,.45);
-  margin: 8px 0 6px;
+  margin: var(--space-2) 0 var(--space-2);
 }
 
 .c-p {
   font-family: var(--font-body);
   font-weight: 600;
   font-style: normal;
-  font-size: 15px;
+  font-size: var(--fs-base);
   line-height: 1.5;
   color: var(--ink-soft);
   margin: 0;
   text-wrap: pretty;
 }
 
-/* stat trio — small recessed parchment wells with a gold-dark rim + inset
-   bevel. No comic ink border or offset shadow. */
 .stat-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .stat {
@@ -288,15 +256,15 @@
   text-align: center;
   background: var(--card-2);
   border: 1px solid var(--brass-dark);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.30);
-  padding: 10px 6px 8px;
+  padding: var(--space-3) var(--space-2) var(--space-2);
 }
 
 .stat-n {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: var(--fs-2xl);
   line-height: .9;
   color: var(--brass-dark);
 }
@@ -304,28 +272,28 @@
 .stat-l {
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--ink-soft);
   opacity: .85;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 /* ── Dispatches ──────────────────────────────────────────────────────── */
 .news {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 10px;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 /* gold-edged parchment row + soft lift. */
 .news-item {
-  padding: 11px 13px;
+  padding: var(--space-3) var(--space-3);
   background: var(--card);
   border: 1px solid var(--brass);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
 }
 
@@ -334,31 +302,31 @@
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass);
-  border-radius: 5px;
-  padding: 3px 8px 2px;
+  border-radius: var(--radius-sm);
+  padding: 3px var(--space-2) 2px;
 }
 
 .news-head {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 17px;
+  font-size: var(--fs-md);
   line-height: 1.1;
   color: var(--brass-dark);
   text-shadow: 0 1px 0 rgba(255,255,255,.45);
-  margin: 7px 0 3px;
+  margin: var(--space-2) 0 3px;
 }
 
 .news-body {
   font-family: var(--font-body);
   font-weight: 600;
   font-style: normal;
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--ink-soft);
   margin: 0;

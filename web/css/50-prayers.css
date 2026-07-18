@@ -1,113 +1,86 @@
-/* =============================================================================
-   Prayers — The Sanctum (Codex)
-   ---------------------------------------------------------------------------
-   Reuses: .page-header*, .card, .card-inner,
-           .btn, .field, .select, .slider-wrap / .slider-track / .slider-fill /
-           .slider-thumb / .slider-input / .v-badge (20-shared.css),
-           .meter (+ .meter-fill brass), .stat-pill, .slot-gauge,
-           .section-header, .gem (via ResourceGem), .icon, .alert--*.
-
-   The duration control is the shared slider rod (.v-badge thumb carries the
-   live tick count).
-
-   Deferred (Option C — visual structure now, data wiring later):
-     • "Upon Your Realm" incoming-prayers section (needs
-       ListPrayersTargetingKingdom query) — omitted until the query lands.
-     • Cross-kingdom targeting (perk-gated) — shown as a locked .target-perk.
-     • Live total-cost recompute uses a fixed 20/tick multiplier (every current
-       prayer costs 20/tick); update .offer-cost-val expression if a future
-       prayer changes that.
-   ============================================================================= */
-
 /* ── The Sanctum — altar card ────────────────────────────────────────────── */
 /* the active (burning) prayer */
-.active-prayer { display: flex; flex-direction: column; gap: 4px; }
-.active-prayer-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-.active-prayer-id { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.active-prayer { display: flex; flex-direction: column; gap: var(--space-1); }
+.active-prayer-top { display: flex; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-5); flex-wrap: wrap; }
+.active-prayer-id { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; flex: 1; }
 .active-prayer-target {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-body); font-weight: 800; font-size: 11px;
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
 .active-prayer-target .icon { stroke: var(--brass-dark); }
-.active-prayer-name { font-family: var(--font-display); font-weight: 600; font-size: 28px; line-height: 1; color: var(--slate); }
-.active-prayer-effect { font-family: var(--font-body); font-weight: 700; font-size: 14.5px; color: var(--slate); text-wrap: pretty; }
+.active-prayer-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-2xl); line-height: 1; color: var(--slate); }
+.active-prayer-effect { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); color: var(--slate); text-wrap: pretty; }
 .active-prayer-effect b { color: var(--brass); font-weight: 800; }
-.active-prayer-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.active-prayer-drain { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.active-prayer-aside { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+.active-prayer-drain { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
 .active-prayer-drain-lbl {
-  font-family: var(--font-body); font-weight: 800; font-size: 9.5px;
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
-.active-prayer .meter { margin-bottom: 4px; }
+.active-prayer .meter { margin-bottom: var(--space-1); }
 
 .active-prayer-foot {
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 18px; margin-top: 18px; flex-wrap: wrap;
+  gap: var(--space-5); margin-top: var(--space-5); flex-wrap: wrap;
 }
 .active-prayer-foot-note {
-  font-family: var(--font-body); font-weight: 600; font-size: 12.5px;
+  font-family: var(--font-body); font-weight: 600; font-size: var(--fs-xs);
   line-height: 1.5; max-width: 56ch; opacity: .72; text-wrap: pretty;
   color: var(--slate);
   margin: 0;
 }
 
 /* ── offering form (altar free) ──────────────────────────────────────────── */
-.offering { display: flex; flex-direction: column; gap: 4px; }
+.offering { display: flex; flex-direction: column; gap: var(--space-1); }
 .offering-form {
-  display: grid; grid-template-columns: 1.1fr 1.1fr; gap: 18px 26px;
+  display: grid; grid-template-columns: 1.1fr 1.1fr; gap: var(--space-5) var(--space-6);
   align-items: start;
 }
 .offering-form .target-perk-group { grid-column: 1 / -1; }
 .offering-form-foot {
   grid-column: 1 / -1;
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 18px; flex-wrap: wrap; margin-top: 4px;
+  gap: var(--space-5); flex-wrap: wrap; margin-top: var(--space-1);
 }
 
-/* Duration rod — a shared slider-row .slider-wrap tied to devotion/gold.
-   The .v-badge thumb carries the live tick count in its engraved numeral.
-   The "ticks" label sits beside the rod. */
 .dur-rod {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .dur-rod .slider-wrap {
   --slider-fill: var(--brass);
   flex: 1; min-width: 0;
 }
-/* The rod has no flanking step buttons (unlike the allocation slider), so the
-   shared 25px track/input left inset only offsets the bar from the “Duration”
-   field-label. Zero the left side so the track's start aligns with the label;
-   keep the right inset so the thumb clears the “ticks” unit label. */
+
 .dur-rod .slider-track { margin-left: 0; }
 .dur-rod .slider-input { left: 0; }
 .dur-unit {
-  font-family: var(--font-body); font-weight: 800; font-size: 11px;
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
   flex: none;
 }
 
 /* perk-gated target notice */
 .target-perk {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-body); font-weight: 700; font-style: italic;
-  font-size: 12px; color: var(--slate); opacity: .72; padding: 8px 12px;
+  font-size: var(--fs-xs); color: var(--slate); opacity: .72; padding: var(--space-2) var(--space-3);
   background: var(--card-2); border: 1px dashed var(--brass-dark);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
 }
 .target-perk .icon { stroke: var(--brass-dark); flex: none; }
 
 /* total-cost readout */
-.offer-cost { display: flex; flex-direction: column; gap: 5px; }
+.offer-cost { display: flex; flex-direction: column; gap: var(--space-1); }
 .offer-cost-lbl {
-  font-family: var(--font-body); font-weight: 800; font-size: 10px;
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
 .offer-cost-val {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--font-display); font-weight: 600; font-size: 24px; line-height: 1;
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); line-height: 1;
   color: var(--slate);
   font-variant-numeric: tabular-nums;
 }
@@ -117,40 +90,40 @@
 .prayer-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 22px;
+  gap: var(--space-6);
 }
 .prayer-card {
-  display: flex; flex-direction: column; padding: 20px 22px 22px;
+  display: flex; flex-direction: column; padding: var(--space-5) var(--space-6) var(--space-6);
 }
 .prayer-card.is-active {
   background: color-mix(in srgb, var(--slate-edge) 12%, var(--card));
   box-shadow: var(--shadow-raised), inset 0 0 0 1px var(--brass), var(--glow-gold);
 }
-.prayer-card.is-sealed {
+.prayer-card.is-locked {
   background: repeating-linear-gradient(45deg, var(--card-2) 0 11px, color-mix(in srgb, var(--slate-2) 35%, var(--card)) 11px 22px);
 }
-.prayer-card.is-sealed .prayer-card-name,
-.prayer-card.is-sealed .prayer-flavour,
-.prayer-card.is-sealed .prayer-stats { opacity: .7; }
+.prayer-card.is-locked .prayer-card-name,
+.prayer-card.is-locked .prayer-flavour,
+.prayer-card.is-locked .prayer-stats { opacity: .7; }
 
-.prayer-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.prayer-card-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .prayer-card-name {
-  font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 1; color: var(--slate);
+  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); line-height: 1; color: var(--slate);
 }
 .prayer-flavour {
-  font-family: var(--font-body); font-weight: 600; font-size: 13.5px;
-  line-height: 1.55; margin: 0 0 16px; text-wrap: pretty; opacity: .85; flex: 1;
+  font-family: var(--font-body); font-weight: 600; font-size: var(--fs-sm);
+  line-height: 1.55; margin: 0 0 var(--space-4); text-wrap: pretty; opacity: .85; flex: 1;
   color: var(--slate);
 }
 .prayer-stats {
-  display: flex; flex-direction: column; gap: 9px; padding: 12px 0; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; margin-bottom: var(--space-4);
   border-top: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
   border-bottom: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
 }
 .prayer-effect,
 .prayer-upkeep {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--font-body); font-weight: 800; font-size: 13.5px; color: var(--slate);
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-sm); color: var(--slate);
 }
 .prayer-effect .icon,
 .prayer-upkeep .icon { stroke: var(--brass-dark); flex: none; }
@@ -159,21 +132,21 @@
 .prayer-card-foot { margin-top: auto; }
 .prayer-card-foot .btn { width: 100%; }
 .prayer-burning {
-  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
-  font-family: var(--font-display); font-weight: 600; font-size: 14px;
+  display: inline-flex; align-items: center; gap: var(--space-2); justify-content: center;
+  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm);
   color: var(--brass-light);
   text-shadow: var(--glow-gold);
-  width: 100%; padding: 8px 10px;
+  width: 100%; padding: var(--space-2) var(--space-3);
 }
 .prayer-burning .icon { stroke: var(--brass-light); flex: none; }
 .cap-note {
   display: block; font-family: var(--font-body); font-weight: 700; font-style: italic;
-  font-size: 12.5px; line-height: 1.5; opacity: .7; text-wrap: pretty;
+  font-size: var(--fs-xs); line-height: 1.5; opacity: .7; text-wrap: pretty;
   color: var(--slate);
 }
 
-/* the seal-glyph disc on each card head — a brass-rimmed slate medallion. */
-.seal-glyph {
+/* the prayer-medallion disc on each card head — a brass-rimmed slate medallion. */
+.prayer-medallion {
   flex: none; display: grid; place-items: center; width: 40px; height: 40px;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, var(--slate-edge), var(--slate-2));

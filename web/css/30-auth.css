@@ -1,39 +1,21 @@
-/* =============================================================================
-   Auth — Codex skin (Pathfinder: Kingmaker-inspired)
-   ---------------------------------------------------------------------------
-   The auth screens (login, register, forgot/reset password, verify): a single
-   framed parchment card centered on the aged-parchment page, with a brass
-   medallion crest, an engraved Cinzel wordmark, and a gold filigree divider.
-   Inputs use the shared codex .field / .field-group / .field-label (already
-   codex in 20-shared.css) — they are NOT redefined here.
-   Semantic class names + markup are preserved; only styling changes.
-   See docs/design-system/design-language.md.
-
-   NOTE: the crest shield is scoped `.auth-crest .crest` so it beats the kingdom
-   identity `.crest` coin in 40-kingdom-chrome.css (which loads later). The
-   kingdom coin is untouched.
-   ============================================================================= */
-
 .auth-stage {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 44px 20px;
+  padding: var(--space-9) var(--space-5);
   position: relative;
   z-index: 1;
 }
 
-/* the auth card is a wide framed parchment panel (shares the codex .card
-   surface; only the max-width + a heavier "lifted slab" shadow is tuned). */
 .auth-wrap {
   width: 100%;
-  max-width: 420px;
+  max-width: var(--content-max-narrow);
 
   .card {
     background: var(--card-fill-lit);
     border: 1px solid var(--brass);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     box-shadow:
       inset 0 1px 0 var(--brass-light),
       inset 0 0 0 1px rgba(124,90,38,.35),
@@ -42,25 +24,20 @@
   .card.is-lit { background: var(--card-fill-lit); }
 }
 
-.auth-wrap--wide { max-width: 444px; }
+.auth-wrap--wide { max-width: var(--content-max-wide); }
 
-.auth-body { padding: 30px 30px 28px; }
+.auth-body { padding: var(--space-7) var(--space-7) var(--space-7); }
 
 /* centered crest + wordmark + tagline lockup */
 .auth-crest {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 22px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
   text-align: center;
 }
 
-/* crest — brass-rimmed slate medallion, embossed gold glyph.
-   Rendered by the shared authCrest() Go helper as .crest.crest-lg, nested
-   inside .auth-crest. Scoped `.auth-crest .crest` (0,2,0) to override the
-   kingdom `.crest` coin (border-radius:50% + token fill) from
-   40-kingdom-chrome.css. */
 .auth-crest .crest {
   flex: none;
   display: grid;
@@ -102,7 +79,7 @@
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 34px;
+  font-size: var(--fs-3xl);
   line-height: 1;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -115,14 +92,12 @@
   font-family: var(--font-body);
   font-weight: 700;
   font-style: normal;
-  font-size: 15px;
+  font-size: var(--fs-base);
   color: var(--ink-soft);
   opacity: .9;
   margin-top: -2px;
 }
 
-/* gold filigree divider — a thin gold line with a centered diamond, echoing
-   the shared .section-rule / .rule-filigree motif. No comic dashed ink. */
 .auth-divider {
   height: 12px;
   border: 0;
@@ -130,23 +105,19 @@
   background:
     radial-gradient(circle at 50% 50%, var(--brass-light) 0 3px, var(--brass) 3px 4px, transparent 4.1px) center / 12px 12px no-repeat,
     linear-gradient(90deg, transparent, var(--brass) 6%, var(--brass) 94%, transparent) center / 100% 1px no-repeat;
-  margin: 0 0 22px;
+  margin: 0 0 var(--space-6);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--space-4);
 }
 
-/* password reveal — small gold-edged slate chip toggle inside the .field well
-   (the dark slate recessed-control tone). A pure link (shared .btn-text) reads
-   as an underlined blue link, which fights the slate well; this chip matches
-   the codex metal vocabulary instead. */
 .password-field {
   position: relative;
 
-  .field { padding-right: 64px; }
+  .field { padding-right: var(--space-9); }
 }
 
 .btn-text {
@@ -156,14 +127,14 @@
   transform: translateY(-50%);
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: .06em;
   text-transform: uppercase;
   background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
   color: var(--brass-light);
   border: 1px solid var(--brass);
-  border-radius: 6px;
-  padding: 3px 8px 2px;
+  border-radius: var(--radius-md);
+  padding: 3px var(--space-2) 2px;
   cursor: pointer;
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 2px rgba(0,0,0,.45), var(--shadow-ink-xs);
 
@@ -175,37 +146,34 @@
   align-self: flex-end;
   display: block;
   text-align: right;
-  margin-top: -5px;
+  margin-top: -var(--space-1);
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--link-color, var(--blue));
   text-decoration: none;
   cursor: pointer;
 
-  &:hover { color: var(--link-hover-color, #2c4258); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  &:hover { color: var(--link-hover-color); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 }
 
-/* submit — full-width codex primary slab, green heraldic "commit" fill with a
-   gold frame + raised brass bevel (mirrors the shared .btn.btn--primary). No
-   comic offset lift. Used by auth forms AND the home CTA. */
 .auth-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-top: 6px;
+  margin-top: var(--space-2);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 19px;
+  font-size: var(--fs-md);
   letter-spacing: .08em;
   text-transform: uppercase;
-  padding: 14px 26px 12px;
-  border-radius: 12px;
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  border-radius: var(--radius-xl);
   cursor: pointer;
   border: 1px solid var(--brass);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--green) 92%, #fff 8%), var(--green));
-  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--green) 92%, var(--white) 8%), var(--green));
+  color: var(--white);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 0 var(--brass-dark),
@@ -223,9 +191,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-top: 22px;
-  padding-top: 18px;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
   border-top: 1px solid color-mix(in srgb, var(--brass) 50%, transparent);
   text-align: center;
 }
@@ -233,7 +201,7 @@
 .auth-foot-text {
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--ink-soft);
   opacity: .9;
 }
@@ -241,7 +209,7 @@
 .auth-foot-link {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--brass-dark);
@@ -263,27 +231,25 @@
   font-family: var(--font-body);
   font-weight: 600;
   font-style: normal;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--ink-soft);
   opacity: .9;
   line-height: 1.55;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   text-wrap: pretty;
 }
 
-/* success / notice alert (recovery sent) — gold-edged parchment banner with a
-   gently green-tinted recessed well, mirroring the shared .alert--success. */
 .auth-alert {
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--brass);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 0 0 1px rgba(124,90,38,.35),
     var(--shadow-ink-xs);
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 
@@ -294,7 +260,7 @@
   strong {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 15px;
+    font-size: var(--fs-base);
     letter-spacing: .04em;
     display: block;
     margin-bottom: 3px;

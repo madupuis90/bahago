@@ -1,23 +1,8 @@
-/* =============================================================================
-   Allocation — Codex re-skin
-   ---------------------------------------------------------------------------
-   Semantic class names UNCHANGED — only CSS values move to the codex
-   vocabulary (dark-slate + brass + parchment, soft layered shadows). The
-   slider control itself is shared (20-shared.css, .slider-wrap / .v-badge).
-
-   Companion changes shipped with the codex sweep:
-     · 20-shared.css     → .slider-fill colour override + .v-badge thumb
-                            (was .v-diamond; renamed to reflect the
-                            rectangular value-badge it actually renders).
-     · 41-kingdom-overview.css → .page-header* codex plate.
-     · sprite-resources.svg  → the 6 redrawn resource glyphs.
-   ============================================================================= */
-
 /* Allocation summary bar — a framed parchment band of resource segments */
 .allocation-bar {
   display: flex;
   height: 26px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--brass-dark);
   box-shadow: var(--shadow-frame);
@@ -38,17 +23,17 @@
 .allocation-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 14px;
-  margin: 14px 0 2px;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0 2px;
 }
 
 .allocation-key {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: .03em;
   text-transform: uppercase;
   color: var(--slate);
@@ -57,7 +42,7 @@
 .allocation-dot {
   width: 13px;
   height: 13px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--brass-dark);
 }
 
@@ -76,13 +61,11 @@
 /* Roster grid */
 .alloc-rule {
   height: 4px;
-  margin: 18px 0 4px;
-  border-radius: 4px;
+  margin: var(--space-5) 0 var(--space-1);
+  border-radius: var(--radius-sm);
   background-image: repeating-linear-gradient(90deg, var(--brass-dark) 0 13px, transparent 13px 21px);
 }
 
-/* Live allocation % now rides inside the slider thumb, so the dedicated
-   Share column is retired. Grid drops from 5 → 4 tracks. */
 .alloc-grid {
   --cols: 60px minmax(150px, 1.1fr) minmax(230px, 2fr) 116px;
 }
@@ -92,11 +75,11 @@
   display: grid;
   grid-template-columns: var(--cols);
   align-items: center;
-  column-gap: 16px;
+  column-gap: var(--space-4);
 }
 
 .alloc-head {
-  padding: 4px 4px 10px;
+  padding: var(--space-1) var(--space-1) var(--space-3);
 }
 
 .alloc-col-header {
@@ -104,7 +87,7 @@
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--brass-dark);
 
   &.alloc-col-header--right {
@@ -113,14 +96,11 @@
 }
 
 .alloc-row {
-  padding: 11px 4px;
+  padding: var(--space-3) var(--space-1);
   border-top: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
   min-height: 58px;
 }
 
-/* per-resource slider fill — set on the row, read by shared .slider-fill.
-   Requires a resource modifier on .alloc-row (e.g. .alloc-row--wood). If the
-   template can't add it, set --slider-fill inline instead. */
 .alloc-row--wood      { --slider-fill: var(--gem-tree); }
 .alloc-row--stone     { --slider-fill: var(--gem-mountain); }
 .alloc-row--food      { --slider-fill: var(--gem-wheat); }
@@ -136,12 +116,10 @@
   line-height: 1.05;
 }
 
-/* optional — the resource the craft yields, beneath the role name (new; needs a
-   <div class="alloc-role-res"> in the template). Harmless if unused. */
 .alloc-role-res {
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--brass-dark);
@@ -180,10 +158,10 @@
 .alloc-rate {
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: .02em;
   color: var(--brass-dark);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 
   &.is-pending {
     color: var(--brass);
@@ -191,8 +169,6 @@
   }
 }
 
-/* idle row — a brass-rimmed slate medallion, sized to match the resource
-   gems (36px) so the idle glyph reads at the same scale as the other icons. */
 .idle-gem {
   width: 36px;
   height: 36px;
@@ -230,9 +206,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin-top: 18px;
-  padding-top: 18px;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--brass-dark);
   flex-wrap: wrap;
 }
@@ -240,7 +216,7 @@
 .alloc-total {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .alloc-total-label {
@@ -248,7 +224,7 @@
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--brass-dark);
 }
 
@@ -277,14 +253,14 @@
 .alloc-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .alloc-error {
   font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--red);
   min-height: 1.2em;
   max-width: 22rem;
@@ -292,31 +268,27 @@
   text-wrap: pretty;
 }
 
-/* optional — wrap an over-allocation warning in a red heraldic plaque.
-   (Needs a <span class="alloc-alarm">.) Codex: a red-tinted slate medallion
-   slab with engraved brass caps — tint --slate-edge with --red rather than a
-   flat heraldic fill, per the kit's medallion rule. */
 .alloc-alarm {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--brass-light);
   background: linear-gradient(180deg, color-mix(in srgb, var(--red) 42%, var(--slate-edge)), color-mix(in srgb, var(--red) 52%, var(--slate-2)));
   border: 1px solid var(--brass);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), var(--shadow-recessed);
-  padding: 6px 13px 5px;
+  padding: var(--space-2) var(--space-3) var(--space-1);
   white-space: nowrap;
 }
 
 /* Slider sizing in allocation row (the slider itself is the shared component) */
 .alloc-row .slider-controls {
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .alloc-row .slider-wrap {

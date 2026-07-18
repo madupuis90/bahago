@@ -45,9 +45,9 @@ func identityPreviewPage() Node {
 
 					/* Skin tokens for the dev preview */
 					.skin-id       { --crest-ring: var(--primary-ink); --crest-fill: rgba(255,246,230,.18); }
-					.skin-home     { --crest-ring: var(--chrome-accent); --crest-fill: rgba(247,238,213,.6); }
-					.skin-auth     { --crest-ring: var(--chrome-accent); --crest-fill: rgba(247,238,213,.72); }
-					.skin-map-self { --crest-ring: var(--ink); --crest-fill: var(--chrome-accent); }
+					.skin-home     { --crest-ring: var(--brass); --crest-fill: rgba(247,238,213,.6); }
+					.skin-auth     { --crest-ring: var(--brass); --crest-fill: rgba(247,238,213,.72); }
+					.skin-map-self { --crest-ring: var(--ink); --crest-fill: var(--brass); }
 					.skin-map-other{ --crest-ring: var(--ink); --crest-fill: #3a6390; }
 
 					/* Context strips */
@@ -61,14 +61,14 @@ func identityPreviewPage() Node {
 						background: linear-gradient(175deg, #fffaf0, #f5ecda);
 						padding: 8px 14px;
 						border-radius: 6px;
-						border: 1.5px solid var(--edge);
+						border: 1.5px solid var(--brass-dark);
 						display: inline-flex;
 					}
 					.auth-strip {
 						background: linear-gradient(175deg, #fffaf0, #f5ecda);
 						padding: 10px 16px;
 						border-radius: 6px;
-						border: 1.5px solid var(--edge);
+						border: 1.5px solid var(--brass-dark);
 						display: inline-flex;
 						box-shadow: 0 4px 10px rgba(60,40,20,.12);
 					}

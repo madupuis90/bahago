@@ -1,8 +1,3 @@
-/* =============================================================================
-   Base — COMIC LAB re-skin (Foundation handoff, 2026-06-18)
-   Drop-in replacement for web/css/02-base.css.
-   ============================================================================= */
-
 html {
   font-family: var(--font-ui);            /* Nunito */
   -webkit-font-smoothing: antialiased;
@@ -43,14 +38,11 @@ a {
   }
 }
 
-/* Bare text-like inputs (un-classed) get the codex recessed-slate well as a
-   fallback so they still read correctly before .field is applied. Every form
-   control should wear .field / .select / .field--area; this is the safety net. */
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]),
 select,
 textarea {
   padding: 0.5rem 0.7rem;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--brass-dark);
   background: var(--slate-edge);
   color: var(--paper);
@@ -83,6 +75,6 @@ code {
   font-size: .88em;
   background: var(--card-2);
   border: 2px solid var(--ink);
-  border-radius: 6px;
-  padding: 0 6px;
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-2);
 }

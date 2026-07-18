@@ -483,7 +483,7 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 	if isActive {
 		cls += " is-active"
 	} else if capReached {
-		cls += " is-sealed"
+		cls += " is-locked"
 	}
 
 	var foot Node
@@ -510,7 +510,7 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 
 	return Div(Class(cls),
 		Div(Class("prayer-card-head"),
-			Span(Class("seal-glyph"), ResourceGem(prayerGemID(def), 22)),
+			Span(Class("prayer-medallion"), ResourceGem(prayerGemID(def), 22)),
 			Span(Class("prayer-card-name"), Text(def.Name)),
 		),
 		P(Class("prayer-flavour"), Text(def.Description)),
