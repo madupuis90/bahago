@@ -62,19 +62,6 @@
   padding-bottom: 4px;
 }
 
-/* Overview card — framed parchment panel with a gold edge, inset bevel */
-.overview-card {
-  background: var(--card-fill-lit);
-  border: 1px solid var(--brass);
-  border-radius: 8px;
-  box-shadow:
-    inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
-    var(--shadow-ink);
-  position: relative;
-  margin-top: 14px;
-}
-
 /* Page header — legacy <h1> markup (pages still using a bare <h1> inside
    .page-header instead of .page-header-title). Mirrors the engraved title so
    the treatment is uniform. */

@@ -134,7 +134,7 @@ func kingdomOverviewSection(kingdom *db.Kingdom, combatLog []combatLogDisplay) N
 }
 
 func overviewCard(tabVariant, tabLabel string, content Node) Node {
-	return Div(Class("overview-card"),
+	return Div(Class("card"),
 		Span(Class("card-tab card-tab--"+tabVariant), Text(tabLabel)),
 		Div(Class("card-inner"), content),
 	)
