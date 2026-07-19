@@ -4,9 +4,9 @@ import "fmt"
 
 const (
 	ColGap = 162
-	RowGap = 144
-	NodeW  = 136
-	NodeH  = 96
+	RowGap = 168
+	NodeW  = 136 // must match the .node card width in web/css/43-buildings.css
+	NodeH  = 120 // must match the .node card height in web/css/43-buildings.css
 	PadX   = 16
 	PadY   = 10
 )
@@ -123,34 +123,14 @@ func PlaceNodes(defs []BuildingDef) PlacedTree {
 	return PlacedTree{Nodes: nodes, NodeByID: byID, Width: w, Height: h}
 }
 
-// ElbowPath returns an SVG path string for an orthogonal elbow connector
-// from point a (top) to point b (bottom) with 14px rounded corners.
+// ElbowPath returns an SVG path string for an orthogonal elbow connector from
+// point a (a card's bottom-middle) to point b (a card's top-middle). The path
+// drops straight down to the vertical midpoint, runs horizontally to b's column,
+// then drops straight down to b — three segments, sharp right angles. When a
+// and b share the same column the horizontal collapses to a single vertical.
 func ElbowPath(a, b Point) string {
 	mid := (a.Y + b.Y) / 2
-	dx := b.X - a.X
-	if dx < 0 {
-		dx = -dx
-	}
-	r := 14
-	if dx/2 < r {
-		r = dx / 2
-	}
-	if dx < 1 {
-		return fmt.Sprintf("M%d,%d L%d,%d", a.X, a.Y, b.X, b.Y)
-	}
-	dir := 1
-	if b.X < a.X {
-		dir = -1
-	}
-	return fmt.Sprintf(
-		"M%d,%d L%d,%d Q%d,%d %d,%d L%d,%d Q%d,%d %d,%d L%d,%d",
-		a.X, a.Y,
-		a.X, mid-r,
-		a.X, mid, a.X+dir*r, mid,
-		b.X-dir*r, mid,
-		b.X, mid, b.X, mid+r,
-		b.X, b.Y,
-	)
+	return fmt.Sprintf("M%d,%d L%d,%d L%d,%d L%d,%d", a.X, a.Y, a.X, mid, b.X, mid, b.X, b.Y)
 }
 
 // PrereqMet reports whether all prerequisites for b are satisfied by counts.

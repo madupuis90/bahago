@@ -60,10 +60,10 @@
 
 /* Roster grid */
 .alloc-rule {
-  height: 4px;
+  height: 2px;
   margin: var(--space-5) 0 var(--space-1);
   border-radius: var(--radius-sm);
-  background-image: repeating-linear-gradient(90deg, var(--brass-dark) 0 13px, transparent 13px 21px);
+  background: var(--brass-dark);
 }
 
 .alloc-grid {

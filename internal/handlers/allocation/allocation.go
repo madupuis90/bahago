@@ -266,7 +266,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					allocationRow("wheat", "Farmer", "food_pct", "food_saved", "Food", kingdom.FoodPct, rates.FoodProduction-rates.FoodUpkeep),
 					allocationRow("flame", "Disciple", "mana_pct", "mana_saved", "Mana", kingdom.ManaPct, rates.ManaProduction-rates.ManaUpkeep),
 					allocationRow("sun", "Clergy", "devotion_pct", "devotion_saved", "Devotion", kingdom.DevotionPct, rates.DevotionProduction-rates.DevotionUpkeep),
-					allocationRow("star", "Scholar", "knowledge_pct", "knowledge_saved", "Lore", kingdom.KnowledgePct, rates.KnowledgeProduction-rates.KnowledgeUpkeep),
+					allocationRow("star", "Scholar", "knowledge_pct", "knowledge_saved", "Knowledge", kingdom.KnowledgePct, rates.KnowledgeProduction-rates.KnowledgeUpkeep),
 					idleRow(rates.PopulationProduction-rates.PopulationUpkeep),
 				),
 				Div(Class("alloc-foot"),
@@ -281,7 +281,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					Div(Class("alloc-section"),
 						Div(Class("alloc-error"),
 							ds.Show("$alloc_total > 100"),
-							Span(Class("alloc-alarm"), Text("⚠ Too many hands!")),
+							Span(Class("alloc-alarm"), Text("Over 100%!")),
 						),
 						allocationAlert(nil),
 						Button(
@@ -405,7 +405,7 @@ func idleRow(net int) Node {
 		Div(
 			Div(Class("alloc-role-name"), Text("Idle")),
 		),
-		P(Class("alloc-assign-note"), Text("An untasked realm breeds faster — idle hands speed your growth.")),
+		P(Class("alloc-assign-note"), Text("Idle allocation speed up the growth of population.")),
 
 		Div(
 			Class("alloc-net-cell"),
