@@ -186,5 +186,9 @@ func dynamicShortClass(items []costItem) Node {
 		}
 		parts = append(parts, fmt.Sprintf("(%s > $%s)", it.expr, it.Resource))
 	}
-	return Group([]Node{Class("cost-pill"), ds.Class("is-short", strings.Join(parts, " || "))})
+	// "is-short" is quoted because it is not a valid JS identifier (the hyphen
+	// makes {is-short: …} a syntax error); datastar's toObject does not quote keys
+	// for us, so callers must quote hyphenated class names themselves. This matches
+	// the convention elsewhere in the codebase (e.g. ds.Class("'is-pending'", …)).
+	return Group([]Node{Class("cost-pill"), ds.Class("'is-short'", strings.Join(parts, " || "))})
 }
