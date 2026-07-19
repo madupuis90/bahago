@@ -78,13 +78,8 @@
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
-.offer-cost-val {
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); line-height: 1;
-  color: var(--slate);
-  font-variant-numeric: tabular-nums;
-}
-.offer-cost-val.is-short { color: var(--red); }
+/* The total-devotion value is rendered by the shared .cost-pill (20-shared.css);
+   its .is-short state replaces the former .offer-cost-val.is-short rule. */
 
 /* ── Available Prayers — catalogue ───────────────────────────────────────── */
 .prayer-grid {

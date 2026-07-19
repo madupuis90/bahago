@@ -570,40 +570,12 @@ func yieldsVal(b game.BuildingDef, count int) Node {
 	return Div(Class("spec-val"), Group(lines))
 }
 
+// costVal renders the build cost as a shared StaticCostPill. The pill is whole-
+// red when any resource is short (Fork A: whole-pill affordability).
 func costVal(b game.BuildingDef, resources map[string]int) Node {
-	type chip struct {
-		res     string
-		glyphID string
-		need    int
-	}
-	c := b.Cost
-	var chips []chip
-	if c.Wood > 0 {
-		chips = append(chips, chip{"wood", "tree", c.Wood})
-	}
-	if c.Stone > 0 {
-		chips = append(chips, chip{"stone", "mountain", c.Stone})
-	}
-	if c.Food > 0 {
-		chips = append(chips, chip{"food", "wheat", c.Food})
-	}
-	if c.Mana > 0 {
-		chips = append(chips, chip{"mana", "flame", c.Mana})
-	}
-	if c.Devotion > 0 {
-		chips = append(chips, chip{"devotion", "sun", c.Devotion})
-	}
-	if c.Knowledge > 0 {
-		chips = append(chips, chip{"knowledge", "star", c.Knowledge})
-	}
-	nodes := Map(chips, func(ch chip) Node {
-		have := resources[ch.res]
-		return Span(Classes{"cost-chip": true, "is-short": have < ch.need},
-			ResourceGem(ch.glyphID, 22),
-			Text(itoa(ch.need)),
-		)
-	})
-	return Div(Classes{"spec-val": true, "cost-chips": true}, Group(nodes))
+	return Div(Class("spec-val"),
+		StaticCostPill(b.Cost, WithGemSize(22), WithStaticAvailability(resources)),
+	)
 }
 
 func reqVal(b game.BuildingDef, counts map[string]int) Node {

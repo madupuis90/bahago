@@ -442,10 +442,10 @@ func offeringForm(kingdom db.Kingdom, prayerKeys []string) Node {
 			Div(Class("offering-form-foot"),
 				Div(Class("offer-cost"),
 					Span(Class("offer-cost-lbl"), Text("Total devotion")),
-					Span(Class("offer-cost-val"),
-						ResourceGem("sun", 20),
-						// 20 = current per-tick upkeep for every prayer; see func comment.
-						ds.Text("$prayer_ticks * 20"),
+					// 20 = current per-tick upkeep for every prayer; see func comment.
+					DynamicCostPill(
+						[]DynamicCostEntry{{Resource: "devotion", Expr: "$prayer_ticks * 20"}},
+						WithGemSize(20), WithSignalAvailability(),
 					),
 				),
 				Button(Type("submit"), Class("btn btn--primary"), Text("Offer prayer")),
@@ -547,15 +547,9 @@ func prayerResKey(def game.PrayerDef) string {
 	}
 }
 
-// resKeyToGemID maps a resource symbol key to its gem colour id.
-var resKeyToGemID = map[string]string{
-	"wood": "tree", "stone": "mountain", "food": "wheat",
-	"mana": "flame", "devotion": "sun", "knowledge": "star",
-}
-
 // prayerGemID returns the gem colour id for a prayer's boosted resource.
 func prayerGemID(def game.PrayerDef) string {
-	return resKeyToGemID[prayerResKey(def)]
+	return GemIDForResource(prayerResKey(def))
 }
 
 // effectHTML returns the bonus text wrapped so the boosted resource reads as an

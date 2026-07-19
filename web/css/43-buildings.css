@@ -37,7 +37,11 @@
 /* ── Node — a small framed parchment card with a gold rim ─────────────────── */
 .node {
   position: absolute; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
+  /* width/height must match NodeW/NodeH in internal/game/tree_layout.go — the SVG
+     connector endpoints are computed from those constants, so a mismatch makes
+     the links start/stop short of the card edges and/or miss the center. */
+  width: 136px; height: 120px;
   padding: var(--space-3) var(--space-2) var(--space-3); text-align: center; user-select: none;
   background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
@@ -83,8 +87,8 @@
 }
 .node-medallion svg { stroke: var(--brass-light); }
 
-.node-name  { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); line-height: 1; }
-.node-count { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; opacity: .7; }
+.node-name  { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); line-height: 1; white-space: nowrap; }
+.node-count { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); line-height: 1; font-variant-numeric: tabular-nums; opacity: .7; }
 .node-count .full   { color: var(--green); }
 .node-count .at-max { color: var(--brass-dark); }
 
@@ -124,19 +128,7 @@
 .bonus-total { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); opacity: .7; margin-top: var(--space-1); }
 .bonus-none  { font-family: var(--font-body); font-weight: 700; font-style: italic; font-size: var(--fs-sm); opacity: .6; }
 
-.cost-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.cost-chip {
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); font-variant-numeric: tabular-nums;
-  color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
-  border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
-  padding: 3px var(--space-3) 3px var(--space-1);
-}
-.cost-chip.is-short {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 38%, var(--slate-edge)), var(--slate-2));
-}
+/* Building cost is rendered by the shared .cost-pill (20-shared.css). */
 
 .req-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .req-item { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-body); font-weight: 800; font-size: var(--fs-sm); }

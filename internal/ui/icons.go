@@ -123,6 +123,28 @@ var gemIDToResKey = map[string]string{
 	"star":     "knowledge",
 }
 
+// ResKeyToGemID is the inverse of gemIDToResKey: resource symbol key → gem
+// colour id. Cost pills and other callers that think in resource keys use
+// GemIDForResource to get the gem colour for ResourceGem.
+var ResKeyToGemID = map[string]string{
+	"wood":      "tree",
+	"stone":    "mountain",
+	"food":     "wheat",
+	"mana":     "flame",
+	"devotion":  "sun",
+	"knowledge": "star",
+}
+
+// GemIDForResource returns the gem colour id for a resource key
+// (wood/stone/food/mana/devotion/knowledge). Unknown keys fall back to the
+// key itself — ResourceGem tolerates either namespace.
+func GemIDForResource(resKey string) string {
+	if id, ok := ResKeyToGemID[resKey]; ok {
+		return id
+	}
+	return resKey
+}
+
 // ResourceGem renders a filled resource gem: the coloured disc (.gem-<gemID>)
 // with the white resource glyph on top. gemID is the gem colour id
 // (tree/mountain/wheat/flame/sun/star); sizePx is the gem diameter. Use this

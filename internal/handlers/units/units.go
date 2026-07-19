@@ -536,25 +536,24 @@ func unitRow(utype string, def game.UnitDef, count int, locked, manaLocked bool,
 }
 
 func trainCostCell(utype string, def game.UnitDef) Node {
-	hasCost := def.Cost.Wood > 0 || def.Cost.Stone > 0 || def.Cost.Mana > 0
-	if !hasCost {
+	entries := make([]DynamicCostEntry, 0, 3)
+	if def.Cost.Wood > 0 {
+		entries = append(entries, DynamicCostEntry{Resource: "wood", Expr: "$cost_wood_" + utype})
+	}
+	if def.Cost.Stone > 0 {
+		entries = append(entries, DynamicCostEntry{Resource: "stone", Expr: "$cost_stone_" + utype})
+	}
+	if def.Cost.Mana > 0 {
+		entries = append(entries, DynamicCostEntry{Resource: "mana", Expr: "$cost_mana_" + utype})
+	}
+	if len(entries) == 0 {
 		return Div()
 	}
+	// WithSignalAvailability compares each $cost_* expression against the
+	// layout-scoped $<resource> signals, so the pill goes whole-red when the
+	// user can't afford the current training count.
 	return Div(Class("unit-cost"),
-		Span(Class("stat-pill"),
-			If(def.Cost.Wood > 0, Span(Class("pill-res"),
-				gemNode("tree", 17),
-				Span(ds.Text("$cost_wood_"+utype)),
-			)),
-			If(def.Cost.Stone > 0, Span(Class("pill-res"),
-				gemNode("mountain", 17),
-				Span(ds.Text("$cost_stone_"+utype)),
-			)),
-			If(def.Cost.Mana > 0, Span(Class("pill-res"),
-				gemNode("flame", 17),
-				Span(ds.Text("$cost_mana_"+utype)),
-			)),
-		),
+		DynamicCostPill(entries, WithGemSize(17), WithSignalAvailability()),
 	)
 }
 
@@ -606,20 +605,18 @@ func lockBanner() Node {
 	)
 }
 
-func gemNode(id string, sizePx int) Node {
-	return ResourceGem(id, sizePx)
-}
+
 
 func upkeepPill(def game.UnitDef) Node {
 	if def.FoodUpkeep > 0 {
 		return Span(Classes{"stat-pill": true, "stat-pill--drain": true},
-			gemNode("wheat", 18),
+			ResourceGem("wheat", 18),
 			Span(Class("pill-neg"), Text(strconv.Itoa(def.FoodUpkeep))),
 		)
 	}
 	if def.ManaUpkeep > 0 {
 		return Span(Classes{"stat-pill": true, "stat-pill--drain": true},
-			gemNode("flame", 18),
+			ResourceGem("flame", 18),
 			Span(Class("pill-neg"), Text(strconv.Itoa(def.ManaUpkeep))),
 		)
 	}

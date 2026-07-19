@@ -110,7 +110,6 @@
 .stat-pill--drain { background: color-mix(in srgb, var(--red) 13%, var(--card)); }
 .stat-pill--drain .neg { color: var(--red); }
 .stat-pill--short { background: color-mix(in srgb, var(--red) 22%, var(--card)); }
-.pill-res { display: inline-flex; align-items: center; gap: var(--space-1); }
 .pill-neg, .pill-short { color: var(--red); }
 
 /* --- roster roll (muster roll — domain term kept) ------------------------- */

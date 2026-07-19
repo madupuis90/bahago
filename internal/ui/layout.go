@@ -57,14 +57,40 @@ func AuthLayout(r *http.Request, title string, content ...Node) Node {
 
 // KingdomLayout renders a full page with the CommandBar chrome.
 // currentPath drives which nav link is highlighted and is forwarded to the layout refresh SSE stream.
+//
+// It also emits the six resource stockpiles as datastar signals ($wood/$stone/
+// $food/$mana/$devotion/$knowledge) scoped to the kingdom-page wrapper. These
+// are the layout-scoped resource signals DynamicCostPill(WithSignalAvailability)
+// compares against; the layout refresh SSE handler keeps them fresh every tick
+// via MarshalAndPatchSignals. Signal names are keyed by the resource key in
+// game.ResourceOrder.
 func KingdomLayout(r *http.Request, title string, currentPath string, kingdom *db.Kingdom, content ...Node) Node {
 	layoutStream := Div(ds.Init(GetSSENoSignals(routes.KingdomLayoutRefreshPath+"?path=%s", currentPath)))
 	return shell(title, layoutStream,
 		Div(Class("kingdom-page"),
+			ds.Signals(ResourceSignals(kingdom), ds.ModifierIfMissing),
 			KingdomTopbar(kingdom, currentPath, 0),
 			MainContent(content...),
 		),
 	)
+}
+
+// ResourceSignals returns the six resource stockpiles of a kingdom as a
+// datastar signal map keyed by resource key (wood/stone/food/mana/devotion/
+// knowledge). Used by KingdomLayout for the initial emit and by the layout
+// refresh SSE handler to patch them each tick.
+func ResourceSignals(kingdom *db.Kingdom) map[string]any {
+	if kingdom == nil {
+		return nil
+	}
+	return map[string]any{
+		"wood":      kingdom.Wood,
+		"stone":    kingdom.Stone,
+		"food":     kingdom.Food,
+		"mana":     kingdom.Mana,
+		"devotion":  kingdom.Devotion,
+		"knowledge": kingdom.Knowledge,
+	}
 }
 
 // MainContent wraps page content in the main element used by all kingdom pages.
@@ -145,7 +171,7 @@ func KingdomTopbar(kingdom *db.Kingdom, currentPath string, msgCount int) Node {
 				resourcePill("wheat", "Food", kingdom.Food),
 				resourcePill("flame", "Mana", kingdom.Mana),
 				resourcePill("sun", "Devotion", kingdom.Devotion),
-				resourcePill("star", "Lore", kingdom.Knowledge),
+				resourcePill("star", "Knowledge", kingdom.Knowledge),
 			),
 			Div(Class("barB2-right"),
 				commandBarTick(),

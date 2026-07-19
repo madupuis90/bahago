@@ -1,6 +1,7 @@
 package layoutrefresh
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -15,9 +16,19 @@ import (
 )
 
 // patchChrome re-renders the topbar so resource values reflect the latest tick
-// and the messages badge reflects the latest unread count.
+// and the messages badge reflects the latest unread count. It also patches the
+// layout-scoped resource signals ($wood/etc.) so DynamicCostPill availability
+// recomputes client-side. The topbar text itself stays server-rendered (patched
+// HTML) for display; the signals are the logic source for cost pills. Both are
+// written from the same kingdom in the same tick so display and logic agree.
 func patchChrome(sse *datastar.ServerSentEventGenerator, kingdom *db.Kingdom, currentPath string, unreadCount int) error {
-	return sse.PatchElementGostar(KingdomTopbar(kingdom, currentPath, unreadCount))
+	if err := sse.PatchElementGostar(KingdomTopbar(kingdom, currentPath, unreadCount)); err != nil {
+		return fmt.Errorf("patch topbar: %w", err)
+	}
+	if err := sse.MarshalAndPatchSignals(ResourceSignals(kingdom)); err != nil {
+		return fmt.Errorf("patch resource signals: %w", err)
+	}
+	return nil
 }
 
 // ── Route registration ────────────────────────────────────────────────────────
