@@ -50,7 +50,7 @@ tasks:
 
   # --- CSS Build ---
   css:build:
-    desc: Concatenate CSS source files in web/static/css/ into web/static/styles.css
+    desc: Concatenate CSS source files in web/css/ into web/static/styles.css
     sources:
       - 'web/css/*.css'
     generates:

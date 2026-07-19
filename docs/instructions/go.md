@@ -112,7 +112,7 @@ This project uses **Go 1.26.1**. Always prefer features available in this versio
   ```go
   mux.HandleFunc("GET /users/{id}", handler)
   ```
-- Handlers should be thin — delegate business logic to a service/query layer
+- Handlers stay thin — read input, call queries, render. When a handler grows beyond that, extract into same-package helpers (sentinel errors → validators → orchestrators), **not a service layer**. See `AGENTS.md` "Handler pattern" and `internal/handlers/army/` for the reference shape.
 - Return appropriate HTTP status codes
 - Use `http.Error()` for error responses
 - Log errors server-side before returning generic messages to clients

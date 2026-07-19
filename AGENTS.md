@@ -6,19 +6,27 @@ PostgreSQL 18, sqlc, goose, gomponents, datastar. Runs in a dev container;
 
 ## Read on demand
 
-- `CONTEXT.md` — ubiquitous-language glossary. Read when naming things or
+- `GLOSSARY.md` — ubiquitous-language glossary. Read when naming things or
   discussing game concepts. Be precise: a *Legion* is not an *Army*, a *Kingdom*
   is not a *Player*.
-- `docs/design.md` — game mechanics design notes.
+- `docs/game/rules.md` — authoritative game mechanics (the *how*). The glossary
+  defines names; this defines behaviour. Draft — being authored; trust the code
+  over this file until a section is filled.
 - `docs/adr/` — architectural decision records (hard-to-reverse, non-obvious
   decisions). Created lazily by the `grill-with-docs` skill.
-- `docs/go.md` · `docs/sql.md` · `docs/ui.md` · `docs/testing.md` — deep
-  conventions. **Read the relevant one before touching that area.**
-- `docs/review.md` — when doing a code review.
-- `docs/ui-test-plans.md` — when running a UI test plan.
-- `docs/design-system/` — visual direction + icon spec. Read when implementing
-  a design handoff.
-- `docs/agent-setup.md` — how the pi agent config is restored in the dev container.
+- `docs/instructions/` — deep conventions. **Read the relevant one before
+  touching that area.** Files: `go.md`, `sql.md`, `ui.md`, `testing.md`,
+  `review.md` (code review), `agent-setup.md` (how the pi agent config is
+  restored in the dev container).
+- `docs/design/` — visual direction (`ui-design.md`), icon system (`icons.md`).
+  Read when implementing UI. CSS naming rules live in `docs/instructions/ui.md`.
+
+### Do not read
+
+`docs/human/` is the project owner's scratchpad — raw, deliberately
+unstructured ideas that may contradict committed decisions or may never be
+implemented. Do not load it as context or treat its contents as direction;
+reading it risks importing thoughts that are not instructions.
 
 ## Communication & approach
 
@@ -90,7 +98,7 @@ All code under `internal/` — nothing importable externally.
 - Full-page responses call `HomeLayout(r, title, content...)` or
   `KingdomLayout(r, title, content...)`; they read user/kingdom/path from
   context. No explicit `Content-Type` needed.
-- SSE handlers use `datastar.NewSSE`; see `docs/ui.md` for ordering rules. Use
+- SSE handlers use `datastar.NewSSE`; see `docs/instructions/ui.md` for ordering rules. Use
   `http.Error()` only before `NewSSE` is called.
 - **Do not re-check middleware guarantees inside handlers.** If a route is
   behind `RequireAuth`/`LoadKingdom`, trust the context — no `if user == nil`
@@ -98,12 +106,12 @@ All code under `internal/` — nothing importable externally.
 - **No service layer.** When a handler grows beyond `read input → one query →
   render`, extract into same-package helpers: sentinel errors → validators →
   orchestrators → thin handler. See `internal/handlers/army/` for the reference
-  implementation and `docs/testing.md` for the test shape. Apply only when
+  implementation and `docs/instructions/testing.md` for the test shape. Apply only when
   there's real complexity; don't impose on thin handlers.
 
 ## Database
 
-Quick rules (full conventions in `docs/sql.md`):
+Quick rules (full conventions in `docs/instructions/sql.md`):
 
 - `pgxpool.Pool` for pooling; context with timeouts for all DB ops.
 - All SQL in `internal/database/queries/*.sql`, one file per feature. Generated
@@ -140,13 +148,6 @@ choice (update the instruction, one-time exception, or reconsider). If a
 pattern or decision worth capturing comes up, raise it proactively — the user
 prefers accurate instructions over silent divergence.
 
-## Design handoffs
-
-A design handoff is a self-contained package describing a UI feature to
-implement. Read `docs/design-system/` first for the visual direction and icon
-spec. Implement CSS in the correct `web/css/` source file, markup in the
-feature handler package, run `task css:build`, and verify at real sizes.
-
 ## CSS source file map
 
 | File | Area |
@@ -158,8 +159,8 @@ feature handler package, run `task css:build`, and verify at real sizes.
 | `web/css/20-shared.css` | shared: `.panel`, `.btn`, `.form-fields`, `.alert-*` |
 | `web/css/30-auth.css` | auth pages |
 | `web/css/31-home.css` | home page content |
-| `web/css/40-kingdom-chrome.css` | kingdom chrome: topbar, bottom-nav, `.nav-stone` |
-| `web/css/41-kingdom-overview.css` | overview: `.page-header`, `.overview-grid`, `.chronicle` |
+| `web/css/40-kingdom-chrome.css` | kingdom chrome: topbar, bottom-nav, gems, crest, pills |
+| `web/css/41-kingdom-overview.css` | overview: `.page-header`, `.overview-grid`, combat-log |
 | `web/css/42-allocation.css` | allocation |
 | `web/css/43-buildings.css` | buildings |
 | `web/css/44-units.css` | units |

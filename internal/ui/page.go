@@ -5,7 +5,7 @@ import (
 	. "maragu.dev/gomponents/html"
 )
 
-// PageHeader renders the engraved codex page title: a formal symmetrical
+// PageHeader renders the engraved page title: a formal symmetrical
 // Cinzel caps title engraved in gold-brown on the parchment, followed by a
 // gold filigree divider. All pages share this one title treatment (Design
 // Reference §3). actions is optional; when present the title is wrapped in

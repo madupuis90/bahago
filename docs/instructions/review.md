@@ -29,7 +29,7 @@ Apply all active instructions. The items below are the most commonly violated �
 - [ ] Primary keys use `GENERATED ALWAYS AS IDENTITY`
 - [ ] Datetime columns use `TIMESTAMPTZ`
 - [ ] Text columns use `TEXT` unless length enforcement is required
-- [ ] CHECK constraints follow inline vs. named style rules (see `sql.instructions.md`)
+- [ ] CHECK constraints follow inline vs. named style rules (see `sql.md`)
 
 ### Go
 - [ ] No `package` declaration duplicated in edited files
@@ -42,10 +42,12 @@ Apply all active instructions. The items below are the most commonly violated �
 - [ ] No `http.Error()` called after `datastar.NewSSE` (SSE responses only)
 
 ### UI / Templates
-- [ ] No string literals for element IDs, signal names, or route paths — constants only
+- [ ] No string literals for **route paths** — use `internal/routes/` constants
+- [ ] Element IDs use inline string literals (no `const`) and only when targeted by SSE or CSS
+- [ ] Signal name strings kept adjacent in one file (the `json` tag + the `ds.*` call); no shared signal consts
 - [ ] `Class()` and `Classes{}` not mixed on the same element
 - [ ] `Iff` used (not `If`) when condition guards a nil pointer dereference
-- [ ] SSE `MergeFragments` called before `MergeSignals` (signals after fragments)
+- [ ] SSE patches use `PatchElementGostar` / `MarshalAndPatchSignals` (the project's datastar-go API) — no `MergeFragments`/`MergeSignals`
 - [ ] Full-page responses use `HomeLayout` or `KingdomLayout` — no raw `HTML5()`
 - [ ] Alert components use `AlertError`/`AlertSuccess`/`AlertContainer` from `internal/ui/` — no per-feature reimplementations
 

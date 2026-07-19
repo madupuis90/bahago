@@ -8,20 +8,21 @@
       Every symbol is 24×24, stroke-width 2, round caps/joins, fill none,
       stroke currentColor. Strokes are inset ~1px so they never clip when
       scaled down. Colour is applied via currentColor on the glyph's
-      container; flat BD colour is delivered by a chip behind the glyph
+      container; flat colour is delivered by a chip behind the glyph
       (see .gem / .crest in the CSS), never baked into these paths.
 
       Kept set (9): the six resources + idle + sandglass + crown.
-      See docs/design-system/icons.md.
+      See docs/design/icons.md.
     -->
 
     <!-- ── Standalone glyphs ─────────────────────────────────────────────── -->
 
     <!-- Crown — standalone glyph, formerly the identity-mark placeholder.
-         Retained as a general "realm" symbol. Three bold spikes, a base band,
-         and a band detail line. -->
+         Retained as a general "realm" symbol. Three bold spikes (the outer
+         two lean outward, away from center), a base band, and a band detail
+         line. -->
     <symbol id="crown" viewBox="0 0 24 24">
-      <path d="M4 19 L4 14 L7 8 L9.5 13 L12 6 L14.5 13 L17 8 L20 14 L20 19 Z"
+      <path d="M4 19 L4 13 L1.5 7.5 L8.5 12 L12 5 L15.5 12 L22.5 7.5 L20 13 L20 19 Z"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M5 16.5 L19 16.5"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

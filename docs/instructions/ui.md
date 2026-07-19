@@ -217,13 +217,39 @@ New feature files go between the last feature file and `99-utilities.css`. Style
 - `.map-nav-btn--disabled` — modifier (state) ✓
 - Never `.btn-locked` or `.building-locked` for modifiers — those look like separate blocks
 
-**Class names are structural / semantic, never narrative flavor.** This is a standing project instruction from the owner — `naming.md` is the authority and lists existing offenders to rename.
+**Class names are structural / semantic, never narrative flavor.** This is a standing project instruction from the owner.
 
-- Use structural names: `title`, `sub-title`, `section`, `item`, `meta`, `row`, `cell`, `body`, `foot`, `actions`, `toolbar`, `list`, `grid`, `panel`, `card`.
-- **Do not invent in-fiction dressing** as class names: `charter`, `oath`, `decree`, `seal`, `missive`, `ledger`, `grimoire`, `folio`, `tome`, `codex`, `edict`, `sigil`, `tablet`, `vellum`, `scriptorium`, `refectory`, `herald`, `pennant`.
-- **Game-mechanic nouns are allowed** because they name real objects the simulation/UI treats as first-class: `unit`, `legion`, `roster`, `muster`, `summon`, `portrait`, `medallion`, `gem`, `army`, `campaign`, `guild`, `prayer`, `building`, `kingdom`, `world-map`, and the resource keys.
-- The test: *does the noun name a thing the game treats as a first-class object?* If yes → semantic. *Does it only evoke a medieval-scribe's office?* If yes → flavor, rejected. When a name sits on both sides, use the structural name.
-- When touching a feature that already has flavor class names (see the offenders table in `naming.md`), rename them in that pass — do not propagate them into new work.
+Two tiers:
+
+1. **Layout and generic containers are structural.** Use plain semantic names: `title`, `sub-title`, `section`, `item`, `meta`, `row`, `cell`, `body`, `foot`, `actions`, `toolbar`, `list`, `grid`, `panel`, `card`. These describe *role and structure*, not subject matter.
+2. **Feature-specific elements may use a game-mechanic noun** when the element *is* that game object — `legion`, `unit-frame`, `unit-group`, `map-border`, `army`, `campaign`, `guild`, `prayer`, `building`, `kingdom`, `world-map`, and the resource keys. Use the noun directly; do not dress it up.
+
+- **Do not invent in-fiction / scribe's-office flavor** as class names: `charter`, `oath`, `decree`, `seal`, `missive`, `ledger`, `grimoire`, `folio`, `tome`, `codex`, `edict`, `sigil`, `tablet`, `vellum`, `scriptorium`, `refectory`, `herald`, `pennant`. If a name only evokes atmosphere and not a game object, use the structural name instead.
+- The test: *does the noun name a thing the game treats as a first-class object?* If yes → semantic (tier 2). *Does it only evoke a medieval-scribe's office?* If yes → flavor, rejected. When a name sits on both sides, use the structural name (tier 1).
+- When touching a feature that already has flavor class names, rename them in that pass — do not propagate them into new work.
+
+### Shared UI element vocabulary
+
+These recurring element names are established in `web/css/` and are what we mean when we refer to them in conversation. Reuse them; do not coin synonyms.
+
+| Name | Means |
+|---|---|
+| `panel` | a content surface (parchment) sitting on the dark frame |
+| `card` | a self-contained block with a header/title; sub-parts `card-title`, `card-subtitle`, `card-header`, `card-inner`, `card-tab` |
+| `btn` | a button; modifiers `--primary`, `--danger`, `--quiet`, `--sm`, `--lg`; `btn-text` for text buttons |
+| `field` | a form field wrapper; sub-parts `field-label`, `field-hint`, `field-group`, `field-affix`, `field-lead`, `field-trail` |
+| `slider` | the allocation slider; sub-parts `slider-track`, `slider-fill`, `slider-thumb`, `slider-ticks`, `slider-input`, `slider-name`, `slider-pct` |
+| `meter` | a tick/progress meter bar; sub-parts `meter-track`, `meter-fill`, `meter-notches`, `meter-notch`, `meter-name`, `meter-qty`, `meter-eta`, `meter-top` |
+| `gem` | a flat resource disc with ink ring and white glyph; `gem-<tree|mountain|wheat|flame|sun|star>`; rendered via `ResourceGem()` |
+| `crest` | a standalone identity coin; rendered via `Crest()` |
+| `pill` | a compact chrome pill (resource readout, etc.); `pill-l`, `pill--mini` |
+| `alert` | an alert banner; `alert--error`, `alert--success`; via `AlertError`/`AlertSuccess`/`AlertContainer` |
+| `eyebrow` | a small all-caps label above a title |
+| `breadcrumb` / `crumb-back` | nav breadcrumb / back link |
+| `empty-state` | a placeholder when a list is empty; `empty-state-title`, `empty-state-hint` |
+| `nav-link` / `nav-group` | nav entry / nav section group; `nav-live` for the live indicator |
+
+When a conversation refers to "the slider thumb," "the card label," "the meter fill," etc., these are the elements meant — and the names to use in new CSS.
 
 ## Heading structure
 
@@ -621,7 +647,7 @@ if !viewerRole.CanManage() {
 }
 ```
 
-CSS classes `alert--success` and `alert--error` are defined in section 5 of `styles.css`.
+CSS classes `alert--success` and `alert--error` are defined in `web/css/20-shared.css`.
 
 ### Redirect after action
 

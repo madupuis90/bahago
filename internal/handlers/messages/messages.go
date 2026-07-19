@@ -704,8 +704,8 @@ func kind(m db.ListInboxMessagesRow) string {
 // selects the larger size used in the reading pane + compose headers.
 func messageMark(k string, lg bool) Node {
 	// The "decree" kind label is user-facing domain language, but the CSS
-	// variant is named message-mark--official (see docs/design-system/naming.md:
-	// "decree" is flavour, not a game-mechanic noun).
+	// variant is named message-mark--official ("decree" is flavour, not a
+	// game-mechanic noun — see docs/instructions/ui.md).
 	suffix := k
 	if k == "decree" {
 		suffix = "official"

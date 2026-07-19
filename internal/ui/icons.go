@@ -76,7 +76,7 @@ func Icon(id string, sizePx int, active bool) Node {
 	)
 }
 
-// Crest renders the kingdom identity mark: a bold BD coin (disc with a thick
+// Crest renders the kingdom identity mark: a bold coin (disc with a thick
 // ink ring). The inner symbol is optional — when id is empty the coin is
 // rendered without a glyph, which is the current state (the symbol is still
 // TBD). extraClass (e.g. "crest-lg", "id-crest", "home-chrome-crest") selects
