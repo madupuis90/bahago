@@ -17,16 +17,15 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // maxPrayers is the default maximum number of prayers a kingdom may have active at once.
@@ -367,9 +366,13 @@ func activePrayerView(p db.KingdomPrayer) Node {
 			Div(Class("active-prayer-aside"),
 				Div(Class("active-prayer-drain"),
 					Span(Class("active-prayer-drain-lbl"), Text("Devotion drain")),
-					Span(Class("stat-pill"),
-						Span(Classes{"pill-neg": true}, Text(fmt.Sprintf("−%d", upkeep))),
-						Text("/tick"),
+					// Per-tick devotion drain: StaticCostPill with CostUpkeep shows
+					// devotion gem + amount + sandglass/arrow-down. The down-arrow
+					// carries the negative direction, so no explicit minus sign.
+					StaticCostPill(
+						game.ResourceValues{Devotion: upkeep},
+						WithGemSize(18),
+						WithCostKind(CostUpkeep),
 					),
 				),
 			),
@@ -515,13 +518,26 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 		),
 		P(Class("prayer-flavour"), Text(def.Description)),
 		Div(Class("prayer-stats"),
-			Span(Class("prayer-effect"),
-				Icon("res-"+prayerResKey(def), 16, false),
-				Raw(effectHTML(def)),
+			// Per-tick production modifier: a StaticCostPill marked CostProduction +
+			// WithPercent renders the bonus resource gem + "+N%" + sandglass/arrow-up
+			// (green). The bonus is a percentage applied to production each tick, not
+			// a flat amount; the +% distinguishes a multiplier from an absolute
+			// amount (glossary: Production Rate / Upkeep). Replaces the old
+			// "+20% wood" effect text line. Prayers with no resource bonus render
+			// nil here (StaticCostPill returns nil for all-zero amounts).
+			StaticCostPill(
+				game.ResourceValues(def.ResourceBonusPct),
+				WithGemSize(18),
+				WithCostKind(CostProduction),
+				WithPercent(),
 			),
-			Span(Class("prayer-upkeep"),
-				Icon("sandglass", 16, false),
-				Text(fmt.Sprintf("%d devotion/tick", def.DevotionUpkeep)),
+			// Per-tick devotion upkeep: a StaticCostPill marked CostUpkeep renders
+			// the devotion gem + amount + sandglass/arrow-down marker, replacing
+			// the old "20 devotion/tick" text line (see WithCostKind).
+			StaticCostPill(
+				game.ResourceValues{Devotion: def.DevotionUpkeep},
+				WithGemSize(18),
+				WithCostKind(CostUpkeep),
 			),
 		),
 		foot,

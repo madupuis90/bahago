@@ -120,7 +120,7 @@
   display: grid;
   grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 168px;
   align-items: center;
-  column-gap: var(--space-4);
+  column-gap: var(--space-6);
 }
 .muster-roll-head { padding: 0 var(--space-1) var(--space-3); }
 .muster-roll-col {
@@ -132,6 +132,10 @@
   opacity: .85;
 }
 .muster-roll-col--r { text-align: right; }
+/* Right-align Power / Upkeep / Cost cells to match their --r headers (cols 3–5) */
+.unit-row > :nth-child(3),
+.unit-row > :nth-child(4),
+.unit-row > :nth-child(5) { justify-self: end; }
 .unit-row {
   padding: var(--space-3) var(--space-1);
   border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);

@@ -636,6 +636,24 @@ input.field:focus, select.field:focus {
 }
 .cost-pill svg { stroke: var(--ink); flex: none; }
 .cost-pill-res { display: inline-flex; align-items: center; gap: var(--space-1); }
+/* Per-tick rate marker (WithCostKind Upkeep/Production): sandglass + oriented
+   arrow, after the resource entries. The sandglass (neutral ink) carries "per
+   tick" (the sprite's tick symbol); the arrow carries direction and is tinted
+   by kind — red for upkeep (drain), green for production (gain), per the
+   meaning-colour palette in docs/design/icons.md. */
+.cost-pill-rate {
+  display: inline-flex; align-items: center; gap: 1px;
+  margin-left: var(--space-1);
+  opacity: .9;
+}
+/* The sprite paths carry stroke="currentColor", so tinting is done via the
+   CSS `color` property (the established mechanism — see .gem .icon,
+   .icon--active in 40-kingdom-chrome.css), not `stroke`. Only the arrow is
+   tinted; the sandglass sibling stays ink so the "per tick" symbol reads
+   neutral. Specificity ties .icon's `color: var(--ink)` but later source
+   order + the .icon selectors live in 40-kingdom-chrome.css, so these win. */
+.cost-pill-arrow--down svg { color: var(--red); }
+.cost-pill-arrow--up svg   { color: var(--green); }
 .cost-pill.is-short {
   background: color-mix(in srgb, var(--red) 22%, var(--card));
   border-color: var(--red);

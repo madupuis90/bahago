@@ -117,12 +117,14 @@ generalised. Not a heraldic shield outline.
 
 ## Glyph inventory
 
-The sprite keeps **ten symbols**, all bare ids in 24×24 space:
+The sprite keeps **twelve symbols**, all bare ids in 24×24 space:
 
 - Resources (6): `res-wood`, `res-stone`, `res-food`, `res-mana`,
   `res-devotion`, `res-knowledge`.
-- Standalone (4): `crown` (realm), `envelope` (auth recovery-sent state),
-  `idle` (sleeping zzz, renamed from `zzz`), `sandglass` (tick timer).
+- Standalone (6): `arrow-down` / `arrow-up` (direction markers for
+  per-tick rate cost pills — upkeep down, production up), `crown` (realm),
+  `envelope` (auth recovery-sent state), `idle` (sleeping zzz, renamed from
+  `zzz`), `sandglass` (tick timer).
 
 Slots the sprite used to hold (heraldic glyphs like `sword`, `swords`,
 `helmet`, `spear`, `soldiers`, `flag`, `flame`, `cross`, `chevron`,

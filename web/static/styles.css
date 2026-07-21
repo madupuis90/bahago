@@ -1200,6 +1200,24 @@ input.field:focus, select.field:focus {
 }
 .cost-pill svg { stroke: var(--ink); flex: none; }
 .cost-pill-res { display: inline-flex; align-items: center; gap: var(--space-1); }
+/* Per-tick rate marker (WithCostKind Upkeep/Production): sandglass + oriented
+   arrow, after the resource entries. The sandglass (neutral ink) carries "per
+   tick" (the sprite's tick symbol); the arrow carries direction and is tinted
+   by kind — red for upkeep (drain), green for production (gain), per the
+   meaning-colour palette in docs/design/icons.md. */
+.cost-pill-rate {
+  display: inline-flex; align-items: center; gap: 1px;
+  margin-left: var(--space-1);
+  opacity: .9;
+}
+/* The sprite paths carry stroke="currentColor", so tinting is done via the
+   CSS `color` property (the established mechanism — see .gem .icon,
+   .icon--active in 40-kingdom-chrome.css), not `stroke`. Only the arrow is
+   tinted; the sandglass sibling stays ink so the "per tick" symbol reads
+   neutral. Specificity ties .icon's `color: var(--ink)` but later source
+   order + the .icon selectors live in 40-kingdom-chrome.css, so these win. */
+.cost-pill-arrow--down svg { color: var(--red); }
+.cost-pill-arrow--up svg   { color: var(--green); }
 .cost-pill.is-short {
   background: color-mix(in srgb, var(--red) 22%, var(--card));
   border-color: var(--red);
@@ -2823,7 +2841,7 @@ input.field:focus, select.field:focus {
   display: grid;
   grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 168px;
   align-items: center;
-  column-gap: var(--space-4);
+  column-gap: var(--space-6);
 }
 .muster-roll-head { padding: 0 var(--space-1) var(--space-3); }
 .muster-roll-col {
@@ -2835,6 +2853,10 @@ input.field:focus, select.field:focus {
   opacity: .85;
 }
 .muster-roll-col--r { text-align: right; }
+/* Right-align Power / Upkeep / Cost cells to match their --r headers (cols 3–5) */
+.unit-row > :nth-child(3),
+.unit-row > :nth-child(4),
+.unit-row > :nth-child(5) { justify-self: end; }
 .unit-row {
   padding: var(--space-3) var(--space-1);
   border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);
@@ -4079,6 +4101,9 @@ input.field:focus, select.field:focus {
   display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; margin-bottom: var(--space-4);
   border-top: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
   border-bottom: 1px dotted color-mix(in srgb, var(--brass-dark) 70%, transparent);
+  /* Cost pills are inline-flex; without this they stretch to the column's
+     full width (align-items defaults to stretch). Keep them content-sized. */
+  align-items: flex-start;
 }
 .prayer-effect,
 .prayer-upkeep {

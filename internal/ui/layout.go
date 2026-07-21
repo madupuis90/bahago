@@ -11,8 +11,8 @@ import (
 
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
+	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 )
 
@@ -85,9 +85,9 @@ func ResourceSignals(kingdom *db.Kingdom) map[string]any {
 	}
 	return map[string]any{
 		"wood":      kingdom.Wood,
-		"stone":    kingdom.Stone,
-		"food":     kingdom.Food,
-		"mana":     kingdom.Mana,
+		"stone":     kingdom.Stone,
+		"food":      kingdom.Food,
+		"mana":      kingdom.Mana,
 		"devotion":  kingdom.Devotion,
 		"knowledge": kingdom.Knowledge,
 	}

@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	. "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
+	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/game"
@@ -43,7 +43,7 @@ import (
 // with a static integer amount.
 type CostEntry struct {
 	Resource string
-	Amount  int
+	Amount   int
 }
 
 // DynamicCostEntry pairs a resource key with a datastar expression that
@@ -53,6 +53,25 @@ type DynamicCostEntry struct {
 	Expr     string
 }
 
+// CostKind labels what the pill's values represent, so the pill can show a
+// per-tick direction marker. It keys off the glossary's two per-tick flows —
+// Production Rate and Upkeep — with Flat being the default (one-time cost).
+//
+//   - CostFlat       — one-time cost; no marker (today's behaviour).
+//   - CostUpkeep     — a per-tick drain; renders the sandglass + arrow-down
+//     marker after the amount.
+//   - CostProduction — a per-tick gain; renders the sandglass + arrow-up
+//     marker after the amount.
+//
+// The marker is whole-pill: a cost is either flat or a rate, never mixed.
+type CostKind int
+
+const (
+	CostFlat CostKind = iota
+	CostUpkeep
+	CostProduction
+)
+
 // CostOpt configures a cost pill.
 type CostOpt func(*costConfig)
 
@@ -61,6 +80,8 @@ type costConfig struct {
 	staticAvail    map[string]int
 	staticAvailSet bool
 	signalAvail    bool
+	kind           CostKind
+	percent        bool
 }
 
 // WithGemSize overrides the gem diameter (px). Default 18.
@@ -81,7 +102,25 @@ func WithSignalAvailability() CostOpt {
 	return func(c *costConfig) { c.signalAvail = true }
 }
 
-func defaultConfig() costConfig { return costConfig{gemSize: 18} }
+// WithCostKind labels the pill as a per-tick rate (Upkeep or Production) so
+// it renders the sandglass + arrow direction marker after the amount. The
+// default is CostFlat (no marker). See CostKind for the semantics.
+func WithCostKind(kind CostKind) CostOpt {
+	return func(c *costConfig) { c.kind = kind }
+}
+
+// WithPercent formats each amount as "+N%" instead of "N". Use it for pills
+// that show a production *modifier* (e.g. a prayer's +20% resource bonus)
+// rather than a per-tick amount; pair it with WithCostKind(CostProduction)
+// so the green up-arrow carries the direction. The pill's affordability
+// options still compare the raw integer (need/expr) against the stockpile,
+// so percent pills should not also use WithStaticAvailability/
+// WithSignalAvailability — a percentage is not a spendable cost.
+func WithPercent() CostOpt {
+	return func(c *costConfig) { c.percent = true }
+}
+
+func defaultConfig() costConfig { return costConfig{gemSize: 18, kind: CostFlat} }
 
 // StaticCostPill renders one cost pill from a ResourceValues, omitting
 // zero-amount resources.
@@ -93,7 +132,7 @@ func StaticCostPill(rv game.ResourceValues, opts ...CostOpt) Node {
 	var items []costItem
 	for _, res := range game.ResourceOrder {
 		if n := rv.Amount(res); n > 0 {
-			items = append(items, costItem{Resource: res, need: n, amount: Text(strconv.Itoa(n))})
+			items = append(items, costItem{Resource: res, need: n, amount: Text(formatAmount(n, cfg.percent))})
 		}
 	}
 	if len(items) == 0 {
@@ -105,7 +144,7 @@ func StaticCostPill(rv game.ResourceValues, opts ...CostOpt) Node {
 	} else {
 		classNode = Class("cost-pill")
 	}
-	return renderCostPill(items, classNode, cfg.gemSize)
+	return renderCostPill(items, classNode, cfg.gemSize, cfg.kind)
 }
 
 // DynamicCostPill renders one cost pill whose amounts are datastar expressions.
@@ -120,7 +159,7 @@ func DynamicCostPill(entries []DynamicCostEntry, opts ...CostOpt) Node {
 		if e.Expr == "" {
 			continue
 		}
-		items = append(items, costItem{Resource: e.Resource, expr: e.Expr, amount: ds.Text(e.Expr)})
+		items = append(items, costItem{Resource: e.Resource, expr: e.Expr, amount: ds.Text(formatAmountExpr(e.Expr, cfg.percent))})
 	}
 	if len(items) == 0 {
 		return nil
@@ -131,7 +170,7 @@ func DynamicCostPill(entries []DynamicCostEntry, opts ...CostOpt) Node {
 	} else {
 		classNode = Class("cost-pill")
 	}
-	return renderCostPill(items, classNode, cfg.gemSize)
+	return renderCostPill(items, classNode, cfg.gemSize, cfg.kind)
 }
 
 // costItem is the internal, source-agnostic representation of one entry.
@@ -145,7 +184,7 @@ type costItem struct {
 	expr     string // dynamic path: expression yielding the cost
 }
 
-func renderCostPill(items []costItem, classNode Node, gemSize int) Node {
+func renderCostPill(items []costItem, classNode Node, gemSize int, kind CostKind) Node {
 	children := []Node{classNode}
 	for _, it := range items {
 		// The amount rides on its own inner span so datastar's data-text (dynamic
@@ -157,7 +196,69 @@ func renderCostPill(items []costItem, classNode Node, gemSize int) Node {
 			),
 		)
 	}
+	if m := rateMarker(kind, gemSize); m != nil {
+		children = append(children, m)
+	}
 	return Span(children...)
+}
+
+// rateMarker renders the per-tick marker (sandglass + oriented arrow) for an
+// Upkeep/Production pill, or nil for Flat. It is whole-pill: the marker lives
+// at the pill level (after all resource entries), not per-entry, since a cost
+// is either flat or a rate. The arrow carries direction; the sandglass carries
+// "per tick" (the codebase's established tick symbol, see docs/design/icons.md).
+func rateMarker(kind CostKind, gemSize int) Node {
+	var arrowID string
+	switch kind {
+	case CostUpkeep:
+		arrowID = "arrow-down"
+	case CostProduction:
+		arrowID = "arrow-up"
+	default:
+		return nil
+	}
+	// Marker glyphs scale with the pill's gem size so they read in proportion
+	// across the gemSize variants used by call sites (17–22px).
+	markerSize := gemSize * 13 / 18 // ~13px at the 18px default; tracks gemSize
+	if markerSize < 11 {
+		markerSize = 11
+	}
+	// The sandglass stays neutral ink (the "per tick" symbol); only the arrow
+	// takes the kind colour — red for upkeep (drain), green for production
+	// (gain), per the meaning-colour palette in docs/design/icons.md. The
+	// arrow rides in its own span so the colour class targets just that glyph.
+	arrowCls := "cost-pill-arrow"
+	if kind == CostUpkeep {
+		arrowCls += " cost-pill-arrow--down"
+	} else {
+		arrowCls += " cost-pill-arrow--up"
+	}
+	return Span(Class("cost-pill-rate"),
+		Icon("sandglass", markerSize, false),
+		Span(Class(arrowCls), Icon(arrowID, markerSize, false)),
+	)
+}
+
+// formatAmount renders a static integer amount: "N", or "+N%" when percent
+// is set (for production-modifier pills). The leading "+" signals a gain (a
+// production modifier is always additive), and pairs with the CostProduction
+// up-arrow marker.
+func formatAmount(n int, percent bool) string {
+	if percent {
+		return fmt.Sprintf("+%d%%", n)
+	}
+	return strconv.Itoa(n)
+}
+
+// formatAmountExpr wraps a dynamic amount expression: the bare expression
+// ("$cost_wood_militia") when not percent, or "+(<expr>)%" when percent
+// (for dynamic production-modifier pills). String concatenation in the
+// datastar expression keeps the +/% literals out of the bound expr itself.
+func formatAmountExpr(expr string, percent bool) string {
+	if percent {
+		return fmt.Sprintf("'+' + (%s) + '%%'", expr)
+	}
+	return expr
 }
 
 // staticShortClass returns a class attribute with cost-pill always set and
