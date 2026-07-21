@@ -42,9 +42,8 @@ func RegisterRoutes(r router.Router, queries db.Querier, pool *pgxpool.Pool, tic
 	h := newHandler(queries, pool, tickHub)
 	r.HandleFunc("GET "+routes.KingdomBuildingsPath, h.handleBuildingsPage())
 	r.HandleFunc("GET "+routes.KingdomBuildingsRefreshPath, h.handleBuildingsRefresh())
-	r.HandleFunc("POST "+routes.KingdomConstructionStartPath, h.handleStartConstruction())
 	r.HandleFunc("GET "+routes.KingdomBuildingsDetailPath, h.handleBuildingsDetail())
-	r.HandleFunc("POST "+routes.KingdomBuildingsRaisePath, h.handleRaise())
+	r.HandleFunc("POST "+routes.KingdomBuildingsRaisePath, h.handleStartConstruction())
 }
 
 type handler struct {
@@ -118,11 +117,42 @@ func (h *handler) handleBuildingsRefresh() http.HandlerFunc {
 	}
 }
 
+func (h *handler) handleBuildingsDetail() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+
+		buildingID := r.URL.Query().Get("building")
+		if _, ok := game.BuildingDefs[buildingID]; !ok {
+			http.Error(w, "unknown building", http.StatusBadRequest)
+			return
+		}
+
+		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
+		if err != nil {
+			log.Printf("buildings detail: get buildings: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		construction, err := loadConstruction(r.Context(), h.queries, kingdom.ID)
+		if err != nil {
+			log.Printf("buildings detail: get construction: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		counts := game.BuildingCountMap(buildings)
+		resources := resourceMap(kingdom)
+
+		sse := datastar.NewSSE(w, r)
+		sse.PatchElementGostar(detailPanel(buildingID, game.BuildingDefList, counts, resources, construction))
+		sse.MarshalAndPatchSignals(map[string]any{"selected_building": buildingID})
+	}
+}
+
 func (h *handler) handleStartConstruction() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
-		btype := r.URL.Query().Get("type")
+		btype := r.URL.Query().Get("building")
 		if err := validateBuildingType(btype); err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(err)))
 			return
@@ -162,85 +192,6 @@ func (h *handler) handleStartConstruction() http.HandlerFunc {
 		sse := datastar.NewSSE(w, r)
 		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("start construction: patch: %v", err)
-		}
-	}
-}
-
-func (h *handler) handleBuildingsDetail() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-
-		buildingID := r.URL.Query().Get("building")
-		if _, ok := game.BuildingDefs[buildingID]; !ok {
-			http.Error(w, "unknown building", http.StatusBadRequest)
-			return
-		}
-
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("buildings detail: get buildings: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		construction, err := loadConstruction(r.Context(), h.queries, kingdom.ID)
-		if err != nil {
-			log.Printf("buildings detail: get construction: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		counts := game.BuildingCountMap(buildings)
-		resources := resourceMap(kingdom)
-
-		sse := datastar.NewSSE(w, r)
-		sse.PatchElementGostar(detailPanel(buildingID, game.BuildingDefList, counts, resources, construction))
-		sse.MarshalAndPatchSignals(map[string]any{"selected_building": buildingID})
-	}
-}
-
-func (h *handler) handleRaise() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-
-		btype := r.URL.Query().Get("building")
-		if err := validateBuildingType(btype); err != nil {
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(err)))
-			return
-		}
-
-		if err := h.startConstruction(r.Context(), kingdom.ID, btype); err != nil {
-			if isStartConstructionUserError(err) {
-				datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(err)))
-				return
-			}
-			log.Printf("buildings raise: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-
-		k, err := h.queries.GetKingdomByID(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("buildings raise: reload kingdom: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
-		if err != nil {
-			log.Printf("buildings raise: reload buildings: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		construction, err := loadConstruction(r.Context(), h.queries, k.ID)
-		if err != nil {
-			log.Printf("buildings raise: get construction: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(buildingsAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		counts := game.BuildingCountMap(buildings)
-		resources := resourceMap(&k)
-		page := buildingsContent(game.BuildingDefList, counts, construction, resources, btype)
-		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
-			log.Printf("buildings raise: patch: %v", err)
 		}
 	}
 }

@@ -159,23 +159,11 @@ func (h *handler) handleSend() http.HandlerFunc {
 		}
 
 		if err := h.sendCampaign(r.Context(), kingdom, input); err != nil {
-			if isSendUserError(err) {
-				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
-				return
-			}
-			log.Printf("army send: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+			respondArmyError(w, r, err, isSendUserError, "army send")
 			return
 		}
 
-		data, err := h.loadArmyData(r, kingdom.ID)
-		if err != nil {
-			log.Printf("army send: reload: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		sse := datastar.NewSSE(w, r)
-		sse.PatchElementGostar(MainContent(armyContent(kingdom, data, "", "attack")))
+		h.renderArmyPage(w, r, kingdom, "army send")
 	}
 }
 
@@ -190,12 +178,7 @@ func (h *handler) handleCancel() http.HandlerFunc {
 		}
 
 		if err := h.cancelCampaign(r.Context(), kingdom.ID, id); err != nil {
-			if isCancelUserError(err) {
-				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
-				return
-			}
-			log.Printf("army cancel: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+			respondArmyError(w, r, err, isCancelUserError, "army cancel")
 			return
 		}
 
@@ -222,23 +205,11 @@ func (h *handler) handleTransfer() http.HandlerFunc {
 		}
 
 		if err := h.transferUnits(r.Context(), kingdom, input); err != nil {
-			if isTransferUserError(err) {
-				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
-				return
-			}
-			log.Printf("army transfer: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+			respondArmyError(w, r, err, isTransferUserError, "army transfer")
 			return
 		}
 
-		data, err := h.loadArmyData(r, kingdom.ID)
-		if err != nil {
-			log.Printf("army transfer: reload: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		sse := datastar.NewSSE(w, r)
-		sse.PatchElementGostar(MainContent(armyContent(kingdom, data, "", "attack")))
+		h.renderArmyPage(w, r, kingdom, "army transfer")
 	}
 }
 
@@ -253,23 +224,38 @@ func (h *handler) handleDisband() http.HandlerFunc {
 		}
 
 		if err := h.disbandLegion(r.Context(), kingdom, id); err != nil {
-			if isDisbandUserError(err) {
-				datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
-				return
-			}
-			log.Printf("army disband: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+			respondArmyError(w, r, err, isDisbandUserError, "army disband")
 			return
 		}
 
-		data, err := h.loadArmyData(r, kingdom.ID)
-		if err != nil {
-			log.Printf("army disband: reload: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		sse := datastar.NewSSE(w, r)
-		sse.PatchElementGostar(MainContent(armyContent(kingdom, data, "", "attack")))
+		h.renderArmyPage(w, r, kingdom, "army disband")
+	}
+}
+
+// respondArmyError patches a user-facing alert for expected user errors, or
+// logs and patches a generic alert for unexpected ones. logPrefix identifies
+// the operation in logs.
+func respondArmyError(w http.ResponseWriter, r *http.Request, err error, isUserErr func(error) bool, logPrefix string) {
+	if isUserErr(err) {
+		datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(err)))
+		return
+	}
+	log.Printf("%s: %v", logPrefix, err)
+	datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+}
+
+// renderArmyPage reloads all army data and patches the main content area.
+// On reload failure it patches a generic alert instead. logPrefix identifies
+// the calling operation in logs.
+func (h *handler) renderArmyPage(w http.ResponseWriter, r *http.Request, kingdom *db.Kingdom, logPrefix string) {
+	data, err := h.loadArmyData(r, kingdom.ID)
+	if err != nil {
+		log.Printf("%s: reload: %v", logPrefix, err)
+		datastar.NewSSE(w, r).PatchElementGostar(armyAlert(AlertError(errors.New("internal error"))))
+		return
+	}
+	if err := datastar.NewSSE(w, r).PatchElementGostar(MainContent(armyContent(kingdom, data, "", "attack"))); err != nil {
+		log.Printf("%s: patch: %v", logPrefix, err)
 	}
 }
 
