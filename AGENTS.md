@@ -113,7 +113,15 @@ All code under `internal/` — nothing importable externally.
 
 Quick rules (full conventions in `docs/instructions/sql.md`):
 
-- `pgxpool.Pool` for pooling; context with timeouts for all DB ops.
+- `pgxpool.Pool` for pooling. DB time bounds are enforced server-side: the
+  pool config in `cmd/server/main.go` sets `statement_timeout` (5s),
+  `lock_timeout` (2s), and `idle_in_transaction_session_timeout` (10s) via
+  `RuntimeParams`. Handlers pass `r.Context()` straight through — do NOT add
+  `context.WithTimeout` around DB calls; it adds noise and is actively wrong
+  for SSE refresh handlers (long-lived streams with per-tick queries inside).
+  Known accepted gap: connection acquisition from an exhausted pool blocks
+  until the request context ends; the statement/lock caps keep connections
+  cycling fast enough that this is not a practical risk at current scale.
 - All SQL in `internal/database/queries/*.sql`, one file per feature. Generated
   code in `internal/database/db/` — never edit. Run `task gen` after query changes.
 - Bulk ops: `WHERE id = ANY(@ids::bigint[])` or `unnest` arrays — never per-row
