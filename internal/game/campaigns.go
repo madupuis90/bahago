@@ -30,7 +30,11 @@ func TravelTicks(x1, y1, x2, y2 int) int {
 }
 
 // AdvanceCampaigns decrements all campaigns and transitions those that hit zero:
-// en_route → active → returning → deleted
+// en_route → active → returning → deleted.
+// The caller must run it inside a transaction so decrement + transitions are
+// atomic — a crash between the bulk writes would otherwise duplicate restored
+// legion units and strand campaigns at ticks_remaining = 0 (the decrement CTE
+// only touches rows > 0, so stranded rows are never re-listed).
 func AdvanceCampaigns(ctx context.Context, q db.Querier) error {
 	atZero, err := q.DecrementAndListCampaignsAtZero(ctx)
 	if err != nil {

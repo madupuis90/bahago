@@ -257,10 +257,17 @@ func validateBuildingType(btype string) error {
 // ── Orchestration ─────────────────────────────────────────────────────────────
 
 // startConstruction reads current buildings, checks the prerequisite, then
-// opens a SERIALIZABLE transaction to enforce the one-active-construction cap
+// opens a SERIALIZABLE transaction to enforce the concurrent-construction cap
 // and deduct cost. PostgreSQL SSI detects concurrent double-starts; the
 // SerializationFailure that fires at commit-time is translated back to
 // ErrConstructionInProgress.
+//
+// There is deliberately NO unique constraint on kingdom_constructions.kingdom_id:
+// skills will raise the concurrent-construction cap beyond 1, so the cap must
+// stay application-enforced. Do not "fix" this with a schema constraint.
+// When the cap rises above 1, this existence check becomes a count check — and
+// the single-row assumptions in the tick (DeleteConstruction by kingdom_id) and
+// GetKingdomConstruction (:one) must be revisited at the same time.
 func (h *handler) startConstruction(ctx context.Context, kingdomID int, btype string) error {
 	def := game.BuildingDefs[btype]
 

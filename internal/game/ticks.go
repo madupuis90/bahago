@@ -85,29 +85,25 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 
 	// Complete constructions after resource allocation — buildings that finish
 	// this tick contribute their bonus starting next tick.
-	completed, err := q.DecrementAndListConstructionAtZero(ctx)
-	if err != nil {
-		return fmt.Errorf("tick: decrement constructions: %w", err)
-	}
-	for _, c := range completed {
-		if err := completeConstruction(ctx, pool, c); err != nil {
-			return fmt.Errorf("tick: complete construction for kingdom %d: %w", c.KingdomID, err)
-		}
+	// Decrement and completions run in ONE transaction: a crash mid-phase rolls
+	// everything back and the next tick retries. Without this, a row left at
+	// ticks_remaining = 0 is never re-listed (the decrement CTE only touches
+	// rows > 0) — the building would never be granted and the kingdom's
+	// construction slot would be blocked forever.
+	if err := withTx(ctx, pool, func(txq db.Querier) error { return completeConstructions(ctx, txq) }); err != nil {
+		return fmt.Errorf("tick: complete constructions: %w", err)
 	}
 
 	// Complete training batches — units arrive at the end of the tick they finish.
-	completedTraining, err := q.DecrementAndListTrainingAtZero(ctx)
-	if err != nil {
-		return fmt.Errorf("tick: decrement training: %w", err)
-	}
-	for _, t := range completedTraining {
-		if err := completeTraining(ctx, pool, t); err != nil {
-			return fmt.Errorf("tick: complete training for kingdom %d: %w", t.KingdomID, err)
-		}
+	// Same single-transaction rationale as constructions above.
+	if err := withTx(ctx, pool, func(txq db.Querier) error { return completeTrainings(ctx, txq) }); err != nil {
+		return fmt.Errorf("tick: complete trainings: %w", err)
 	}
 
-	// Advance campaign states (movement, status transitions).
-	if err := AdvanceCampaigns(ctx, q); err != nil {
+	// Advance campaign states (movement, status transitions). Single transaction
+	// for the same reason: a crash between BulkRestoreLegionUnits and
+	// BulkDeleteCampaigns would duplicate units and strand the campaign.
+	if err := withTx(ctx, pool, func(txq db.Querier) error { return AdvanceCampaigns(ctx, txq) }); err != nil {
 		return fmt.Errorf("tick: advance campaigns: %w", err)
 	}
 
@@ -143,51 +139,64 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 	return nil
 }
 
-// completeConstruction atomically increments the building count and removes the
-// construction row. Using a transaction prevents a double-increment if the process
-// dies between the two writes — the row would otherwise remain at ticks_remaining=0
-// and be picked up again on the next tick.
-func completeConstruction(ctx context.Context, pool *pgxpool.Pool, c db.DecrementAndListConstructionAtZeroRow) error {
+// withTx runs fn inside a single transaction, committing on success. A rollback
+// on error or crash leaves the phase untouched so the next tick can retry it.
+func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(db.Querier) error) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin: %w", err)
+		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-
-	txq := db.New(tx)
-	params := db.IncrementKingdomBuildingParams{
-		KingdomID:    c.KingdomID,
-		BuildingType: c.BuildingType,
-	}
-	if err := txq.IncrementKingdomBuilding(ctx, params); err != nil {
-		return fmt.Errorf("increment building %s: %w", c.BuildingType, err)
-	}
-	if err := txq.DeleteConstruction(ctx, c.KingdomID); err != nil {
-		return fmt.Errorf("delete construction: %w", err)
+	if err := fn(db.New(tx)); err != nil {
+		return err
 	}
 	return tx.Commit(ctx)
 }
 
-// completeTraining atomically adds the trained units and removes the training row.
-func completeTraining(ctx context.Context, pool *pgxpool.Pool, t db.DecrementAndListTrainingAtZeroRow) error {
-	tx, err := pool.Begin(ctx)
+// completeConstructions decrements all constructions and, for each that reaches
+// zero, increments the building count and removes the construction row. It must
+// be called inside a transaction (see withTx) so the phase is atomic.
+func completeConstructions(ctx context.Context, q db.Querier) error {
+	completed, err := q.DecrementAndListConstructionAtZero(ctx)
 	if err != nil {
-		return fmt.Errorf("begin: %w", err)
+		return fmt.Errorf("decrement constructions: %w", err)
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	for _, c := range completed {
+		params := db.IncrementKingdomBuildingParams{
+			KingdomID:    c.KingdomID,
+			BuildingType: c.BuildingType,
+		}
+		if err := q.IncrementKingdomBuilding(ctx, params); err != nil {
+			return fmt.Errorf("increment building %s for kingdom %d: %w", c.BuildingType, c.KingdomID, err)
+		}
+		if err := q.DeleteConstruction(ctx, c.KingdomID); err != nil {
+			return fmt.Errorf("delete construction for kingdom %d: %w", c.KingdomID, err)
+		}
+	}
+	return nil
+}
 
-	txq := db.New(tx)
-	if err := txq.UpsertKingdomUnits(ctx, db.UpsertKingdomUnitsParams{
-		KingdomID: t.KingdomID,
-		UnitType:  t.UnitType,
-		Count:     t.Count,
-	}); err != nil {
-		return fmt.Errorf("upsert units %s: %w", t.UnitType, err)
+// completeTrainings decrements all training batches and, for each that reaches
+// zero, adds the trained units and removes the training row. It must be called
+// inside a transaction (see withTx) so the phase is atomic.
+func completeTrainings(ctx context.Context, q db.Querier) error {
+	completed, err := q.DecrementAndListTrainingAtZero(ctx)
+	if err != nil {
+		return fmt.Errorf("decrement training: %w", err)
 	}
-	if err := txq.DeleteTraining(ctx, t.KingdomID); err != nil {
-		return fmt.Errorf("delete training: %w", err)
+	for _, t := range completed {
+		if err := q.UpsertKingdomUnits(ctx, db.UpsertKingdomUnitsParams{
+			KingdomID: t.KingdomID,
+			UnitType:  t.UnitType,
+			Count:     t.Count,
+		}); err != nil {
+			return fmt.Errorf("upsert units %s for kingdom %d: %w", t.UnitType, t.KingdomID, err)
+		}
+		if err := q.DeleteTraining(ctx, t.KingdomID); err != nil {
+			return fmt.Errorf("delete training for kingdom %d: %w", t.KingdomID, err)
+		}
 	}
-	return tx.Commit(ctx)
+	return nil
 }
 
 // cancelUnsustainedPrayers cancels prayers for any caster that cannot sustain their total

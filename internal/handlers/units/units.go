@@ -287,10 +287,17 @@ func validateTrainInput(input *trainInput) []error {
 // ── Orchestration ─────────────────────────────────────────────────────────────
 
 // trainUnits enforces the summons-unlock and prerequisite checks, then opens a
-// SERIALIZABLE transaction to enforce the one-active-training cap and deduct
+// SERIALIZABLE transaction to enforce the concurrent-training cap and deduct
 // cost. PostgreSQL SSI detects concurrent double-starts; the
 // SerializationFailure that fires at commit-time is translated back to
 // ErrTrainingInProgress.
+//
+// There is deliberately NO unique constraint on kingdom_training.kingdom_id:
+// skills will raise the concurrent-training cap beyond 1, so the cap must stay
+// application-enforced. Do not "fix" this with a schema constraint. When the
+// cap rises above 1, this existence check becomes a count check — and the
+// single-row assumptions in the tick (DeleteTraining by kingdom_id) and
+// GetKingdomTraining (:one) must be revisited at the same time.
 func (h *handler) trainUnits(ctx context.Context, kingdom *db.Kingdom, input *trainInput, buildings []db.KingdomBuilding) error {
 	unit := game.UnitDefs[input.UnitType]
 
