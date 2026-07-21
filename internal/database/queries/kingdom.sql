@@ -60,9 +60,11 @@ FROM (
 WHERE kingdoms.id = data.id;
 
 -- name: StealKingdomPopulation :exec
+-- The floor is a parameter so game.MinPopulation stays the single source of
+-- truth instead of being hardcoded here.
 UPDATE kingdoms
-SET population = GREATEST(100, population - $2)
-WHERE id = $1;
+SET population = GREATEST(@min_population, population - @amount)
+WHERE id = @id;
 
 -- name: BulkTickKingdoms :exec
 UPDATE kingdoms

@@ -155,6 +155,8 @@ type Querier interface {
 	SnapshotLegionUnitsIntoCampaign(ctx context.Context, arg SnapshotLegionUnitsIntoCampaignParams) error
 	StartConstruction(ctx context.Context, arg StartConstructionParams) error
 	StartTraining(ctx context.Context, arg StartTrainingParams) error
+	// The floor is a parameter so game.MinPopulation stays the single source of
+	// truth instead of being hardcoded here.
 	StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error
 	TransferLeadership(ctx context.Context, arg TransferLeadershipParams) error
 	UpdateGuildDescription(ctx context.Context, arg UpdateGuildDescriptionParams) error

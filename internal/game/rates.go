@@ -32,6 +32,12 @@ type ResourceRates struct {
 // loss = population / starvationDivisor. A value of 100 means at most 1% per tick,
 // halving a fully starving population in roughly 69 hours (69 ticks at 1h intervals).
 // Partial shortages cause proportionally less loss, scaling linearly with the deficit ratio.
+// MinPopulation is the floor below which a kingdom's population can never
+// fall — neither by starvation nor by combat plunder. The kingdoms table's
+// DEFAULT mirrors this as the starting population; that migration is deployed
+// and cannot be edited, so keep the two in sync manually.
+const MinPopulation = 100
+
 const (
 	starvationDivisor = 100
 	woodDivisor       = 10 * 100 // 10 workers → 1 wood/tick

@@ -451,17 +451,20 @@ func (q *Queries) ListOtherKingdoms(ctx context.Context, id int) ([]ListOtherKin
 
 const stealKingdomPopulation = `-- name: StealKingdomPopulation :exec
 UPDATE kingdoms
-SET population = GREATEST(100, population - $2)
-WHERE id = $1
+SET population = GREATEST($1, population - $2)
+WHERE id = $3
 `
 
 type StealKingdomPopulationParams struct {
-	ID         int
-	Population int
+	MinPopulation int
+	Amount        int
+	ID            int
 }
 
+// The floor is a parameter so game.MinPopulation stays the single source of
+// truth instead of being hardcoded here.
 func (q *Queries) StealKingdomPopulation(ctx context.Context, arg StealKingdomPopulationParams) error {
-	_, err := q.db.Exec(ctx, stealKingdomPopulation, arg.ID, arg.Population)
+	_, err := q.db.Exec(ctx, stealKingdomPopulation, arg.MinPopulation, arg.Amount, arg.ID)
 	return err
 }
 

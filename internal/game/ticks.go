@@ -76,7 +76,7 @@ func ProcessTick(ctx context.Context, pool *pgxpool.Pool, notify func(db.Kingdom
 		params.Mana[i] = max(0, k.Mana+r.ManaProduction-r.ManaUpkeep)
 		params.Devotion[i] = max(0, k.Devotion+r.DevotionProduction-r.DevotionUpkeep)
 		params.Knowledge[i] = max(0, k.Knowledge+r.KnowledgeProduction-r.KnowledgeUpkeep)
-		params.Population[i] = max(100, k.Population+r.PopulationProduction-r.PopulationUpkeep)
+		params.Population[i] = max(MinPopulation, k.Population+r.PopulationProduction-r.PopulationUpkeep)
 	}
 
 	if err := q.BulkTickKingdoms(ctx, params); err != nil {

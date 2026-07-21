@@ -259,7 +259,7 @@ func resolveCombatAtKingdom(
 	if atkPow > defPow {
 		ratio := float64(atkPow-defPow) / float64(atkPow+defPow)
 		calculated := max(1, int(float64(targetKingdom.Population)*ratio*0.1))
-		popStolen = min(calculated, max(0, targetKingdom.Population-100))
+		popStolen = min(calculated, max(0, targetKingdom.Population-MinPopulation))
 		for _, c := range attackers {
 			for _, u := range campaignUnitsByID[c.ID] {
 				share := int(float64(popStolen) * float64(totalUnitPower(u.UnitType, u.Count)) / float64(atkPow))
@@ -399,8 +399,9 @@ func resolveCombatAtKingdom(
 			return nil, fmt.Errorf("bulk gain population: %w", err)
 		}
 		if err := q.StealKingdomPopulation(ctx, db.StealKingdomPopulationParams{
-			ID:         targetKingdom.ID,
-			Population: popStolen,
+			ID:            targetKingdom.ID,
+			Amount:        popStolen,
+			MinPopulation: MinPopulation,
 		}); err != nil {
 			return nil, fmt.Errorf("steal population from kingdom %d: %w", targetKingdom.ID, err)
 		}
