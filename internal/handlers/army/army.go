@@ -1098,7 +1098,7 @@ func legionSlotCard(slotNum int) Node {
 	return Div(Classes{"open-slot": true, "legion-slot": true},
 		Span(Class("open-slot__crest"), Text(romanNumeral(slotNum))),
 		Span(Class("open-slot__copy"),
-			Span(Class("open-slot__h"), Text(fmt.Sprintf("Open banner · Legion %s", romanNumeral(slotNum)))),
+			Span(Class("open-slot__h"), Text(fmt.Sprintf("Vacant · Legion %s", romanNumeral(slotNum)))),
 			Span(Class("open-slot__sub"), Text("Transfer troops from the reserve to use this legion.")),
 		),
 	)
@@ -1107,6 +1107,7 @@ func legionSlotCard(slotNum int) Node {
 // summaryStrip renders the thin command-summary stat bar above the body.
 func summaryStrip(data armyData) Node {
 	raised := len(data.legions)
+	vacantLegions := game.MaxLegionsPerKingdom - raised
 	freeLegions := raised - len(data.campaigns)
 
 	var totalUnits, totalPower int
@@ -1132,7 +1133,7 @@ func summaryStrip(data armyData) Node {
 		powerTone = StatMuted
 	}
 	return SummaryStrip(
-		SummaryStat{Label: "Manned legions", Sub: fmt.Sprintf("/ %d", game.MaxLegionsPerKingdom), Num: raised},
+		SummaryStat{Label: "Vacant legions", Sub: fmt.Sprintf("/ %d", game.MaxLegionsPerKingdom), Num: vacantLegions},
 		SummaryStat{Label: "Free legions", Num: freeLegions},
 		SummaryStat{Label: "Total units", Num: totalUnits},
 		SummaryStat{Label: "Total power", Num: totalPower, Tone: powerTone},
@@ -1169,7 +1170,7 @@ func armyContent(kingdom *db.Kingdom, data armyData, targetName, action string) 
 	}
 
 	// Group cards by state so the time-sensitive afield legions lead, then
-	// at-home legions, then open banner slots. Within each group legions stay
+	// at-home legions, then vacant legion slots. Within each group legions stay
 	// in number order (ListLegionsForKingdom already sorts by number).
 	var afieldCards, homeCards, slotCards []Node
 	for _, l := range data.legions {

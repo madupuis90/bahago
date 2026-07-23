@@ -62,7 +62,7 @@
 .xfer-go { height: 46px; }
 @media (max-width: 720px) { .xfer-go { grid-column: 1 / -1; } }
 
-/* ── Legion field — recessed parchment plinth holding the raised banner cards */
+/* ── Legion field — recessed parchment plinth holding the legion cards */
 .legion-field {
   background: var(--card-2); border: 1px solid var(--brass); border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-recessed), var(--shadow-ink-xs);
@@ -287,7 +287,7 @@
   border-top: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent);
 }
 
-/* Open banner slot — visual recipe lives in `20-shared.css` (.open-slot).
+/* Vacant legion slot — visual recipe lives in `20-shared.css` (.open-slot).
    `.legion-slot` is a thin local hook: it carries the shared look and drops
    the default bottom margin (slots sit inside the flex `.legion-stack`, which
    gaps its children — a trailing margin would break rhythm). */
