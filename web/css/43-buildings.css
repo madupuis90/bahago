@@ -14,7 +14,7 @@
   padding: var(--space-5);
   background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink);
   /* faint engraved grid wash on the parchment */
   background-image: radial-gradient(color-mix(in srgb, var(--brass-dark) 12%, transparent) 1.4px, transparent 1.5px);
   background-size: 22px 22px;
@@ -45,16 +45,16 @@
   padding: var(--space-3) var(--space-2) var(--space-3); text-align: center; user-select: none;
   background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   transition: transform .08s ease, box-shadow .08s ease, background .12s;
 }
-.node:hover       { transform: translate(-1px,-1px); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.45), var(--shadow-ink-sm); }
+.node:hover       { transform: translate(-1px,-1px); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .45), var(--shadow-ink-sm); }
 .node.is-selected {
   background: linear-gradient(180deg,
       color-mix(in srgb, var(--brass-light) 30%, var(--card)),
       color-mix(in srgb, var(--brass) 16%, var(--card-2)));
   border-color: var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.40), var(--glow-gold);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .40), var(--glow-gold);
   transform: translate(-1px,-1px); z-index: 3;
 }
 .node.is-locked   { opacity: .5; }
@@ -110,7 +110,7 @@
 .detail-title {
   font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1;
   color: var(--brass-dark);
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 .detail-tally { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); letter-spacing: .02em; opacity: .65; margin-top: 3px; }
 .detail .pips { margin-bottom: var(--space-4); }

@@ -30,7 +30,7 @@
   box-shadow: none;
   padding: 0;
   transform: none;
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 
 .page-header:has(.page-header-actions) {
@@ -64,7 +64,7 @@
   box-shadow: none;
   padding: 0;
   transform: none;
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 
 .page-header h1 .italic {

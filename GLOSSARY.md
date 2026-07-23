@@ -28,10 +28,16 @@ _Avoid_: Structure, Improvement — use "Building" for the completed structure, 
 **Construction**: An in-progress building project tracked by `ticks_remaining`. Completes when the countdown reaches zero, incrementing the Building count.
 _Avoid_: Building (see above).
 
-**Unit**: A standard military unit trained with Wood or Stone, with food upkeep. Examples: Recruit, Archer, Raider, Knight, Catapult.
-_Avoid_: Soldier, Troop, Regular.
+**Unit**: Any trainable military entity belonging to a Kingdom — both Soldiers and Summons are Units. "Unit" is the umbrella term; when distinguishing by training currency, use the **Unit Category** (see below).
+_Avoid_: Troop, Regular.
 
-**Summon**: A magical military unit trained with Mana, with mana upkeep. Requires mana production to unlock. Examples: Shade, Dread Knight.
+**Unit Category**: The class of a Unit, governing which card it appears in on the Units page, its unlock gate, and its upkeep currency. Current categories: **Soldier** and **Summon** (extensible — new categories will be added over time).
+_Avoid_: Unit Type for the class (use "Unit Category"); reserve "unit type" for the specific kind, e.g. Recruit, Shade.
+
+**Soldier**: A standard military Unit trained with Wood or Stone, with food upkeep. The Soldier category's Units-page card is titled "Soldiers". Examples: Recruit, Archer, Raider, Knight, Catapult.
+_Avoid_: Troop, Regular.
+
+**Summon**: A magical military Unit trained with Mana, with mana upkeep. Requires mana production to unlock. The Summon category's Units-page card is titled "Summons". Examples: Shade, Dread Knight.
 _Avoid_: Magical Unit, Mana Unit.
 
 **Training**: An in-progress batch of Units or Summons. A single Training order produces a fixed count of one type; it completes in a fixed number of ticks regardless of batch size.

@@ -333,10 +333,10 @@ func buildingsContent(defs []game.BuildingDef, counts map[string]int, constructi
 
 func buildingsBanner(construction *db.KingdomConstruction) Node {
 	if construction == nil {
-		return Div(Classes{"progress-banner": true, "is-idle": true},
-			Div(Class("progress-banner-body"),
-				P(Class("progress-banner-idle-title"), Text("Active Construction")),
-				P(Class("progress-banner-idle-text"), Text("No construction underway — select a building to begin.")),
+		return Div(Class("open-slot"),
+			Span(Class("open-slot__copy"),
+				Span(Class("open-slot__h"), Text("Active Construction")),
+				Span(Class("open-slot__sub"), Text("No construction underway — select a building to begin.")),
 			),
 		)
 	}
@@ -349,7 +349,7 @@ func buildingsBanner(construction *db.KingdomConstruction) Node {
 	if construction.TicksTotal > 0 {
 		fillPct = float64(construction.TicksTotal-construction.TicksRemaining) / float64(construction.TicksTotal) * 100
 	}
-	return Div(Class("progress-banner"),
+	return Div(Class("card progress-banner"),
 		Div(Class("progress-banner-gem"), buildingGlyph(def, 34)),
 		Div(Class("progress-banner-body"),
 			Div(Class("meter"),

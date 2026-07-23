@@ -32,7 +32,7 @@ func identityPreviewPage() Node {
 				Link(Rel("stylesheet"), Href("/static/styles.css")),
 				El("style", Raw(`
 					body { padding: 2rem; background: #fdf8ef; color: #2c1810; font-family: var(--font-body), Nunito, sans-serif; }
-					h1 { margin: 0 0 .25rem; font-size: 1.5rem; font-family: var(--font-display), Lilita One, sans-serif; }
+					h1 { margin: 0 0 .25rem; font-size: 1.5rem; font-family: var(--font-display); }
 					.dev-note { color: #8a7060; font-size: .82rem; margin-bottom: 2rem; }
 					.status { display: inline-block; padding: 2px 8px; border-radius: 4px; background: var(--green); color: #fff; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-left: .5rem; vertical-align: middle; }
 					.section { margin-bottom: 2rem; }

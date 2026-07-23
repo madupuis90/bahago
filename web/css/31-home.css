@@ -1,22 +1,13 @@
-/* ── Hero — framed parchment banner with a muted illustrated scene ──────── */
+/* ── Hero — framed parchment banner (frame via the .card co-class) with a muted illustrated scene ──────── */
 .home-hero {
-  position: relative;
   overflow: hidden;
   min-height: 388px;
   margin-bottom: var(--space-6);
   padding: var(--space-7) var(--space-7) var(--space-9);
-  background: var(--card-fill-lit);
-  color: var(--ink);
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-xl);
-  box-shadow:
-    inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
-    var(--shadow-ink-lg);
 }
 
 /* keep hero text above the scene */
-.home-kicker,
+.home-hero .eyebrow,
 .home-title,
 .home-sub,
 .home-cta { position: relative; z-index: 2; }
@@ -70,33 +61,8 @@
 
 /* ── Hero copy ────────────────────────────────────────────────────────── */
 
-.home-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.4), var(--shadow-ink-xs);
-  margin-bottom: var(--space-4);
-  white-space: nowrap;
-}
-.home-kicker::before {
-  content: '';
-  width: 3px;
-  height: 13px;
-  border-radius: 2px;
-  background: var(--brass);
-  box-shadow: 0 0 4px var(--brass);
-  flex: none;
-}
+/* hero kicker = shared .eyebrow (20-shared.css) */
+.home-hero .eyebrow { margin-bottom: var(--space-4); white-space: nowrap; font-size: var(--fs-sm); }
 
 /* title — straight engraved Cinzel caps in dark warm gold on parchment. */
 .home-title {
@@ -294,7 +260,7 @@
   background: var(--card);
   border: 1px solid var(--brass);
   border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
 }
 
 /* date — small slate plaque, engraved gold caps. */

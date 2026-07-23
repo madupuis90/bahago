@@ -87,7 +87,7 @@
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 4px rgba(0,0,0,.5),
-    0 2px 4px rgba(40,28,12,.30);
+    0 2px 4px rgb(var(--ink-shadow-rgb) / .30);
 }
 .crest .icon { color: var(--crest-glyph); }
 .crest--ghost { --crest-fill: transparent; box-shadow: 0 0 0 1px var(--brass-dark); }
@@ -108,7 +108,7 @@
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 4px rgba(0,0,0,.35),
-    0 1px 3px rgba(40,28,12,.30);
+    0 1px 3px rgb(var(--ink-shadow-rgb) / .30);
 }
 .gem .icon,
 .gem .gly,
@@ -180,34 +180,28 @@
   color: var(--c-sub);
 }
 
-/* resource PILL — "metallic slate selector": dark charcoal cell, gold trim */
-.pill {
-  display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  border: 1px solid var(--brass-dark);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-recessed);
-}
-.pill .gem { width: 30px; height: 30px; }
-.pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
-.pill-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
-.pill-v { margin-top: 2px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); color: var(--brass-light); font-variant-numeric: tabular-nums; }
-.pill-v.is-zero { color: var(--red); text-shadow: 0 0 6px rgba(141,47,36,.6); }
-.pill--mini { padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1); }
-.pill--mini .pill-v { margin-top: 0; font-size: var(--fs-sm); }
-
-/* tick chip — metallic slate selector with a gold sandglass */
-.tick {
+/* chrome cell — recessed slate selector with gold trim (resource pills, tick chip) */
+.pill, .tick {
   display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3) var(--space-1);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-recessed);
-  color: var(--primary-ink);
 }
+.pill { padding-left: var(--space-1); }            /* room for the gem medallion */
+.pill .gem { width: 30px; height: 30px; }
+.pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
+.pill-l, .tick-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
+.pill-v, .tick-v { font-family: var(--font-display); font-weight: 600; color: var(--brass-light); font-variant-numeric: tabular-nums; }
+.pill-v { margin-top: 2px; font-size: var(--fs-sm); }
+.pill-v.is-zero { color: var(--red); text-shadow: 0 0 6px rgba(141,47,36,.6); }
+.pill--mini { padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1); }
+.pill--mini .pill-v { margin-top: 0; font-size: var(--fs-sm); }
+
+/* tick chip — the .pill/.tick chrome cell carrying a gold sandglass */
+.tick { color: var(--primary-ink); }
 .tick .gly, .tick svg { color: var(--brass); }
-.tick-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .16em; text-transform: uppercase; color: var(--c-sub); }
-.tick-v { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); color: var(--brass-light); font-variant-numeric: tabular-nums; }
+.tick-v { font-size: var(--fs-base); }
 
 /* leave button — stone slab, gold border */
 .leave {
@@ -238,7 +232,7 @@
 .nav-link-l { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .14em; text-transform: uppercase; }
 
 .barB2-nav .nav-link { color: var(--c-sub); }
-.barB2-nav .nav-link:hover { color: var(--brass-light); background: rgba(230,201,130,.06); }
+.barB2-nav .nav-link:hover { color: var(--brass-light); background: rgb(var(--brass-light-rgb) / .06); }
 .barB2-nav .nav-link.is-on {
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border-color: var(--brass);
@@ -263,3 +257,20 @@
 }
 
 .frame-body--desk { align-items: stretch; }
+
+/* ── Small screens — wrap the resource row, scroll the nav, tighten gutters ── */
+@media (max-width: 900px) {
+  .barB2-info { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); }
+  .barB2-res { grid-column: 1 / -1; justify-content: flex-start; }
+  .barB2-nav, .barB2-nav--ico { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
+  .barB2-nav::-webkit-scrollbar { display: none; }
+  .id { min-width: 0; }
+  .id > div { min-width: 0; }
+  .id-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kingdom-page main { padding: var(--space-4); }
+}
+
+@media (max-width: 600px) {
+  .kingdom-page main { padding: var(--space-3) var(--space-2); }
+  .id-name { font-size: var(--fs-md); }
+}

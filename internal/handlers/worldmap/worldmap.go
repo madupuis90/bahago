@@ -150,7 +150,7 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 			"selected_kingdom_id": initialSelectedID,
 		}),
 		Div(Class("world-main"),
-			Div(Class("world-board"),
+			Div(Class("card world-board"),
 				Div(Class("board-head"),
 					H1(Class("board-name"), Text("World Map")),
 					P(Class("board-region"), Text(fmt.Sprintf("Page %d · %d", pageX, pageY))),
@@ -159,7 +159,7 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 					flatBoard(kingdoms, myKingdomID, tileX0, tileY0, initialSelectedID, pageX, pageY),
 				),
 			),
-			Div(Class("world-cmd"),
+			Div(Class("card world-cmd"),
 				Div(Class("cmd-nav"),
 					Div(Class("cmd-nav-bar"),
 						Span(Class("cmd-section-title"), Text("Region")),
@@ -238,10 +238,15 @@ func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx,
 	tile := biomeColor(tx, ty)
 	selected := k != nil && k.ID == initialSelectedID
 
-	var dataAttr, onClickAttr Node
+	var cellAttrs []Node
 	if k != nil {
-		dataAttr = Data("kingdom-id", strconv.Itoa(k.ID))
-		onClickAttr = ds.On("click", "$selected_kingdom_id = +el.dataset.kingdomId")
+		cellAttrs = []Node{
+			Data("kingdom-id", strconv.Itoa(k.ID)),
+			ds.On("click", "$selected_kingdom_id = +el.dataset.kingdomId"),
+			ds.On("keydown", "evt.key === 'Enter' && ($selected_kingdom_id = +el.dataset.kingdomId)"),
+			TabIndex("0"),
+			Role("button"),
+		}
 	}
 
 	return Div(
@@ -253,8 +258,7 @@ func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx,
 			"map-cell--selected":  selected,
 		},
 		Style(fmt.Sprintf("--tile:%s", tile)),
-		dataAttr,
-		onClickAttr,
+		Group(cellAttrs),
 		Div(Class("map-cell-content"),
 			Iff(k != nil, func() Node { return crestMarker(k, isOwn) }),
 		),

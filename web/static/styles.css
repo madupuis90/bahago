@@ -34,27 +34,32 @@
   --ink: #2a1f12;
   --ink-soft: #5a4d36;
 
+  /* RGB triplets for alpha-mixing — rgb(var(--ink-shadow-rgb) / .3) etc. */
+  --ink-shadow-rgb:   40 28 12;    /* warm ink behind every soft shadow   */
+  --brass-dark-rgb:   124 90 38;   /* = --brass-dark                      */
+  --brass-light-rgb:  230 201 130; /* = --brass-light                     */
+
   /* shadows — soft, layered (retired: comic hard-offset 4px 4px 0 var(--ink)) */
-  --shadow-ink:    0 3px 8px rgba(40,28,12,.22), 0 1px 2px rgba(40,28,12,.16);
-  --shadow-ink-sm: 0 2px 5px rgba(40,28,12,.20);
-  --shadow-ink-xs: 0 1px 2px rgba(40,28,12,.18);
-  --shadow-ink-lg: 0 6px 16px rgba(40,28,12,.28), 0 2px 4px rgba(40,28,12,.18);
+  --shadow-ink:    0 3px 8px rgb(var(--ink-shadow-rgb) / .22), 0 1px 2px rgb(var(--ink-shadow-rgb) / .16);
+  --shadow-ink-sm: 0 2px 5px rgb(var(--ink-shadow-rgb) / .20);
+  --shadow-ink-xs: 0 1px 2px rgb(var(--ink-shadow-rgb) / .18);
+  --shadow-ink-lg: 0 6px 16px rgb(var(--ink-shadow-rgb) / .28), 0 2px 4px rgb(var(--ink-shadow-rgb) / .18);
 
   /* material bevels — the gold frame vocabulary */
   --shadow-raised:    /* raised gold-edged frame (buttons, raised cards) */
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 0 var(--brass-dark),
-    0 2px 6px rgba(40,28,12,.30);
+    0 2px 6px rgb(var(--ink-shadow-rgb) / .30);
   --shadow-recessed:  /* inset well (recessed selectors, slate cells) */
     inset 0 2px 4px rgba(0,0,0,.45),
     inset 0 0 0 1px rgba(0,0,0,.30);
   --shadow-frame:     /* dark slate frame with gold trim (chrome shells) */
-    inset 0 1px 0 rgba(230,201,130,.18),
+    inset 0 1px 0 rgb(var(--brass-light-rgb) / .18),
     inset 0 -3px 6px rgba(0,0,0,.55),
     inset 0 0 0 1px var(--brass-dark),
-    0 3px 10px rgba(40,28,12,.30);
+    0 3px 10px rgb(var(--ink-shadow-rgb) / .30);
   --glow-gold:        /* active / alert glow */
-    0 0 10px rgba(230, 201, 130, .55), 0 0 2px rgba(230,201,130,.85);
+    0 0 10px rgb(var(--brass-light-rgb) / .55), 0 0 2px rgb(var(--brass-light-rgb) / .85);
 
   /* ── Type scale (rem) — Cinzel/Nunito driven, snapped to clean fractions ─ */
   --fs-2xs:  .625rem;   /* 10px — tiny meta / superscripts              */
@@ -144,7 +149,7 @@
   --panel-border: 1px solid var(--brass);
   --panel-shadow:
     inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.5),
+    inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .5),
     var(--shadow-ink);
 
   /* ── Buttons — modular "heavy stone slab" with a thick gold border ─── */
@@ -153,7 +158,7 @@
   --shadow-btn-hover:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 0 var(--brass-dark),
-    0 3px 8px rgba(40,28,12,.40);
+    0 3px 8px rgb(var(--ink-shadow-rgb) / .40);
   --shadow-btn-active:
     inset 0 2px 4px rgba(0,0,0,.55),
     inset 0 0 0 1px var(--brass-dark);
@@ -163,7 +168,7 @@
 
   /* dark-slate frame background for the chrome shells */
   --chrome-bg:
-    linear-gradient(180deg, rgba(230,201,130,.06) 0%, transparent 20%, transparent 80%, rgba(0,0,0,.30) 100%),
+    linear-gradient(180deg, rgb(var(--brass-light-rgb) / .06) 0%, transparent 20%, transparent 80%, rgba(0,0,0,.30) 100%),
     linear-gradient(180deg, var(--slate) 0%, var(--slate-2) 100%);
   --card-fill-lit:
     linear-gradient(180deg,
@@ -203,7 +208,9 @@ a {
   text-decoration: none;
   cursor: pointer;
 
-  &:hover {
+  /* zero-specificity hover — any class on the anchor (.btn, .leave, …) beats
+     this, so button-styled links never turn link-blue; bare <a> links keep it */
+  :where(&:hover) {
     text-decoration: underline;
     text-underline-offset: 3px;
     text-decoration-thickness: 2.5px;
@@ -242,11 +249,19 @@ input[type="range"] {
   accent-color: var(--blue);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 h1 {
-  font-family: var(--font-display);       /* Lilita One */
+  font-family: var(--font-display);       /* Cinzel */
   font-size: 1.7rem;
   line-height: 1;
-  font-weight: 400;                       /* Lilita is single-weight */
+  font-weight: 700;                       /* Cinzel 400 is too thin for headings */
 }
 
 code {
@@ -254,7 +269,7 @@ code {
   font-weight: 800;
   font-size: .88em;
   background: var(--card-2);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--brass-dark);
   border-radius: var(--radius-md);
   padding: 0 var(--space-2);
 }
@@ -425,6 +440,7 @@ code {
 
   @media (max-width: 820px) {
     flex-direction: column;
+    padding: var(--space-4) var(--space-4) var(--space-6);
 
     .side-nav { width: 100%; }
   }
@@ -545,13 +561,18 @@ code {
     cursor: pointer;
     transition: background .1s, padding-left .1s, color .1s;
 
-    &:hover { background: rgba(230,201,130,.10); padding-left: var(--space-3); text-decoration: none; color: var(--brass-light); }
+    &:hover { background: rgb(var(--brass-light-rgb) / .10); padding-left: var(--space-3); text-decoration: none; color: var(--brass-light); }
   }
 
   a + a { border-top: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
 }
 
 /* ── Footer — small Cinzel line ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .home-chrome { flex-wrap: wrap; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
+  .home-chrome-name { font-size: var(--fs-lg); }
+}
+
 .home-foot {
   text-align: center;
   padding: var(--space-5);
@@ -593,7 +614,7 @@ code {
   border-radius: var(--radius-lg);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
+    inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35),
     var(--shadow-ink);
   color: var(--ink);
 
@@ -606,11 +627,9 @@ code {
 /* Padding hull — card content sits inside this, clear of the gold edge. */
 .card-inner { padding: var(--space-5) var(--space-6) var(--space-5); }
 
-.card-tab {
-  --card-accent: var(--blue);
-  position: absolute;
-  top: -14px;
-  left: 18px;
+/* slate plaque — small gold-edged caps label with an accent stripe.
+   .eyebrow sits in flow above a title; .card-tab is pinned to a card's top edge. */
+.eyebrow, .card-tab {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -618,7 +637,7 @@ code {
   font-weight: 600;
   font-size: var(--fs-xs);
   line-height: 1;
-  letter-spacing: .12em;
+  letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
@@ -630,15 +649,27 @@ code {
     inset 0 -2px 3px rgba(0,0,0,.4),
     var(--shadow-ink-xs);
 }
-/* the heraldic accent stripe on the left of the plaque */
-.card-tab::before {
+.eyebrow::before, .card-tab::before {
   content: '';
   width: 3px;
-  height: 14px;
+  height: 12px;
   border-radius: 2px;
+  background: var(--brass);
+  box-shadow: 0 0 4px var(--brass);
+  flex: none;
+}
+
+.card-tab {
+  --card-accent: var(--blue);
+  position: absolute;
+  top: -14px;
+  left: 18px;
+}
+/* the heraldic accent stripe on the left of the plaque */
+.card-tab::before {
+  height: 14px;
   background: var(--card-accent);
   box-shadow: 0 0 4px var(--card-accent);
-  flex: none;
 }
 .card-tab--red    { --card-accent: var(--red); }
 .card-tab--green  { --card-accent: var(--green); }
@@ -705,18 +736,8 @@ code {
 
 .eyebrow {
   position: relative;
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
-  letter-spacing: .08em; text-transform: uppercase; color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  border: 1px solid var(--brass); border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3) 3px var(--space-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.4), var(--shadow-ink-xs);
+  padding-bottom: 3px;
   margin: 0 0 var(--space-3);
-}
-.eyebrow::before {
-  content: ''; width: 3px; height: 12px; border-radius: 2px;
-  background: var(--brass); box-shadow: 0 0 4px var(--brass); flex: none;
 }
 * + .eyebrow { margin-top: var(--space-6); }
 
@@ -753,8 +774,8 @@ code {
 
   &.btn--sm {
     font-size: var(--fs-sm); padding: var(--space-2) var(--space-3) var(--space-2); border-radius: var(--radius-lg);
-    box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 3px rgba(40,28,12,.30);
-    &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 6px rgba(40,28,12,.40); }
+    box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 3px rgb(var(--ink-shadow-rgb) / .30);
+    &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 6px rgb(var(--ink-shadow-rgb) / .40); }
     &:active { box-shadow: var(--shadow-btn-active); }
   }
 
@@ -780,11 +801,6 @@ code {
 }
 
 .slider-controls { display: flex; align-items: center; gap: var(--space-2); }
-
-.slider-wrap {
-  position: relative; flex: 1; min-width: 0; height: 26px;
-  display: flex; align-items: center;
-}
 
 .slider-wrap {
   position: relative; flex: 1; min-width: 0; height: 30px;
@@ -886,7 +902,7 @@ code {
   font-family: var(--font-body); font-weight: 700; font-size: 0.92rem;
   position: relative;
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink-xs);
   padding: 0.7rem 0.9rem;
 }
 .alert--success {
@@ -1021,27 +1037,47 @@ input.field:focus, select.field:focus {
 }
 .meter-notch:last-child { border-right: none; box-shadow: none; }
 
+/* framed parchment via the .card co-class */
 .progress-banner {
   display: flex; align-items: center; gap: var(--space-5);
   padding: var(--space-4) var(--space-5); margin-bottom: var(--space-4);
-  background: var(--card-fill-lit);
-  border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow:
-    inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
-    var(--shadow-ink);
-}
-/* idle = faint diagonal "no work" hatch, desaturated to parchment tone */
-.progress-banner.is-idle {
-  background:
-    repeating-linear-gradient(45deg, var(--card) 0 12px, var(--card-2) 12px 24px),
-    var(--card-fill-lit);
 }
 .progress-banner-gem { flex: none; }
 .progress-banner-body { flex: 1; min-width: 0; }
-.progress-banner-idle-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); letter-spacing: .04em; line-height: 1; margin-bottom: var(--space-1); color: var(--brass-dark); }
-.progress-banner-idle-text  { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-sm); color: var(--ink-soft); opacity: .9; }
 .progress-banner .meter { flex: 1; min-width: 0; }
+
+/* Open slot — a dashed, inviting parchment surface signalling "this position
+   is available / no activity here yet". Shared by the army's open legion banner
+   (`.legion-slot` keeps a thin local hook) and the buildings/units idle banners.
+   The active (filled) state remains a `.card.progress-banner` with a gem + meter. */
+.open-slot {
+  display: flex; align-items: center; gap: var(--space-4); width: 100%; text-align: left;
+  margin-bottom: var(--space-4);
+  border: 1px dashed color-mix(in srgb, var(--brass) 70%, transparent); border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 10px,
+      color-mix(in srgb, var(--brass-dark) 6%, transparent) 10px 20px),
+    var(--card-fill-lit);
+}
+.open-slot__crest {
+  flex: none; width: 50px; height: 58px; display: grid; place-items: center;
+  color: var(--brass-dark);
+  font-family: var(--font-display); font-size: var(--fs-lg);
+  background: var(--card-2);
+  border: 1px dashed color-mix(in srgb, var(--brass) 60%, transparent);
+  border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
+}
+.open-slot__crest .icon { color: var(--brass-dark); }
+.open-slot__copy { flex: 1; min-width: 0; }
+.open-slot__h {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: 1.1;
+  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); display: block;
+}
+.open-slot__sub {
+  font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); opacity: .7;
+  margin-top: 3px; text-wrap: pretty;
+}
 
 .slot-gauge { display: inline-flex; align-items: center; gap: var(--space-2); }
 .slot-gauge-dots { display: flex; gap: var(--space-1); }
@@ -1062,8 +1098,9 @@ input.field:focus, select.field:focus {
 
 .train-ctl {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: var(--space-2);
 }
 .stepper {
@@ -1085,14 +1122,14 @@ input.field:focus, select.field:focus {
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   color: var(--brass-light);
   border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 2px rgba(40,28,12,.30);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 2px rgb(var(--ink-shadow-rgb) / .30);
   transition: background .1s, box-shadow .1s, filter .1s;
   -webkit-user-select: none;
   user-select: none;
 }
 .step-btn:hover {
   filter: brightness(1.08);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 5px rgba(40,28,12,.40);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 5px rgb(var(--ink-shadow-rgb) / .40);
 }
 .step-btn:active {
   box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark);
@@ -1191,7 +1228,7 @@ input.field:focus, select.field:focus {
   border-radius: var(--radius-pill);
   background: var(--card-2);
   border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.25), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .25), var(--shadow-ink-xs);
   font-family: var(--font-display);
   font-size: var(--fs-base);
   color: var(--ink);
@@ -1222,6 +1259,45 @@ input.field:focus, select.field:focus {
   background: color-mix(in srgb, var(--red) 22%, var(--card));
   border-color: var(--red);
 }
+/* drain — upkeep readout (units page); pair the number with .text-negative */
+.cost-pill--drain { background: color-mix(in srgb, var(--red) 13%, var(--card)); }
+
+/* ── Summary strip — shared top-of-page stat bar (Units, Campaign) ──────── */
+/* Framed parchment surface; each stat stacks label over number, divided by
+   a hairline. .is-neg tints the number red (drains/costs); .is-muted dims
+   it for de-emphasised zero values. See internal/ui/summary.go. */
+.summary-strip {
+  display: flex; margin: 0 0 var(--space-6);
+  background: var(--card); border: 1px solid var(--brass); border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
+  overflow: hidden;
+
+  @media (max-width: 760px) { flex-wrap: wrap; }
+}
+.summary-stat {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-4);
+
+  & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
+  @media (max-width: 760px) { flex: 1 0 45%; }
+  @media (max-width: 760px) & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
+}
+.summary-label {
+  font-family: var(--font-display); font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; font-size: var(--fs-xs); color: var(--brass-dark); opacity: .9;
+}
+.summary-val { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.summary-num {
+  font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1;
+  font-variant-numeric: tabular-nums;
+
+  &.is-neg   { color: var(--red); }
+  &.is-muted { color: color-mix(in srgb, var(--ink) 40%, transparent); }
+}
+.summary-sub {
+  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap;
+}
 .auth-stage {
   flex: 1;
   display: flex;
@@ -1242,7 +1318,7 @@ input.field:focus, select.field:focus {
     border-radius: var(--radius-lg);
     box-shadow:
       inset 0 1px 0 var(--brass-light),
-      inset 0 0 0 1px rgba(124,90,38,.35),
+      inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35),
       var(--shadow-ink-lg);
   }
   .card.is-lit { background: var(--card-fill-lit); }
@@ -1405,7 +1481,7 @@ input.field:focus, select.field:focus {
   transition: box-shadow .1s ease, background .15s ease, filter .12s ease;
   text-decoration: none;
 
-  &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 3px 8px rgba(40,28,12,.40); filter: brightness(1.06); }
+  &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 3px 8px rgb(var(--ink-shadow-rgb) / .40); filter: brightness(1.06); }
   &:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); filter: brightness(.95); }
   &:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 }
@@ -1469,7 +1545,7 @@ input.field:focus, select.field:focus {
   border-radius: var(--radius-lg);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
+    inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35),
     var(--shadow-ink-xs);
   font-family: var(--font-body);
   font-weight: 700;
@@ -1491,25 +1567,16 @@ input.field:focus, select.field:focus {
     color: color-mix(in srgb, var(--green) 75%, var(--ink) 25%);
   }
 }
-/* ── Hero — framed parchment banner with a muted illustrated scene ──────── */
+/* ── Hero — framed parchment banner (frame via the .card co-class) with a muted illustrated scene ──────── */
 .home-hero {
-  position: relative;
   overflow: hidden;
   min-height: 388px;
   margin-bottom: var(--space-6);
   padding: var(--space-7) var(--space-7) var(--space-9);
-  background: var(--card-fill-lit);
-  color: var(--ink);
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-xl);
-  box-shadow:
-    inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
-    var(--shadow-ink-lg);
 }
 
 /* keep hero text above the scene */
-.home-kicker,
+.home-hero .eyebrow,
 .home-title,
 .home-sub,
 .home-cta { position: relative; z-index: 2; }
@@ -1563,33 +1630,8 @@ input.field:focus, select.field:focus {
 
 /* ── Hero copy ────────────────────────────────────────────────────────── */
 
-.home-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.4), var(--shadow-ink-xs);
-  margin-bottom: var(--space-4);
-  white-space: nowrap;
-}
-.home-kicker::before {
-  content: '';
-  width: 3px;
-  height: 13px;
-  border-radius: 2px;
-  background: var(--brass);
-  box-shadow: 0 0 4px var(--brass);
-  flex: none;
-}
+/* hero kicker = shared .eyebrow (20-shared.css) */
+.home-hero .eyebrow { margin-bottom: var(--space-4); white-space: nowrap; font-size: var(--fs-sm); }
 
 /* title — straight engraved Cinzel caps in dark warm gold on parchment. */
 .home-title {
@@ -1787,7 +1829,7 @@ input.field:focus, select.field:focus {
   background: var(--card);
   border: 1px solid var(--brass);
   border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
 }
 
 /* date — small slate plaque, engraved gold caps. */
@@ -1914,7 +1956,7 @@ input.field:focus, select.field:focus {
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 4px rgba(0,0,0,.5),
-    0 2px 4px rgba(40,28,12,.30);
+    0 2px 4px rgb(var(--ink-shadow-rgb) / .30);
 }
 .crest .icon { color: var(--crest-glyph); }
 .crest--ghost { --crest-fill: transparent; box-shadow: 0 0 0 1px var(--brass-dark); }
@@ -1935,7 +1977,7 @@ input.field:focus, select.field:focus {
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 4px rgba(0,0,0,.35),
-    0 1px 3px rgba(40,28,12,.30);
+    0 1px 3px rgb(var(--ink-shadow-rgb) / .30);
 }
 .gem .icon,
 .gem .gly,
@@ -2007,34 +2049,28 @@ input.field:focus, select.field:focus {
   color: var(--c-sub);
 }
 
-/* resource PILL — "metallic slate selector": dark charcoal cell, gold trim */
-.pill {
-  display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate));
-  border: 1px solid var(--brass-dark);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-recessed);
-}
-.pill .gem { width: 30px; height: 30px; }
-.pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
-.pill-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
-.pill-v { margin-top: 2px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); color: var(--brass-light); font-variant-numeric: tabular-nums; }
-.pill-v.is-zero { color: var(--red); text-shadow: 0 0 6px rgba(141,47,36,.6); }
-.pill--mini { padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1); }
-.pill--mini .pill-v { margin-top: 0; font-size: var(--fs-sm); }
-
-/* tick chip — metallic slate selector with a gold sandglass */
-.tick {
+/* chrome cell — recessed slate selector with gold trim (resource pills, tick chip) */
+.pill, .tick {
   display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3) var(--space-1);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-recessed);
-  color: var(--primary-ink);
 }
+.pill { padding-left: var(--space-1); }            /* room for the gem medallion */
+.pill .gem { width: 30px; height: 30px; }
+.pill-txt { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
+.pill-l, .tick-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--c-sub); }
+.pill-v, .tick-v { font-family: var(--font-display); font-weight: 600; color: var(--brass-light); font-variant-numeric: tabular-nums; }
+.pill-v { margin-top: 2px; font-size: var(--fs-sm); }
+.pill-v.is-zero { color: var(--red); text-shadow: 0 0 6px rgba(141,47,36,.6); }
+.pill--mini { padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1); }
+.pill--mini .pill-v { margin-top: 0; font-size: var(--fs-sm); }
+
+/* tick chip — the .pill/.tick chrome cell carrying a gold sandglass */
+.tick { color: var(--primary-ink); }
 .tick .gly, .tick svg { color: var(--brass); }
-.tick-l { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs); letter-spacing: .16em; text-transform: uppercase; color: var(--c-sub); }
-.tick-v { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); color: var(--brass-light); font-variant-numeric: tabular-nums; }
+.tick-v { font-size: var(--fs-base); }
 
 /* leave button — stone slab, gold border */
 .leave {
@@ -2065,7 +2101,7 @@ input.field:focus, select.field:focus {
 .nav-link-l { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .14em; text-transform: uppercase; }
 
 .barB2-nav .nav-link { color: var(--c-sub); }
-.barB2-nav .nav-link:hover { color: var(--brass-light); background: rgba(230,201,130,.06); }
+.barB2-nav .nav-link:hover { color: var(--brass-light); background: rgb(var(--brass-light-rgb) / .06); }
 .barB2-nav .nav-link.is-on {
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border-color: var(--brass);
@@ -2089,7 +2125,24 @@ input.field:focus, select.field:focus {
   50%      { box-shadow: var(--shadow-ink-xs), var(--glow-gold); }
 }
 
-.frame-body--desk { align-items: stretch; }.page-header {
+.frame-body--desk { align-items: stretch; }
+
+/* ── Small screens — wrap the resource row, scroll the nav, tighten gutters ── */
+@media (max-width: 900px) {
+  .barB2-info { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); }
+  .barB2-res { grid-column: 1 / -1; justify-content: flex-start; }
+  .barB2-nav, .barB2-nav--ico { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
+  .barB2-nav::-webkit-scrollbar { display: none; }
+  .id { min-width: 0; }
+  .id > div { min-width: 0; }
+  .id-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kingdom-page main { padding: var(--space-4); }
+}
+
+@media (max-width: 600px) {
+  .kingdom-page main { padding: var(--space-3) var(--space-2); }
+  .id-name { font-size: var(--fs-md); }
+}.page-header {
   margin: 0 0 var(--space-2);
   position: relative;
   z-index: 1;
@@ -2121,7 +2174,7 @@ input.field:focus, select.field:focus {
   box-shadow: none;
   padding: 0;
   transform: none;
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 
 .page-header:has(.page-header-actions) {
@@ -2155,7 +2208,7 @@ input.field:focus, select.field:focus {
   box-shadow: none;
   padding: 0;
   transform: none;
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 
 .page-header h1 .italic {
@@ -2458,7 +2511,7 @@ input.field:focus, select.field:focus {
   box-shadow:
     inset 0 1px 0 var(--brass-light),
     inset 0 -2px 4px rgba(0,0,0,.5),
-    0 1px 3px rgba(40,28,12,.30);
+    0 1px 3px rgb(var(--ink-shadow-rgb) / .30);
   color: var(--brass-light);
 }
 
@@ -2587,7 +2640,7 @@ input.field:focus, select.field:focus {
   padding: var(--space-5);
   background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink);
   /* faint engraved grid wash on the parchment */
   background-image: radial-gradient(color-mix(in srgb, var(--brass-dark) 12%, transparent) 1.4px, transparent 1.5px);
   background-size: 22px 22px;
@@ -2618,16 +2671,16 @@ input.field:focus, select.field:focus {
   padding: var(--space-3) var(--space-2) var(--space-3); text-align: center; user-select: none;
   background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   transition: transform .08s ease, box-shadow .08s ease, background .12s;
 }
-.node:hover       { transform: translate(-1px,-1px); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.45), var(--shadow-ink-sm); }
+.node:hover       { transform: translate(-1px,-1px); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .45), var(--shadow-ink-sm); }
 .node.is-selected {
   background: linear-gradient(180deg,
       color-mix(in srgb, var(--brass-light) 30%, var(--card)),
       color-mix(in srgb, var(--brass) 16%, var(--card-2)));
   border-color: var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.40), var(--glow-gold);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .40), var(--glow-gold);
   transform: translate(-1px,-1px); z-index: 3;
 }
 .node.is-locked   { opacity: .5; }
@@ -2683,7 +2736,7 @@ input.field:focus, select.field:focus {
 .detail-title {
   font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1;
   color: var(--brass-dark);
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 .detail-tally { font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs); letter-spacing: .02em; opacity: .65; margin-top: 3px; }
 .detail .pips { margin-bottom: var(--space-4); }
@@ -2724,50 +2777,6 @@ input.field:focus, select.field:focus {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-}
-
-.units-summary {
-  display: flex;
-  margin-top: var(--space-6);
-  background: var(--card);
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
-  overflow: hidden;
-}
-.units-summary-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-5) var(--space-3);
-}
-.units-summary-stat + .units-summary-stat { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-.units-summary-label {
-  font-family: var(--font-display);
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  font-size: var(--fs-xs);
-  color: var(--brass-dark);
-  opacity: .9;
-  white-space: nowrap;
-}
-.units-summary-val { display: flex; align-items: baseline; gap: var(--space-2); }
-.units-summary-num {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  line-height: 1;
-  color: var(--ink);
-}
-.units-summary-num.neg { color: var(--red); }
-.units-summary-sub {
-  font-family: var(--font-body);
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  font-size: var(--fs-xs);
-  color: var(--ink-soft);
 }
 
 /* --- unit portrait token (held-count badge .unit-token/.unit-tally live shared in 20-shared.css) */
@@ -2811,27 +2820,7 @@ input.field:focus, select.field:focus {
 .attribute--faith    { background: color-mix(in srgb, var(--yellow) 38%, var(--card)); }
 .attribute--drawback { background: color-mix(in srgb, var(--ink) 12%, var(--card)); opacity: .82; }
 
-/* --- stat pills ----------------------------------------------------------- */
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3) var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--card-2);
-  border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.25), var(--shadow-ink-xs);
-  font-family: var(--font-display);
-  font-size: var(--fs-base);
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.stat-pill svg { stroke: var(--ink); flex: none; }
-.stat-pill--drain { background: color-mix(in srgb, var(--red) 13%, var(--card)); }
-.stat-pill--drain .neg { color: var(--red); }
-.stat-pill--short { background: color-mix(in srgb, var(--red) 22%, var(--card)); }
-.pill-neg, .pill-short { color: var(--red); }
+/* --- stat pills — merged into the shared .cost-pill (20-shared.css) --------- */
 
 /* --- roster roll (muster roll — domain term kept) ------------------------- */
 .muster-roll { display: flex; flex-direction: column; }
@@ -2853,6 +2842,7 @@ input.field:focus, select.field:focus {
   opacity: .85;
 }
 .muster-roll-col--r { text-align: right; }
+.muster-roll-col--c { text-align: center; }
 /* Right-align Power / Upkeep / Cost cells to match their --r headers (cols 3–5) */
 .unit-row > :nth-child(3),
 .unit-row > :nth-child(4),
@@ -2878,11 +2868,11 @@ input.field:focus, select.field:focus {
   color: var(--red);
 }
 
-/* --- inline train control (re-skinned input; optional stepper, see README) - */
-.unit-train { display: flex; justify-content: flex-end; }
+/* --- inline train control (stepper stacked above the Train button, centered) - */
+.unit-train { display: flex; justify-content: center; }
 /* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
 
-/* --- lock note + sealed-summons banner ------------------------------------ */
+/* --- lock note + sealed-summons banner (framed via the .card co-class) ------ */
 .unit-lock-note {
   display: inline-flex;
   align-items: center;
@@ -2903,10 +2893,7 @@ input.field:focus, select.field:focus {
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
-  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--purple) 13%, var(--card));
-  border: 1px solid var(--brass);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
   font-family: var(--font-body);
   font-weight: 700;
   font-style: italic;
@@ -2921,7 +2908,17 @@ input.field:focus, select.field:focus {
   { width: 46px; height: 46px; display: grid; place-items: center; }
 .progress-banner-gem.progress-banner-gem--summon
   { width: 46px; height: 46px; display: grid; place-items: center; }
-.progress-banner-gem .unit-portrait { width: 46px; height: 46px; }/* ── Main layout — map column | command panel ───────────────────────────────── */
+.progress-banner-gem .unit-portrait { width: 46px; height: 46px; }
+
+/* ── Small screens — the roll keeps its columns and scrolls sideways ──────── */
+@media (max-width: 820px) {
+  .muster-roll { overflow-x: auto; }
+  .muster-roll-head, .unit-row, .muster-roll-foot {
+    min-width: 620px;
+    grid-template-columns: 56px minmax(120px, 1fr) 64px 68px 100px 150px;
+    column-gap: var(--space-3);
+  }
+}/* ── Main layout — map column | command panel ───────────────────────────────── */
 .world { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; }
 .world-main {
   height: 100%; min-height: 0;
@@ -2929,12 +2926,10 @@ input.field:focus, select.field:focus {
   gap: var(--space-4); align-items: stretch;
 }
 
-/* ── Left: map board (a framed parchment card) ────────────────────────────── */
+/* ── Left: map board (framed parchment via the .card co-class) ────────────── */
 .world-board {
-  position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
   padding: var(--space-4) var(--space-5) var(--space-5); overflow: hidden;
-  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
 }
 .board-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; position: relative; z-index: 1; }
 /* board title — engraved Cinzel caps (matches .page-header-title) */
@@ -2942,7 +2937,7 @@ input.field:focus, select.field:focus {
   display: inline-block; white-space: nowrap; margin: 0;
   font-family: var(--font-display); font-weight: 700; font-size: var(--fs-2xl); line-height: 1.1;
   letter-spacing: .12em; text-transform: uppercase; color: var(--brass-dark);
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(124,90,38,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 /* region chip — a small gold-edged parchment eyebrow */
 .board-region {
@@ -2965,10 +2960,10 @@ input.field:focus, select.field:focus {
   font-size: var(--fs-base); line-height: 1; color: var(--brass-light);
   background: linear-gradient(180deg, var(--slate-edge), var(--slate));
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 3px rgba(40,28,12,.30);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 0 var(--brass-dark), 0 1px 3px rgb(var(--ink-shadow-rgb) / .30);
   transition: box-shadow .08s, background .12s, filter .1s;
 }
-.map-nav-btn:hover  { filter: brightness(1.08); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 6px rgba(40,28,12,.40); }
+.map-nav-btn:hover  { filter: brightness(1.08); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 2px 6px rgb(var(--ink-shadow-rgb) / .40); }
 .map-nav-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); }
 
 /* ── Flat board ─────────────────────────────────────────────────────────────── */
@@ -2985,7 +2980,7 @@ input.field:focus, select.field:focus {
   grid-area: 2 / 2; display: grid;
   grid-template-columns: repeat(8, var(--map-cell-size)); grid-template-rows: repeat(8, var(--map-cell-size));
   /* the slate gap BETWEEN tiles = the board's grout lines */
-  gap: 1.var(--space-1); background: var(--slate-2);
+  gap: var(--space-1); background: var(--slate-2);
   border: 1px solid var(--brass); border-radius: var(--radius-md); overflow: visible;
   box-shadow: var(--shadow-ink);
 }
@@ -2993,7 +2988,8 @@ input.field:focus, select.field:focus {
 /* ── Shared tile language ───────────────────────────────────────────────────── */
 .map-cell { position: relative; background: var(--tile); overflow: visible; }
 .map-cell--clickable { cursor: pointer; }
-.map-cell:hover { box-shadow: inset 0 0 0 3px var(--brass); z-index: 2; }
+.map-cell:hover, .map-cell:focus-visible { box-shadow: inset 0 0 0 3px var(--brass); z-index: 2; }
+.map-cell:focus-visible { outline: none; }              /* the brass ring above is the focus indicator */
 .map-cell--own  { box-shadow: inset 0 0 0 3px var(--rel-self); z-index: 1; }
 .map-cell--selected,
 .map-cell--selected:hover { box-shadow: inset 0 0 0 4px var(--red); z-index: 3; }
@@ -3024,22 +3020,20 @@ input.field:focus, select.field:focus {
 }
 .rel-war .marker-crest svg { stroke: var(--white); }
 .rel-war .marker-rel-dot { background: var(--rel-war); }
-/* hover tooltip */
+/* tooltip — on hover or keyboard focus (cells are focusable, see flatCell) */
 .map-marker[data-tip]::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); white-space: nowrap;
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .04em; text-transform: uppercase; color: var(--brass-dark);
   background: var(--card); border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: 3px var(--space-2) 2px;
   pointer-events: none; opacity: 0; transition: opacity .1s; z-index: 20;
 }
-.map-cell:hover .map-marker[data-tip]::after { opacity: 1; }
+.map-cell:is(:hover, :focus-within) .map-marker[data-tip]::after { opacity: 1; }
 
-/* ── Right: command panel (a framed parchment card) ────────────────────────── */
+/* ── Right: command panel (framed parchment via the .card co-class) ────────── */
 .world-cmd {
-  position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
 }
 .cmd-nav { padding: var(--space-4) var(--space-4) var(--space-4); border-bottom: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent); background: var(--card-2); }
 .cmd-nav-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
@@ -3053,10 +3047,10 @@ input.field:focus, select.field:focus {
 .cmd-search .field { flex: 1; min-width: 0; }
 
 /* minimap — 8×8 region grid on a slate ground */
-.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: 2.var(--space-1); padding: var(--space-2); background: var(--slate-2); border: 1px solid var(--brass); border-radius: var(--radius-lg); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
+.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: var(--space-2); padding: var(--space-2); background: var(--slate-2); border: 1px solid var(--brass); border-radius: var(--radius-lg); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
 .map-minimap-cell { height: 18px; background: var(--tile); border-radius: 1px; cursor: pointer; }
 .map-minimap-cell:hover { box-shadow: inset 0 0 0 2px var(--brass-light); }
-.map-minimap-cell--current { box-shadow: inset 0 0 0 2px var(--brass-light), 0 0 6px rgba(230,201,130,.5); }
+.map-minimap-cell--current { box-shadow: inset 0 0 0 2px var(--brass-light), 0 0 6px rgb(var(--brass-light-rgb) / .5); }
 
 /* detail scroller */
 .cmd-detail { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-4); }
@@ -3070,7 +3064,6 @@ input.field:focus, select.field:focus {
 .cmd-empty-sub { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-sm); font-style: italic; color: var(--ink-soft); opacity: .85; margin-top: var(--space-1); text-wrap: pretty; max-width: 28ch; }
 
 /* ── Kingdom detail panel ───────────────────────────────────────────────────── */
-.kd-panel { }
 .kd-head { display: flex; align-items: flex-start; gap: var(--space-3); }
 .kd-crest {
   flex: none; width: 50px; height: 50px; display: grid; place-items: center;
@@ -3090,37 +3083,17 @@ input.field:focus, select.field:focus {
 /* action buttons stack */
 .kd-actions { display: flex; flex-direction: column; gap: var(--space-2); }
 .kd-actions .btn { width: 100%; }
-.kd-self-note { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: var(--fs-sm); color: var(--ink-soft); opacity: .85; text-wrap: pretty; margin: var(--space-3) 0 0; padding: var(--space-3) var(--space-3); border-radius: var(--radius-lg); background: var(--card-2); border: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); }/* ── Command summary strip ─────────────────────────────────────────────── */
-.summary {
-  display: flex; margin: 0 0 var(--space-6);
-  background: var(--card); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
-  overflow: hidden;
+.kd-self-note { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: var(--fs-sm); color: var(--ink-soft); opacity: .85; text-wrap: pretty; margin: var(--space-3) 0 0; padding: var(--space-3) var(--space-3); border-radius: var(--radius-lg); background: var(--card-2); border: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); }
 
-  @media (max-width: 760px) { flex-wrap: wrap; }
+/* ── Small screens — stack board above command panel, shrink tiles ─────────── */
+@media (max-width: 900px) {
+  .world-main { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
+  .map-flat { --map-cell-size: 44px; }
 }
-.summary-stat {
-  flex: 1; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5) var(--space-4);
-
-  & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-  @media (max-width: 760px) { flex: 1 0 45%; }
-  @media (max-width: 760px) & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-}
-.ss-label {
-  font-family: var(--font-display); font-weight: 600; letter-spacing: .05em;
-  text-transform: uppercase; font-size: var(--fs-xs); color: var(--brass-dark); opacity: .9;
-}
-.ss-val { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
-.ss-num {
-  font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1;
-  font-variant-numeric: tabular-nums;
-
-  &.is-muted { color: color-mix(in srgb, var(--ink) 40%, transparent); }
-}
-.ss-sub {
-  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
-  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap;
-}
+@media (max-width: 480px) {
+  .map-flat { --map-cell-size: 38px; }
+}/* ── Page rhythm: small gap between the three framed surfaces ─────────── */
+.army-content > * + * { margin-top: var(--space-5); }
 
 /* ── Unit token · roster · strength line ───────────────────────────────── */
 .portrait {
@@ -3161,16 +3134,12 @@ input.field:focus, select.field:focus {
 .sl-sep { opacity: .35; }
 /* NOTE: upkeep / .sl-drain is dropped permanently — strength line is power · units only. */
 
-/* ── Quartermaster — Reserve strip + transfer form ─────────────────────── */
-.qm-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: var(--space-4); margin-bottom: var(--space-2); flex-wrap: wrap;
-}
+/* ── Reserve — strip + transfer form ─────────────────────────── */
 .qm-strip {
   display: flex; flex-wrap: wrap; gap: var(--space-5) var(--space-6); padding: var(--space-2) 2px var(--space-5); margin-bottom: var(--space-1);
   border-bottom: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent);
 }
-.qm-form-head { margin: var(--space-4) 0 var(--space-3); }
+.qm-strength { margin: var(--space-3) 0 var(--space-5); }
 .xfer-grid {
   display: grid;
   grid-template-columns: minmax(140px,1fr) minmax(140px,1fr) minmax(130px,1fr) 96px auto;
@@ -3181,12 +3150,19 @@ input.field:focus, select.field:focus {
 .xfer-go { height: 46px; }
 @media (max-width: 720px) { .xfer-go { grid-column: 1 / -1; } }
 
+/* ── Legion field — recessed parchment plinth holding the raised banner cards */
+.legion-field {
+  background: var(--card-2); border: 1px solid var(--brass); border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-recessed), var(--shadow-ink-xs);
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
 /* ── Legion stack & cards ──────────────────────────────────────────────── */
 .legion-stack { display: flex; flex-direction: column; gap: var(--space-5); }
 
 .legion-card {
   background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink);
   padding: var(--space-5) var(--space-6) var(--space-6); position: relative;
 
   &.is-afield {
@@ -3196,12 +3172,6 @@ input.field:focus, select.field:focus {
   }
 }
 .legion-card-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }
-.legion-card-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.legion-name {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1;
-  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5);
-  margin: 0;
-}
 
 .legion-crest {
   flex: none; width: 52px; height: 60px; display: grid; place-items: center;
@@ -3228,7 +3198,7 @@ input.field:focus, select.field:focus {
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
   border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-1) var(--space-3) 3px; background: var(--card-2); width: max-content;
 }
 .status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--brass-dark); background: var(--brass-dark); flex: none; }
@@ -3263,12 +3233,11 @@ input.field:focus, select.field:focus {
 .status-pill--return .status-dot { background: var(--green); border-color: var(--brass-dark); }
 @keyframes blip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
 
-/* Afield order readout (sits right in the card head). */
-.legion-head-order { margin-left: auto; }
+/* Afield order readout (sits next to the legion number, left in the .cc-head). */
 .afield-order {
   display: inline-flex; align-items: center; gap: var(--space-3); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-2) var(--space-3);
 }
 .afield-arrow { font-family: var(--font-display); font-size: var(--fs-md); color: var(--brass-dark); opacity: .75; }
@@ -3303,21 +3272,22 @@ input.field:focus, select.field:focus {
   &.seg--defend.is-on { background: var(--blue); color: var(--brass-light); box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold); }
 }
 
-/* At-home legion: muster column | dispatch column. */
-.legion-home {
-  display: grid; grid-template-columns: 1fr 330px; gap: var(--space-6); align-items: start;
-
-  @media (max-width: 760px) { grid-template-columns: 1fr; }
-}
+/* At-home legion: muster only (march orders live in their own card). */
 .legion-muster { display: flex; flex-direction: column; gap: var(--space-4); align-items: flex-start; }
-.legion-dispatch {
-  display: flex; flex-direction: column; gap: var(--space-3);
-  border-left: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-left: var(--space-6);
 
-  @media (max-width: 760px) {
-    border-left: none; padding-left: 0;
-    border-top: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-top: var(--space-5);
-  }
+/* ── March orders card ─────────────────────────────────────────────────── */
+.march-form { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-5); align-items: end; }
+.march-form > .field-group { flex: 1 1 180px; min-width: 150px; }
+.march-form > .dispatch-go { flex: 0 0 auto; height: 46px; }
+.march-preview { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-2); }
+.march-preview-legion {
+  display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start;
+  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
+}
+.march-preview-name {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: 1;
+  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5);
 }
 .dispatch-empty {
   margin: var(--space-1) 0 0; font-family: var(--font-body); font-weight: 700; font-style: italic;
@@ -3325,13 +3295,24 @@ input.field:focus, select.field:focus {
 }
 .dispatch-go { margin-top: var(--space-1); }
 
-/* Afield legion: campaign view. */
-.legion-campaign { display: flex; flex-direction: column; gap: 2px; }
-.timeline { display: flex; align-items: flex-start; max-width: 520px; margin: 2px 0 var(--space-5); }
-.tl-stop {
-  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: var(--space-2); text-align: center;
+/* Afield legion: one strip (identity · status · clock) with the roster body. */
+.legion-campaign { display: flex; flex-direction: column; gap: var(--space-5); }
+.cc-head {
+  display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap;
+  margin-bottom: var(--space-6); /* reserve room for the timeline labels below the .cc-head strip */
 }
+.cc-head-left { display: flex; align-items: center; gap: var(--space-4); flex: none; }
+.cc-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); flex: none; margin-left: auto; }
+.cc-head .timeline { flex: 1 1 240px; max-width: 520px; margin: 0; }
+@media (max-width: 900px) {
+  .cc-head .timeline { order: 3; flex-basis: 100%; max-width: none; }
+}
+
+/* Timeline: dots row participates in the .cc-head centerline; labels are
+   out-of-flow so they don't lift the dots above the strip's center. */
+.timeline { position: relative; display: flex; flex-direction: column; align-items: stretch; max-width: 520px; }
+.tl-dots { display: flex; align-items: center; }
+.tl-dot-cell { position: relative; flex: 1; display: flex; justify-content: center; }
 .tl-dot {
   width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--brass);
   background: var(--card-2);
@@ -3339,41 +3320,37 @@ input.field:focus, select.field:focus {
   z-index: 1;
 }
 .tl-line {
-  position: absolute; top: 8px; right: 50%; width: 100%; height: 2px;
-  background: var(--brass-dark);
+  position: absolute; top: 50%; right: 50%; width: 100%; height: 2px;
+  transform: translateY(-50%); background: var(--brass-dark);
 }
+.tl-labels { position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0; display: flex; }
 .tl-label {
+  flex: 1; text-align: center;
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
-.tl-stop--done .tl-dot { background: var(--green); }
-.tl-stop--done .tl-line { background: var(--green); }
-.tl-stop--now .tl-dot {
+.tl-dot-cell--done .tl-dot { background: var(--green); }
+.tl-dot-cell--done .tl-line { background: var(--green); }
+.tl-dot-cell--now .tl-dot {
   background: var(--brass);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold);
   animation: pulseDot 1.4s ease-in-out infinite;
 }
-.tl-stop--now .tl-line { background: var(--green); }
-.tl-stop--todo .tl-label { opacity: .5; }
+.tl-dot-cell--now .tl-line { background: var(--green); }
+.tl-label--todo { opacity: .5; }
 @keyframes pulseDot {
   0%,100% { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold); }
   50%     { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), 0 0 0 5px color-mix(in srgb, var(--brass) 40%, transparent); }
 }
 
-.cc-body {
-  display: grid; grid-template-columns: 1fr 230px; gap: var(--space-6); align-items: start;
-
-  @media (max-width: 640px) { grid-template-columns: 1fr; }
-}
+/* Roster body — the “army description” middle portion of an afield card. */
+.cc-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .cc-roster { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
-.cc-label { display: block; }
 .cc-eta {
-  display: flex; flex-direction: column; gap: var(--space-3); background: var(--card-fill-lit);
+  display: inline-flex; align-items: baseline; gap: var(--space-3); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
 }
-.cc-eta-row { display: flex; flex-direction: column; gap: 3px; }
-.cc-eta-row--total { border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); padding-top: var(--space-3); }
 .cc-eta-lbl {
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
@@ -3388,53 +3365,15 @@ input.field:focus, select.field:focus {
 }
 .cc-foot {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
-  flex-wrap: wrap; margin-top: var(--space-5); padding-top: var(--space-4);
+  flex-wrap: wrap; padding-top: var(--space-4);
   border-top: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent);
 }
-.cc-foot-note {
-  font-family: var(--font-body); font-weight: 700; font-style: italic;
-  font-size: var(--fs-sm); opacity: .72; text-wrap: pretty;
-}
 
-/* ── Open banner slot ──────────────────────────────────────────────────── */
-.legion-slot {
-  display: flex; align-items: center; gap: var(--space-4); width: 100%; text-align: left;
-  cursor: pointer; font: inherit; color: inherit;
-  border: 1px dashed color-mix(in srgb, var(--brass) 70%, transparent); border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-5); background:
-    repeating-linear-gradient(45deg, transparent 0 10px,
-      color-mix(in srgb, var(--brass-dark) 6%, transparent) 10px 20px),
-    var(--card-fill-lit);
-  transition: border-color .12s, box-shadow .12s;
-
-  &:hover { border-color: var(--brass); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 45%, transparent), var(--glow-gold); }
-  &:active { filter: brightness(.97); }
-}
-.slot-crest {
-  flex: none; width: 50px; height: 58px; display: grid; place-items: center;
-  font-family: var(--font-display); font-size: var(--fs-lg);
-  color: var(--brass-dark); background: var(--card-2);
-  border: 1px dashed color-mix(in srgb, var(--brass) 60%, transparent);
-  border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
-}
-.slot-copy { flex: 1; min-width: 0; }
-.slot-h {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: 1.1;
-  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); display: block;
-}
-.slot-sub {
-  font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); opacity: .7;
-  margin-top: 3px; text-wrap: pretty;
-}
-.slot-cta {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex: none;
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); letter-spacing: .04em;
-  text-transform: uppercase; color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
-  border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--glow-gold);
-  padding: var(--space-2) var(--space-3) var(--space-2);
-}.flip-scene {
+/* Open banner slot — visual recipe lives in `20-shared.css` (.open-slot).
+   `.legion-slot` is a thin local hook: it carries the shared look and drops
+   the default bottom margin (slots sit inside the flex `.legion-stack`, which
+   gaps its children — a trailing margin would break rhythm). */
+.legion-slot { /* == .open-slot */ margin-bottom: 0; }.flip-scene {
   width: 192px;
   height: 288px;
   perspective: 600px;
@@ -3572,7 +3511,7 @@ input.field:focus, select.field:focus {
 }
 .filter-tab.is-on .filter-count {
   color: var(--brass-dark); background: var(--card-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30);
 }
 
 /* scrolling pile */
@@ -3670,7 +3609,7 @@ input.field:focus, select.field:focus {
 .message-detail-wrap {
   position: relative; margin: var(--space-6); padding: var(--space-7) var(--space-7); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink);
   background-image: repeating-linear-gradient(transparent 0 31px, color-mix(in srgb, var(--blue) 8%, transparent) 31px 32px);
   background-position: 0 6px;
 }
@@ -3789,7 +3728,7 @@ input.field:focus, select.field:focus {
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
   border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-1) var(--space-3) 3px; background: var(--card-2); white-space: nowrap; width: max-content;
 }
 .role-tag .icon { stroke: currentColor; }
@@ -3884,7 +3823,7 @@ input.field:focus, select.field:focus {
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-xs);
   letter-spacing: .03em; text-transform: uppercase; color: var(--ink);
   background: var(--card-2); border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-1) var(--space-3) 3px;
 }
 .meta-chip .icon { stroke: currentColor; }
@@ -3908,7 +3847,7 @@ input.field:focus, select.field:focus {
 .standing--bare.is-foot { margin: var(--space-6) 0 0; }
 .standing--banner {
   background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink-sm);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink-sm);
   padding: var(--space-5) var(--space-6); margin: 0 0 var(--space-6);
   flex-direction: row; align-items: center; gap: var(--space-5); flex-wrap: wrap;
 }

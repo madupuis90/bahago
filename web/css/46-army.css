@@ -1,34 +1,5 @@
-/* ── Command summary strip ─────────────────────────────────────────────── */
-.summary {
-  display: flex; margin: 0 0 var(--space-6);
-  background: var(--card); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
-  overflow: hidden;
-
-  @media (max-width: 760px) { flex-wrap: wrap; }
-}
-.summary-stat {
-  flex: 1; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5) var(--space-4);
-
-  & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-  @media (max-width: 760px) { flex: 1 0 45%; }
-  @media (max-width: 760px) & + & { border-left: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-}
-.ss-label {
-  font-family: var(--font-display); font-weight: 600; letter-spacing: .05em;
-  text-transform: uppercase; font-size: var(--fs-xs); color: var(--brass-dark); opacity: .9;
-}
-.ss-val { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
-.ss-num {
-  font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1;
-  font-variant-numeric: tabular-nums;
-
-  &.is-muted { color: color-mix(in srgb, var(--ink) 40%, transparent); }
-}
-.ss-sub {
-  font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
-  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap;
-}
+/* ── Page rhythm: small gap between the three framed surfaces ─────────── */
+.army-content > * + * { margin-top: var(--space-5); }
 
 /* ── Unit token · roster · strength line ───────────────────────────────── */
 .portrait {
@@ -69,16 +40,12 @@
 .sl-sep { opacity: .35; }
 /* NOTE: upkeep / .sl-drain is dropped permanently — strength line is power · units only. */
 
-/* ── Quartermaster — Reserve strip + transfer form ─────────────────────── */
-.qm-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: var(--space-4); margin-bottom: var(--space-2); flex-wrap: wrap;
-}
+/* ── Reserve — strip + transfer form ─────────────────────────── */
 .qm-strip {
   display: flex; flex-wrap: wrap; gap: var(--space-5) var(--space-6); padding: var(--space-2) 2px var(--space-5); margin-bottom: var(--space-1);
   border-bottom: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent);
 }
-.qm-form-head { margin: var(--space-4) 0 var(--space-3); }
+.qm-strength { margin: var(--space-3) 0 var(--space-5); }
 .xfer-grid {
   display: grid;
   grid-template-columns: minmax(140px,1fr) minmax(140px,1fr) minmax(130px,1fr) 96px auto;
@@ -89,12 +56,19 @@
 .xfer-go { height: 46px; }
 @media (max-width: 720px) { .xfer-go { grid-column: 1 / -1; } }
 
+/* ── Legion field — recessed parchment plinth holding the raised banner cards */
+.legion-field {
+  background: var(--card-2); border: 1px solid var(--brass); border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-recessed), var(--shadow-ink-xs);
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
 /* ── Legion stack & cards ──────────────────────────────────────────────── */
 .legion-stack { display: flex; flex-direction: column; gap: var(--space-5); }
 
 .legion-card {
   background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.35), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35), var(--shadow-ink);
   padding: var(--space-5) var(--space-6) var(--space-6); position: relative;
 
   &.is-afield {
@@ -104,12 +78,6 @@
   }
 }
 .legion-card-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }
-.legion-card-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.legion-name {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1;
-  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5);
-  margin: 0;
-}
 
 .legion-crest {
   flex: none; width: 52px; height: 60px; display: grid; place-items: center;
@@ -136,7 +104,7 @@
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
   letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
   border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-1) var(--space-3) 3px; background: var(--card-2); width: max-content;
 }
 .status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--brass-dark); background: var(--brass-dark); flex: none; }
@@ -171,12 +139,11 @@
 .status-pill--return .status-dot { background: var(--green); border-color: var(--brass-dark); }
 @keyframes blip { 0%,100% { transform: scale(1); } 50% { transform: scale(.55); } }
 
-/* Afield order readout (sits right in the card head). */
-.legion-head-order { margin-left: auto; }
+/* Afield order readout (sits next to the legion number, left in the .cc-head). */
 .afield-order {
   display: inline-flex; align-items: center; gap: var(--space-3); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
   padding: var(--space-2) var(--space-3);
 }
 .afield-arrow { font-family: var(--font-display); font-size: var(--fs-md); color: var(--brass-dark); opacity: .75; }
@@ -211,21 +178,22 @@
   &.seg--defend.is-on { background: var(--blue); color: var(--brass-light); box-shadow: inset 0 1px 0 var(--brass-light), var(--glow-gold); }
 }
 
-/* At-home legion: muster column | dispatch column. */
-.legion-home {
-  display: grid; grid-template-columns: 1fr 330px; gap: var(--space-6); align-items: start;
-
-  @media (max-width: 760px) { grid-template-columns: 1fr; }
-}
+/* At-home legion: muster only (march orders live in their own card). */
 .legion-muster { display: flex; flex-direction: column; gap: var(--space-4); align-items: flex-start; }
-.legion-dispatch {
-  display: flex; flex-direction: column; gap: var(--space-3);
-  border-left: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-left: var(--space-6);
 
-  @media (max-width: 760px) {
-    border-left: none; padding-left: 0;
-    border-top: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); padding-top: var(--space-5);
-  }
+/* ── March orders card ─────────────────────────────────────────────────── */
+.march-form { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-5); align-items: end; }
+.march-form > .field-group { flex: 1 1 180px; min-width: 150px; }
+.march-form > .dispatch-go { flex: 0 0 auto; height: 46px; }
+.march-preview { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-2); }
+.march-preview-legion {
+  display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start;
+  background: var(--card-fill-lit); border: 1px solid var(--brass); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
+}
+.march-preview-name {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: 1;
+  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5);
 }
 .dispatch-empty {
   margin: var(--space-1) 0 0; font-family: var(--font-body); font-weight: 700; font-style: italic;
@@ -233,13 +201,24 @@
 }
 .dispatch-go { margin-top: var(--space-1); }
 
-/* Afield legion: campaign view. */
-.legion-campaign { display: flex; flex-direction: column; gap: 2px; }
-.timeline { display: flex; align-items: flex-start; max-width: 520px; margin: 2px 0 var(--space-5); }
-.tl-stop {
-  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: var(--space-2); text-align: center;
+/* Afield legion: one strip (identity · status · clock) with the roster body. */
+.legion-campaign { display: flex; flex-direction: column; gap: var(--space-5); }
+.cc-head {
+  display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap;
+  margin-bottom: var(--space-6); /* reserve room for the timeline labels below the .cc-head strip */
 }
+.cc-head-left { display: flex; align-items: center; gap: var(--space-4); flex: none; }
+.cc-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); flex: none; margin-left: auto; }
+.cc-head .timeline { flex: 1 1 240px; max-width: 520px; margin: 0; }
+@media (max-width: 900px) {
+  .cc-head .timeline { order: 3; flex-basis: 100%; max-width: none; }
+}
+
+/* Timeline: dots row participates in the .cc-head centerline; labels are
+   out-of-flow so they don't lift the dots above the strip's center. */
+.timeline { position: relative; display: flex; flex-direction: column; align-items: stretch; max-width: 520px; }
+.tl-dots { display: flex; align-items: center; }
+.tl-dot-cell { position: relative; flex: 1; display: flex; justify-content: center; }
 .tl-dot {
   width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--brass);
   background: var(--card-2);
@@ -247,41 +226,37 @@
   z-index: 1;
 }
 .tl-line {
-  position: absolute; top: 8px; right: 50%; width: 100%; height: 2px;
-  background: var(--brass-dark);
+  position: absolute; top: 50%; right: 50%; width: 100%; height: 2px;
+  transform: translateY(-50%); background: var(--brass-dark);
 }
+.tl-labels { position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0; display: flex; }
 .tl-label {
+  flex: 1; text-align: center;
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
 }
-.tl-stop--done .tl-dot { background: var(--green); }
-.tl-stop--done .tl-line { background: var(--green); }
-.tl-stop--now .tl-dot {
+.tl-dot-cell--done .tl-dot { background: var(--green); }
+.tl-dot-cell--done .tl-line { background: var(--green); }
+.tl-dot-cell--now .tl-dot {
   background: var(--brass);
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold);
   animation: pulseDot 1.4s ease-in-out infinite;
 }
-.tl-stop--now .tl-line { background: var(--green); }
-.tl-stop--todo .tl-label { opacity: .5; }
+.tl-dot-cell--now .tl-line { background: var(--green); }
+.tl-label--todo { opacity: .5; }
 @keyframes pulseDot {
   0%,100% { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), var(--glow-gold); }
   50%     { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -1px 1px rgba(0,0,0,.25), var(--shadow-ink-xs), 0 0 0 5px color-mix(in srgb, var(--brass) 40%, transparent); }
 }
 
-.cc-body {
-  display: grid; grid-template-columns: 1fr 230px; gap: var(--space-6); align-items: start;
-
-  @media (max-width: 640px) { grid-template-columns: 1fr; }
-}
+/* Roster body — the “army description” middle portion of an afield card. */
+.cc-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .cc-roster { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
-.cc-label { display: block; }
 .cc-eta {
-  display: flex; flex-direction: column; gap: var(--space-3); background: var(--card-fill-lit);
+  display: inline-flex; align-items: baseline; gap: var(--space-3); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink-xs);
 }
-.cc-eta-row { display: flex; flex-direction: column; gap: 3px; }
-.cc-eta-row--total { border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); padding-top: var(--space-3); }
 .cc-eta-lbl {
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-2xs);
   letter-spacing: .05em; text-transform: uppercase; color: var(--brass-dark);
@@ -296,50 +271,12 @@
 }
 .cc-foot {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
-  flex-wrap: wrap; margin-top: var(--space-5); padding-top: var(--space-4);
+  flex-wrap: wrap; padding-top: var(--space-4);
   border-top: 1px solid color-mix(in srgb, var(--brass-dark) 50%, transparent);
 }
-.cc-foot-note {
-  font-family: var(--font-body); font-weight: 700; font-style: italic;
-  font-size: var(--fs-sm); opacity: .72; text-wrap: pretty;
-}
 
-/* ── Open banner slot ──────────────────────────────────────────────────── */
-.legion-slot {
-  display: flex; align-items: center; gap: var(--space-4); width: 100%; text-align: left;
-  cursor: pointer; font: inherit; color: inherit;
-  border: 1px dashed color-mix(in srgb, var(--brass) 70%, transparent); border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-5); background:
-    repeating-linear-gradient(45deg, transparent 0 10px,
-      color-mix(in srgb, var(--brass-dark) 6%, transparent) 10px 20px),
-    var(--card-fill-lit);
-  transition: border-color .12s, box-shadow .12s;
-
-  &:hover { border-color: var(--brass); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 45%, transparent), var(--glow-gold); }
-  &:active { filter: brightness(.97); }
-}
-.slot-crest {
-  flex: none; width: 50px; height: 58px; display: grid; place-items: center;
-  font-family: var(--font-display); font-size: var(--fs-lg);
-  color: var(--brass-dark); background: var(--card-2);
-  border: 1px dashed color-mix(in srgb, var(--brass) 60%, transparent);
-  border-radius: 10px 10px 26px 26px / 10px 10px 40px 40px;
-}
-.slot-copy { flex: 1; min-width: 0; }
-.slot-h {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: 1.1;
-  letter-spacing: .04em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); display: block;
-}
-.slot-sub {
-  font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); opacity: .7;
-  margin-top: 3px; text-wrap: pretty;
-}
-.slot-cta {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex: none;
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); letter-spacing: .04em;
-  text-transform: uppercase; color: var(--brass-light);
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
-  border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--glow-gold);
-  padding: var(--space-2) var(--space-3) var(--space-2);
-}
+/* Open banner slot — visual recipe lives in `20-shared.css` (.open-slot).
+   `.legion-slot` is a thin local hook: it carries the shared look and drops
+   the default bottom margin (slots sit inside the flex `.legion-stack`, which
+   gaps its children — a trailing margin would break rhythm). */
+.legion-slot { /* == .open-slot */ margin-bottom: 0; }

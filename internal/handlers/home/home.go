@@ -44,8 +44,8 @@ func (h *handler) handleHomePage() http.HandlerFunc {
 
 func homeContent() Node {
 	return Group([]Node{
-		Section(Class("home-hero"),
-			P(Class("home-kicker"), Text("✧ A realm awaits your rule")),
+		Section(Class("card home-hero"),
+			P(Class("eyebrow"), Text("✧ A realm awaits your rule")),
 			H1(Class("home-title"), Text("Bahago")),
 			P(Class("home-sub"), Text("Command a kingdom. Gather ancient resources, raise mighty armies, forge alliances in guilds, and carve your name into the annals of the realm.")),
 			Div(Class("home-cta"),

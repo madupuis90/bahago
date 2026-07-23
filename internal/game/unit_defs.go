@@ -67,6 +67,22 @@ const (
 	UnitDreadKnight = "dread_knight"
 )
 
+// UnitCategory is the class of a unit type. It governs which card a unit
+// appears in on the Units page, the card-tab styling, the unlock gate, and the
+// upkeep currency. New categories (e.g. siege machines, beasts) are added by
+// introducing a new constant plus an entry in UnitCategories / UnitsByCategory.
+type UnitCategory string
+
+const (
+	// CategorySoldier — units trained with Wood/Stone and food upkeep.
+	// Glossary term: "Soldier" (the Units-page card is titled "Soldiers").
+	CategorySoldier UnitCategory = "soldier"
+
+	// CategorySummon — units trained with Mana and mana upkeep, gated behind
+	// mana production. Glossary term: "Summon".
+	CategorySummon UnitCategory = "summon"
+)
+
 // UnitDef describes a unit type. All values are static config — nothing is stored in the DB.
 type UnitDef struct {
 	// Name is the human-readable display name.
@@ -91,9 +107,9 @@ type UnitDef struct {
 	// regardless of how many units are in the batch.
 	Ticks int
 
-	// IsSummon marks units that belong to the summon table.
-	// Summons cost mana, have mana upkeep, and require the summon feature to be unlocked.
-	IsSummon bool
+	// Category is the unit's class: drives the Units-page card tab, unlock
+	// gate, and upkeep currency. See the UnitCategory constants.
+	Category UnitCategory
 
 	// Prerequisites lists buildings that must have at least MinCount instances
 	// before this unit becomes available to train. All must be satisfied (AND).
@@ -155,7 +171,7 @@ var UnitDefs = map[string]UnitDef{
 		Ticks:      20, // 5h
 		Cost:       ResourceValues{Mana: 30},
 		ManaUpkeep: 1,
-		IsSummon:   true,
+		Category:   CategorySummon,
 		Attributes: []Attribute{AttributeSummon},
 	},
 	UnitDreadKnight: {
@@ -164,7 +180,7 @@ var UnitDefs = map[string]UnitDef{
 		Ticks:      32, // 8h
 		Cost:       ResourceValues{Mana: 60},
 		ManaUpkeep: 2,
-		IsSummon:   true,
+		Category:   CategorySummon,
 		Attributes: []Attribute{AttributeSummon, AttributeDeathtouch, AttributeUndead},
 	},
 }
@@ -182,6 +198,66 @@ var UnitOrder = []string{
 var SummonOrder = []string{
 	UnitShade,
 	UnitDreadKnight,
+}
+
+// UnitCategories is the display order of unit categories on the Units page.
+// Add new categories here; their unit lists go in UnitsByCategory.
+var UnitCategories = []UnitCategory{
+	CategorySoldier,
+	CategorySummon,
+}
+
+// UnitsByCategory groups unit type identifiers by category, in display order.
+var UnitsByCategory = map[UnitCategory][]string{
+	CategorySoldier: UnitOrder,
+	CategorySummon:  SummonOrder,
+}
+
+// AllUnitOrder returns every unit type identifier across all categories, in
+// category-then-display order. Use this instead of hand-appending UnitOrder
+// and SummonOrder so new categories are picked up automatically.
+func AllUnitOrder() []string {
+	var all []string
+	for _, cat := range UnitCategories {
+		all = append(all, UnitsByCategory[cat]...)
+	}
+	return all
+}
+
+// CategoryLabel is the plural display title used for a category's card tab.
+func (c UnitCategory) Label() string {
+	switch c {
+	case CategorySoldier:
+		return "Soldiers"
+	case CategorySummon:
+		return "Summons"
+	default:
+		return string(c)
+	}
+}
+
+// CategoryTabClass returns the .card-tab modifier for a category, or the empty
+// string for the default (blue) tab styling.
+func (c UnitCategory) TabClass() string {
+	switch c {
+	case CategorySummon:
+		return "card-tab--summon"
+	default:
+		return ""
+	}
+}
+
+// CategoryLocked reports whether an entire category's card is sealed on the
+// Units page. Soldier is never section-locked; Summon is sealed until the
+// kingdom has mana production. Per-unit building-prerequisite locks are
+// enforced separately via CanTrain.
+func CategoryLocked(c UnitCategory, kingdom db.Kingdom) bool {
+	switch c {
+	case CategorySummon:
+		return !CanTrainSummons(kingdom)
+	default:
+		return false
+	}
 }
 
 // CanTrain reports whether a kingdom may train the given unit type based on building prerequisites.

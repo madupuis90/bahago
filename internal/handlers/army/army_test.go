@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
@@ -495,4 +496,51 @@ func TestHandleDisband_InvalidInputRenders(t *testing.T) {
 	w := httptest.NewRecorder()
 	h(w, disbandReq(0, attacker))
 	testhelper.AssertContains(t, w.Body.String(), "invalid legion id")
+}
+
+// ── armyContent structure ─────────────────────────────────────────────────────
+//
+// Locks the two layout invariants the centralisation introduced: a dedicated
+// Orders section exists (so the per-legion forms are gone), and afield
+// legions render before at-home legions (so the time-sensitive cards lead).
+
+func renderArmy(kingdom *db.Kingdom, data armyData) string {
+	var b strings.Builder
+	_ = armyContent(kingdom, data, "", "attack").Render(&b)
+	return b.String()
+}
+
+func TestArmyContent_HasMarchOrdersSection(t *testing.T) {
+	html := renderArmy(attacker, armyData{})
+	testhelper.AssertContains(t, html, "Orders")
+	testhelper.AssertContains(t, html, "No available legion to order")
+	testhelper.AssertContains(t, html, "The Reserve")
+}
+
+func TestArmyContent_GroupsAfieldLegionsFirst(t *testing.T) {
+	data := armyData{
+		legions: []db.ListLegionsForKingdomRow{
+			{ID: 1, Number: 1, Name: "Legion I", CampaignStatus: pgtype.Text{String: "en_route", Valid: true}},
+			{ID: 2, Number: 2, Name: "Legion II", CampaignStatus: pgtype.Text{}},
+		},
+		legionUnits: map[int][]db.KingdomLegionUnit{
+			2: {{LegionID: 2, UnitType: "recruit", Count: 5}},
+		},
+		campaigns: []db.GetCampaignsForKingdomRow{{
+			ID: 7, LegionID: 1, Action: "attack", Status: "en_route",
+			TargetKingdomID: 9, TicksRemaining: 2, ActionTicks: 3, TravelTicks: 4,
+		}},
+	}
+	html := renderArmy(attacker, data)
+	afield := strings.Index(html, "Attack")        // order chip only on afield cards
+	home := strings.Index(html, "At home")          // status-pill label for an at-home legion
+	if afield == -1 {
+		t.Fatalf("afield legion order chip not found; html:\n%s", html)
+	}
+	if home == -1 {
+		t.Fatalf("at-home legion pill not found; html:\n%s", html)
+	}
+	if afield > home {
+		t.Errorf("afield legion should render before at-home legion (afield@%d, home@%d)", afield, home)
+	}
 }

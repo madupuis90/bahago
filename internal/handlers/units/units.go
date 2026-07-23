@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"slices"
 	"strconv"
 
 	"github.com/jackc/pgerrcode"
@@ -301,7 +300,7 @@ func validateTrainInput(input *trainInput) []error {
 func (h *handler) trainUnits(ctx context.Context, kingdom *db.Kingdom, input *trainInput, buildings []db.KingdomBuilding) error {
 	unit := game.UnitDefs[input.UnitType]
 
-	if unit.IsSummon && !game.CanTrainSummons(*kingdom) {
+	if unit.Category == game.CategorySummon && !game.CanTrainSummons(*kingdom) {
 		return ErrSummonsNotUnlocked
 	}
 
@@ -384,12 +383,16 @@ func loadTraining(ctx context.Context, queries db.Querier, kingdomID int) (*db.K
 func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.KingdomBuilding, training *db.KingdomTraining) Node {
 	counts := game.UnitCountMap(units)
 	buildingCounts := game.BuildingCountMap(buildings)
-	canSummon := game.CanTrainSummons(*kingdom)
 
-	allTypes := slices.Concat(game.UnitOrder, game.SummonOrder)
+	allTypes := game.AllUnitOrder()
 	signals := make(map[string]any, len(allTypes))
 	for _, utype := range allTypes {
 		signals["count_"+utype] = 1
+	}
+
+	cards := make([]Node, 0, len(game.UnitCategories))
+	for _, cat := range game.UnitCategories {
+		cards = append(cards, musterRoll(cat, kingdom, game.UnitsByCategory[cat], counts, buildingCounts, training))
 	}
 
 	return Div(
@@ -398,11 +401,8 @@ func unitsContent(kingdom *db.Kingdom, units []db.KingdomUnit, buildings []db.Ki
 		unitsAlert(nil),
 		trainingGrounds(training),
 		PageHeader("Units"),
-		Div(Class("host-cards"),
-			musterRoll("", "", game.UnitOrder, counts, buildingCounts, training, false),
-			musterRoll("Summons", "card-tab--summon", game.SummonOrder, counts, buildingCounts, training, !canSummon),
-		),
 		hostSummary(counts, allTypes),
+		Div(Class("host-cards"), Group(cards)),
 	)
 }
 
@@ -415,29 +415,27 @@ func hostSummary(counts map[string]int, allTypes []string) Node {
 		totalFood += n * def.FoodUpkeep
 		totalMana += n * def.ManaUpkeep
 	}
-	return Div(Class("units-summary is-foot"),
-		hostStat("Standing", "units", totalUnits, false),
-		hostStat("Food Drain", "per tick", totalFood, totalFood > 0),
-		hostStat("Mana Drain", "per tick", totalMana, totalMana > 0),
-	)
-}
-
-func hostStat(label, sub string, num int, drain bool) Node {
-	return Div(Class("units-summary-stat"),
-		Span(Class("units-summary-label"), Text(label)),
-		Div(Class("units-summary-val"),
-			Span(Classes{"units-summary-num": true, "neg": drain}, Text(strconv.Itoa(num))),
-			Span(Class("units-summary-sub"), Text(sub)),
-		),
+	foodTone := StatDefault
+	if totalFood > 0 {
+		foodTone = StatNeg
+	}
+	manaTone := StatDefault
+	if totalMana > 0 {
+		manaTone = StatNeg
+	}
+	return SummaryStrip(
+		SummaryStat{Label: "Standing", Sub: "units", Num: totalUnits},
+		SummaryStat{Label: "Food Drain", Sub: "per tick", Num: totalFood, Tone: foodTone},
+		SummaryStat{Label: "Mana Drain", Sub: "per tick", Num: totalMana, Tone: manaTone},
 	)
 }
 
 func trainingGrounds(training *db.KingdomTraining) Node {
 	if training == nil {
-		return Div(Classes{"progress-banner": true, "is-idle": true},
-			Div(Class("progress-banner-body"),
-				P(Class("progress-banner-idle-title"), Text("Active Training")),
-				P(Class("progress-banner-idle-text"), Text("No training in progress")),
+		return Div(Class("open-slot"),
+			Span(Class("open-slot__copy"),
+				Span(Class("open-slot__h"), Text("Active Training")),
+				Span(Class("open-slot__sub"), Text("No training in progress — choose a company below to begin.")),
 			),
 		)
 	}
@@ -450,7 +448,7 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 	for range int(training.TicksTotal) {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
-	return Div(Class("progress-banner"),
+	return Div(Class("card progress-banner"),
 		Div(Class("progress-banner-gem "+portraitClass(def)),
 			Div(Class("unit-portrait unit-portrait--sm "+portraitMod(def))),
 		),
@@ -476,22 +474,23 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 // portraitClass returns a modifier class for the gem wrapper so the summon vs
 // unit portrait tint still applies inside the progress banner.
 func portraitClass(def game.UnitDef) string {
-	if def.IsSummon {
+	if def.Category == game.CategorySummon {
 		return "progress-banner-gem--summon"
 	}
 	return "progress-banner-gem--unit"
 }
 
 func portraitMod(def game.UnitDef) string {
-	if def.IsSummon {
+	if def.Category == game.CategorySummon {
 		return "unit-portrait--summon"
 	}
 	return "unit-portrait--unit"
 }
 
-func musterRoll(title, tabClass string, order []string, counts, buildingCounts map[string]int, training *db.KingdomTraining, sectionLocked bool) Node {
+func musterRoll(cat game.UnitCategory, kingdom *db.Kingdom, order []string, counts, buildingCounts map[string]int, training *db.KingdomTraining) Node {
+	sectionLocked := game.CategoryLocked(cat, *kingdom)
 	return Div(Class("card"),
-		If(title != "", Div(Class("card-tab "+tabClass), Text(title))),
+		Div(Class("card-tab "+cat.TabClass()), Text(cat.Label())),
 		Div(Class("card-inner"),
 			If(sectionLocked, lockBanner()),
 			Div(Class("muster-roll-head"),
@@ -500,7 +499,7 @@ func musterRoll(title, tabClass string, order []string, counts, buildingCounts m
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Power")),
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Upkeep")),
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Cost")),
-				Div(Class("muster-roll-col muster-roll-col--r"), Text("Train")),
+				Div(Class("muster-roll-col muster-roll-col--c"), Text("Train")),
 			),
 			Group(Map(order, func(utype string) Node {
 				def := game.UnitDefs[utype]
@@ -533,7 +532,7 @@ func unitRow(utype string, def game.UnitDef, count int, locked, manaLocked bool,
 				),
 			),
 		),
-		Span(Class("stat-pill"),
+		Span(Class("cost-pill"),
 			Text(strconv.Itoa(def.Power)),
 		),
 		upkeepPill(def),
@@ -603,7 +602,7 @@ func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTra
 }
 
 func lockBanner() Node {
-	return Div(Class("lock-banner"),
+	return Div(Class("card lock-banner"),
 		ResourceGem("flame", 34),
 		P(Text("Summoning is sealed — establish "),
 			El("b", Text("mana production")),
@@ -616,15 +615,15 @@ func lockBanner() Node {
 
 func upkeepPill(def game.UnitDef) Node {
 	if def.FoodUpkeep > 0 {
-		return Span(Classes{"stat-pill": true, "stat-pill--drain": true},
+		return Span(Classes{"cost-pill": true, "cost-pill--drain": true},
 			ResourceGem("wheat", 18),
-			Span(Class("pill-neg"), Text(strconv.Itoa(def.FoodUpkeep))),
+			Span(Class("text-negative"), Text(strconv.Itoa(def.FoodUpkeep))),
 		)
 	}
 	if def.ManaUpkeep > 0 {
-		return Span(Classes{"stat-pill": true, "stat-pill--drain": true},
+		return Span(Classes{"cost-pill": true, "cost-pill--drain": true},
 			ResourceGem("flame", 18),
-			Span(Class("pill-neg"), Text(strconv.Itoa(def.ManaUpkeep))),
+			Span(Class("text-negative"), Text(strconv.Itoa(def.ManaUpkeep))),
 		)
 	}
 	return Span(Class("unit-upkeep--none"), Text("none"))

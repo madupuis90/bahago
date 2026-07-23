@@ -70,7 +70,7 @@ func TestTrainUnits_SummonsNotUnlocked(t *testing.T) {
 	// unlock summoning.
 	var summonName string
 	for name, def := range game.UnitDefs {
-		if def.IsSummon {
+		if def.Category == game.CategorySummon {
 			summonName = name
 			break
 		}
@@ -101,9 +101,9 @@ func TestTrainUnits_UnitNotAvailable(t *testing.T) {
 	}
 
 	// Skip summons since they'd hit the unlock guard first.
-	if game.UnitDefs[gated].IsSummon {
+	if game.UnitDefs[gated].Category == game.CategorySummon {
 		for name, def := range game.UnitDefs {
-			if !def.IsSummon && !game.CanTrain(name, map[string]int{}) {
+			if def.Category != game.CategorySummon && !game.CanTrain(name, map[string]int{}) {
 				gated = name
 				break
 			}

@@ -82,7 +82,7 @@
 }
 .filter-tab.is-on .filter-count {
   color: var(--brass-dark); background: var(--card-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30);
 }
 
 /* scrolling pile */
@@ -180,7 +180,7 @@
 .message-detail-wrap {
   position: relative; margin: var(--space-6); padding: var(--space-7) var(--space-7); background: var(--card-fill-lit);
   border: 1px solid var(--brass); border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgba(124,90,38,.30), var(--shadow-ink);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .30), var(--shadow-ink);
   background-image: repeating-linear-gradient(transparent 0 31px, color-mix(in srgb, var(--blue) 8%, transparent) 31px 32px);
   background-position: 0 6px;
 }

@@ -18,7 +18,7 @@
     border-radius: var(--radius-lg);
     box-shadow:
       inset 0 1px 0 var(--brass-light),
-      inset 0 0 0 1px rgba(124,90,38,.35),
+      inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35),
       var(--shadow-ink-lg);
   }
   .card.is-lit { background: var(--card-fill-lit); }
@@ -181,7 +181,7 @@
   transition: box-shadow .1s ease, background .15s ease, filter .12s ease;
   text-decoration: none;
 
-  &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 3px 8px rgba(40,28,12,.40); filter: brightness(1.06); }
+  &:hover  { box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 0 var(--brass-dark), 0 3px 8px rgb(var(--ink-shadow-rgb) / .40); filter: brightness(1.06); }
   &:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); filter: brightness(.95); }
   &:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 2px; }
 }
@@ -245,7 +245,7 @@
   border-radius: var(--radius-lg);
   box-shadow:
     inset 0 1px 0 var(--brass-light),
-    inset 0 0 0 1px rgba(124,90,38,.35),
+    inset 0 0 0 1px rgb(var(--brass-dark-rgb) / .35),
     var(--shadow-ink-xs);
   font-family: var(--font-body);
   font-weight: 700;

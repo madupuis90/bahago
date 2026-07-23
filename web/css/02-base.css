@@ -23,7 +23,9 @@ a {
   text-decoration: none;
   cursor: pointer;
 
-  &:hover {
+  /* zero-specificity hover — any class on the anchor (.btn, .leave, …) beats
+     this, so button-styled links never turn link-blue; bare <a> links keep it */
+  :where(&:hover) {
     text-decoration: underline;
     text-underline-offset: 3px;
     text-decoration-thickness: 2.5px;
@@ -62,11 +64,19 @@ input[type="range"] {
   accent-color: var(--blue);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 h1 {
-  font-family: var(--font-display);       /* Lilita One */
+  font-family: var(--font-display);       /* Cinzel */
   font-size: 1.7rem;
   line-height: 1;
-  font-weight: 400;                       /* Lilita is single-weight */
+  font-weight: 700;                       /* Cinzel 400 is too thin for headings */
 }
 
 code {
@@ -74,7 +84,7 @@ code {
   font-weight: 800;
   font-size: .88em;
   background: var(--card-2);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--brass-dark);
   border-radius: var(--radius-md);
   padding: 0 var(--space-2);
 }

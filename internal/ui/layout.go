@@ -112,6 +112,8 @@ func shell(title string, layoutStream Node, body ...Node) Node {
 			Lang("en"),
 			Head(
 				TitleEl(Text(title)),
+				Meta(Charset("utf-8")),
+				Meta(Name("viewport"), Content("width=device-width, initial-scale=1")),
 				Link(Rel("icon"), Href("data:,")),
 				Link(Rel("preconnect"), Href("https://fonts.googleapis.com")),
 				Link(Rel("preconnect"), Href("https://fonts.gstatic.com"), Attr("crossorigin", "")),
