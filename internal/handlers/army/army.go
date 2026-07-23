@@ -1107,8 +1107,7 @@ func legionSlotCard(slotNum int) Node {
 // summaryStrip renders the thin command-summary stat bar above the body.
 func summaryStrip(data armyData) Node {
 	raised := len(data.legions)
-	vacantLegions := game.MaxLegionsPerKingdom - raised
-	freeLegions := raised - len(data.campaigns)
+	availableLegions := raised - len(data.campaigns)
 
 	var totalUnits, totalPower int
 	for _, u := range data.reserve {
@@ -1133,8 +1132,8 @@ func summaryStrip(data armyData) Node {
 		powerTone = StatMuted
 	}
 	return SummaryStrip(
-		SummaryStat{Label: "Vacant legions", Sub: fmt.Sprintf("/ %d", game.MaxLegionsPerKingdom), Num: vacantLegions},
-		SummaryStat{Label: "Free legions", Num: freeLegions},
+		SummaryStat{Label: "Manned legions", Sub: fmt.Sprintf("/ %d", game.MaxLegionsPerKingdom), Num: raised},
+		SummaryStat{Label: "Available legions", Num: availableLegions},
 		SummaryStat{Label: "Total units", Num: totalUnits},
 		SummaryStat{Label: "Total power", Num: totalPower, Tone: powerTone},
 	)
