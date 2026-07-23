@@ -1097,7 +1097,7 @@ func legionSlotCard(slotNum int) Node {
 		Span(Class("open-slot__crest"), Text(romanNumeral(slotNum))),
 		Span(Class("open-slot__copy"),
 			Span(Class("open-slot__h"), Text(fmt.Sprintf("Open banner · Legion %s", romanNumeral(slotNum)))),
-			Span(Class("open-slot__sub"), Text("Transfer companies into this banner from the Reserve to raise it.")),
+			Span(Class("open-slot__sub"), Text("Transfer troops from the reserve to use this legion.")),
 		),
 	)
 }
