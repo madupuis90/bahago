@@ -3095,6 +3095,12 @@ input.field:focus, select.field:focus {
 }/* ── Page rhythm: small gap between the three framed surfaces ─────────── */
 .army-content > * + * { margin-top: var(--space-5); }
 
+/* The page title already carries a filigree divider; the per-card section
+   rules stack four of these lines on one page. Drop the .section-rule inside
+   cards here so the section title stands alone (guild pages keep theirs). */
+.army-content .section-rule { display: none; }
+.army-content .section-header { gap: 0; }
+
 /* ── Unit token · roster · strength line ───────────────────────────────── */
 .portrait {
   flex: none; display: grid; place-items: center; position: relative;
