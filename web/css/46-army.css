@@ -114,7 +114,13 @@
   padding: var(--space-1) var(--space-3) 3px; background: var(--card-2); width: max-content;
 }
 .status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--brass-dark); background: var(--brass-dark); flex: none; }
-.status-pill--home   { background: var(--card-2); }
+.status-pill--home   {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--green) 15%, var(--card)),
+    color-mix(in srgb, var(--green) 8%, var(--card-2)));
+  color: color-mix(in srgb, var(--green) 60%, var(--ink) 40%);
+}
+.status-pill--home   .status-dot { background: var(--green); border-color: var(--brass-dark); }
 .status-pill--march  {
   background: linear-gradient(180deg,
     color-mix(in srgb, var(--brass) 30%, var(--card)),
