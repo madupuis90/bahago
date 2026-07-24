@@ -2882,15 +2882,22 @@ input.field:focus, select.field:focus {
 }
 
 /* --- inline train control (Qty stepper in col 6, Train button in col 7) ----- */
-.unit-train { display: flex; justify-content: center; }
+.unit-train { display: flex; align-items: center; justify-content: center; }
 /* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
+
+/* The Cost cell wraps an inline-flex .cost-pill in a block div. Without this,
+   the div's line box carries the font's leading above the pill, so the grid's
+   align-items:center centers the div not the pill — the pill ends up a few px
+   low. Making it a flex container with line-height:1 removes the leading, so
+   the pill centers precisely and lines up vertically with the .unit-lock-note
+   (which is centered via .unit-train's flex align-items). */
+.unit-cost { display: flex; align-items: center; justify-content: flex-end; line-height: 1; }
 
 /* --- lock note + sealed-summons banner (framed via the .card co-class) ------ */
 .unit-lock-note {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  justify-self: flex-end;
   font-family: var(--font-body);
   font-weight: 800;
   font-size: var(--fs-xs);

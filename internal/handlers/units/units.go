@@ -571,7 +571,7 @@ func trainCostCell(utype string, def game.UnitDef) Node {
 // the Qty and Train columns (see trainCell).
 func qtyCell(utype string, locked, manaLocked bool, training *db.KingdomTraining) Node {
 	if manaLocked || locked || training != nil {
-		return Div() // cell absorbed by the spanning lock note / disabled button slot
+		return nil // no cell — trainCell's note/button spans the Qty+Train columns
 	}
 	countKey := "count_" + utype
 	decExpr := fmt.Sprintf("$%s = Math.max(1, ($%s || 1) - 1)", countKey, countKey)
@@ -591,10 +591,7 @@ func qtyCell(utype string, locked, manaLocked bool, training *db.KingdomTraining
 func trainCell(utype string, locked, manaLocked bool, training *db.KingdomTraining) Node {
 	if manaLocked {
 		return Div(Class("unit-train unit-train--note"),
-			Span(Class("unit-lock-note"),
-				ResourceGem("flame", 16),
-				Text("Needs mana"),
-			),
+			Span(Class("unit-lock-note"), Text("Skill required")),
 		)
 	}
 	if locked {
@@ -617,10 +614,7 @@ func trainCell(utype string, locked, manaLocked bool, training *db.KingdomTraini
 func lockBanner() Node {
 	return Div(Class("card lock-banner"),
 		ResourceGem("flame", 34),
-		P(Text("Summoning is sealed — establish "),
-			El("b", Text("mana production")),
-			Text(" to channel the aether."),
-		),
+		P(Text("Summoning is locked — a skill is required to unlock.")),
 	)
 }
 
