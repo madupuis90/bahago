@@ -2836,7 +2836,7 @@ input.field:focus, select.field:focus {
 .unit-row,
 .muster-roll-foot {
   display: grid;
-  grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 168px;
+  grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 104px 92px;
   align-items: center;
   column-gap: var(--space-6);
 }
@@ -2855,6 +2855,11 @@ input.field:focus, select.field:focus {
 .unit-row > :nth-child(3),
 .unit-row > :nth-child(4),
 .unit-row > :nth-child(5) { justify-self: end; }
+/* Qty (col 6) + Train (col 7) are center-aligned, matching the --c headers. */
+.unit-row > :nth-child(6),
+.unit-row > :nth-child(7) { justify-self: center; }
+/* Lock note spans the Qty + Train columns so a single short note fills both. */
+.unit-row > .unit-train--note { grid-column: 6 / 8; }
 .unit-row {
   padding: var(--space-3) var(--space-1);
   border-top: 2px dotted color-mix(in srgb, var(--ink) 28%, transparent);
@@ -2876,7 +2881,7 @@ input.field:focus, select.field:focus {
   color: var(--red);
 }
 
-/* --- inline train control (stepper stacked above the Train button, centered) - */
+/* --- inline train control (Qty stepper in col 6, Train button in col 7) ----- */
 .unit-train { display: flex; justify-content: center; }
 /* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
 
@@ -2923,7 +2928,7 @@ input.field:focus, select.field:focus {
   .muster-roll { overflow-x: auto; }
   .muster-roll-head, .unit-row, .muster-roll-foot {
     min-width: 620px;
-    grid-template-columns: 56px minmax(120px, 1fr) 64px 68px 100px 150px;
+    grid-template-columns: 56px minmax(120px, 1fr) 64px 68px 100px 90px 78px;
     column-gap: var(--space-3);
   }
 }/* ── Main layout — map column | command panel ───────────────────────────────── */

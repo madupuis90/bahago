@@ -499,6 +499,7 @@ func musterRoll(cat game.UnitCategory, kingdom *db.Kingdom, order []string, coun
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Power")),
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Upkeep")),
 				Div(Class("muster-roll-col muster-roll-col--r"), Text("Cost")),
+				Div(Class("muster-roll-col muster-roll-col--c"), Text("Qty")),
 				Div(Class("muster-roll-col muster-roll-col--c"), Text("Train")),
 			),
 			Group(Map(order, func(utype string) Node {
@@ -537,7 +538,8 @@ func unitRow(utype string, def game.UnitDef, count int, locked, manaLocked bool,
 		),
 		upkeepPill(def),
 		trainCostCell(utype, def),
-		trainControl(utype, locked, manaLocked, training),
+		qtyCell(utype, locked, manaLocked, training),
+		trainCell(utype, locked, manaLocked, training),
 	)
 }
 
@@ -563,9 +565,32 @@ func trainCostCell(utype string, def game.UnitDef) Node {
 	)
 }
 
-func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTraining) Node {
+// qtyCell renders the Qty column (cols 6): the stepper when a row is
+// trainable, empty otherwise. The lock note and the disabled-during-training
+// button live in trainCell; when a row is locked the lock note spans both
+// the Qty and Train columns (see trainCell).
+func qtyCell(utype string, locked, manaLocked bool, training *db.KingdomTraining) Node {
+	if manaLocked || locked || training != nil {
+		return Div() // cell absorbed by the spanning lock note / disabled button slot
+	}
+	countKey := "count_" + utype
+	decExpr := fmt.Sprintf("$%s = Math.max(1, ($%s || 1) - 1)", countKey, countKey)
+	incExpr := fmt.Sprintf("$%s = ($%s || 1) + 1", countKey, countKey)
+	return Div(Class("unit-train"),
+		Div(Class("stepper"),
+			Span(Class("step-btn step-btn--l"), Role("button"), ds.On("click", decExpr), Text("−")),
+			Input(Class("count-box"), Attr("inputmode", "numeric"), Type("text"), ds.Bind(countKey)),
+			Span(Class("step-btn step-btn--r"), Role("button"), ds.On("click", incExpr), Text("+")),
+		),
+	)
+}
+
+// trainCell renders the Train column (col 7): the Train button when a row is
+// trainable, a disabled button while training is in progress, or a lock note
+// that spans the Qty+Train columns (6/8) when the unit is locked.
+func trainCell(utype string, locked, manaLocked bool, training *db.KingdomTraining) Node {
 	if manaLocked {
-		return Div(Class("unit-train"),
+		return Div(Class("unit-train unit-train--note"),
 			Span(Class("unit-lock-note"),
 				ResourceGem("flame", 16),
 				Text("Needs mana"),
@@ -573,31 +598,19 @@ func trainControl(utype string, locked, manaLocked bool, training *db.KingdomTra
 		)
 	}
 	if locked {
-		return Div(Class("unit-train"),
+		return Div(Class("unit-train unit-train--note"),
 			Span(Class("unit-lock-note"), Text("Building required")),
 		)
 	}
 	if training != nil {
 		return Div(Class("unit-train"),
-			Div(Class("train-ctl"),
-				Button(Class("btn"), Disabled(), Text("Train")),
-			),
+			Button(Class("btn btn--sm"), Disabled(), Text("Train")),
 		)
 	}
 	trainExpr := fmt.Sprintf("$unit_type='%s';$train_count=$count_%s;%s",
 		utype, utype, datastar.PostSSE(routes.KingdomUnitsTrainPath))
-	countKey := "count_" + utype
-	decExpr := fmt.Sprintf("$%s = Math.max(1, ($%s || 1) - 1)", countKey, countKey)
-	incExpr := fmt.Sprintf("$%s = ($%s || 1) + 1", countKey, countKey)
 	return Div(Class("unit-train"),
-		Div(Class("train-ctl"),
-			Div(Class("stepper"),
-				Span(Class("step-btn step-btn--l"), Role("button"), ds.On("click", decExpr), Text("−")),
-				Input(Class("count-box"), Attr("inputmode", "numeric"), Type("text"), ds.Bind(countKey)),
-				Span(Class("step-btn step-btn--r"), Role("button"), ds.On("click", incExpr), Text("+")),
-			),
-			Button(Class("btn btn--sm btn--primary"), ds.On("click", trainExpr), Text("Train")),
-		),
+		Button(Class("btn btn--sm btn--primary"), ds.On("click", trainExpr), Text("Train")),
 	)
 }
 
