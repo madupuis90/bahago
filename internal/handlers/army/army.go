@@ -671,10 +671,12 @@ func statusPill(campaign *db.GetCampaignsForKingdomRow) Node {
 			}
 		}
 	}
-	return Span(Classes{"status-pill": true, "status-pill--" + tone: true},
-		Span(Class("status-dot")),
-		Text(label),
-	)
+	classes := Classes{"status-pill": true, "status-pill--" + tone: true}
+	if campaign != nil {
+		// only the afield states carry a status dot; the at-home pill is plain
+		return Span(classes, Span(Class("status-dot")), Text(label))
+	}
+	return Span(classes, Text(label))
 }
 
 // actionTag renders the attack/defend order chip. sm renders the compact
