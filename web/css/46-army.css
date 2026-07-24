@@ -170,7 +170,7 @@
 
 .action-toggle {
   display: inline-flex; border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  overflow: hidden; box-shadow: var(--shadow-raised); width: max-content;
+  overflow: hidden; box-shadow: var(--shadow-raised); width: max-content; height: 46px;
 }
 .seg {
   display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer;
