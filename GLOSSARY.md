@@ -85,8 +85,14 @@ Guild membership roles:
 
 _Avoid_: Alliance, Faction, Clan.
 
-**World Map**: A 64×64 tile grid divided into 8×8 pages of 8×8 tiles. Each Kingdom occupies a coordinate on the grid.
+**World Map**: A 64×64 tile grid divided into 8×8 pages of 8×8 tiles. Each Kingdom occupies a coordinate on the grid. Coordinates use a top-left origin: (0,0) is the north-west corner; X increases east, Y increases south.
 _Avoid_: Map, Grid.
+
+**Region**: One of the 64 pages of the World Map, addressed by page coordinates (px, py). A Region has a name, a dominant **Biome** shown on the minimap, and a per-tile Biome layout for its 64 tiles.
+_Avoid_: Province, Zone, Territory.
+
+**Biome**: A terrain class assigned to each tile. Five exist: Plains, Forest, Water, Mountain, Marsh. A Region's dominant Biome drives its minimap colour; per-tile Biomes drive the board's tile fills. Biome is currently cosmetic — no gameplay mechanic reads it.
+_Avoid_: Terrain type, Landscape.
 
 ---
 

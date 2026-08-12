@@ -341,6 +341,54 @@ func (q *Queries) GetGuildBySlug(ctx context.Context, slug string) (Guild, error
 	return i, err
 }
 
+const getGuildsForKingdoms = `-- name: GetGuildsForKingdoms :many
+SELECT
+    gm.kingdom_id,
+    g.id   AS guild_id,
+    g.slug AS guild_slug,
+    g.name AS guild_name
+FROM guild_memberships gm
+JOIN guilds g ON g.id = gm.guild_id
+WHERE gm.kingdom_id = ANY($1::bigint[])
+  AND gm.role IN ('applicant', 'supporter', 'member', 'officer', 'leader')
+`
+
+type GetGuildsForKingdomsRow struct {
+	KingdomID int
+	GuildID   int
+	GuildSlug string
+	GuildName string
+}
+
+// The active guild commitment for each listed kingdom (one per kingdom via
+// guild_memberships_one_active_per_kingdom). applicant/supporter are included
+// to match GetKingdomGuildMembership's notion of a kingdom's guild; applicant
+// rows have not yet joined but signal the intended affiliation.
+func (q *Queries) GetGuildsForKingdoms(ctx context.Context, kingdomIds []int) ([]GetGuildsForKingdomsRow, error) {
+	rows, err := q.db.Query(ctx, getGuildsForKingdoms, kingdomIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGuildsForKingdomsRow
+	for rows.Next() {
+		var i GetGuildsForKingdomsRow
+		if err := rows.Scan(
+			&i.KingdomID,
+			&i.GuildID,
+			&i.GuildSlug,
+			&i.GuildName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getKingdomGuildInvitation = `-- name: GetKingdomGuildInvitation :one
 SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited' LIMIT 1
 `

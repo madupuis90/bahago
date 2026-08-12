@@ -101,6 +101,11 @@ type Querier interface {
 	GetCampaignsForKingdom(ctx context.Context, kingdomID int) ([]GetCampaignsForKingdomRow, error)
 	GetGuildByID(ctx context.Context, id int) (Guild, error)
 	GetGuildBySlug(ctx context.Context, slug string) (Guild, error)
+	// The active guild commitment for each listed kingdom (one per kingdom via
+	// guild_memberships_one_active_per_kingdom). applicant/supporter are included
+	// to match GetKingdomGuildMembership's notion of a kingdom's guild; applicant
+	// rows have not yet joined but signal the intended affiliation.
+	GetGuildsForKingdoms(ctx context.Context, kingdomIds []int) ([]GetGuildsForKingdomsRow, error)
 	GetInboxMessageByID(ctx context.Context, arg GetInboxMessageByIDParams) (GetInboxMessageByIDRow, error)
 	GetKingdomBuildings(ctx context.Context, kingdomID int) ([]KingdomBuilding, error)
 	GetKingdomByID(ctx context.Context, id int) (Kingdom, error)

@@ -113,13 +113,15 @@
 
   --unread: #e8dcc0;        /* messages: warm parchment-unread row tint on the page */
 
-  /* heraldic map washes — biome fills (terrain "feel") for the World board */
+  /* heraldic map washes — biome fills (terrain "feel") for the World board.
+     Five biomes (see internal/game/region_defs.go): Plains, Forest, Water,
+     Mountain, Marsh. MainBiome drives the minimap; per-tile fills drive the
+     board. Mountain was retinted from the old khaki Crags to a true gray. */
   --bio-p: #bcd089;   /* Plains   */
-  --bio-f: #7aa356;   /* Woodland */
-  --bio-h: #e8c562;   /* Downs    */
-  --bio-r: #b5a585;   /* Crags    */
-  --bio-w: #86b7d0;   /* Coast    */
-  --bio-m: #9cb079;   /* Fen      */
+  --bio-f: #7aa356;   /* Forest   */
+  --bio-r: #9a958c;   /* Mountain */
+  --bio-w: #86b7d0;   /* Water    */
+  --bio-m: #9cb079;   /* Marsh    */
 
   /* diplomacy relation accents — marker fills, own-tile ring, relation dots */
   --rel-self:    var(--brass);
@@ -165,6 +167,7 @@
 
   /* ── World map — must match game.PageSize ─────────────────────────────── */
   --map-cell-size: 4rem;
+  --map-selected: var(--ink);   /* selected-tile ring — engraved dark outline, max contrast, no diplomacy hue */
 
   /* dark-slate frame background for the chrome shells */
   --chrome-bg:
@@ -3011,35 +3014,44 @@ input.field:focus, select.field:focus {
 .map-cell:hover, .map-cell:focus-visible { box-shadow: inset 0 0 0 3px var(--brass); z-index: 2; }
 .map-cell:focus-visible { outline: none; }              /* the brass ring above is the focus indicator */
 .map-cell--own  { box-shadow: inset 0 0 0 3px var(--rel-self); z-index: 1; }
+/* selected tile — a persistent 3px ring in --map-selected (warm near-black
+   ink). Bound reactively to $selected_kingdom_id via data-class on each
+   occupied tile, so find-a-kingdom, clicking another marker, and the ×
+   close button all move/clear the ring through the signal. The :hover
+   variant keeps the same ring so hovering a selected tile never flickers
+   back to brass. z-index:4 sits it above hover/own. The colour is kept off
+   --rel-neutral/-red so it doesn't masquerade as a diplomacy relation. */
 .map-cell--selected,
-.map-cell--selected:hover { box-shadow: inset 0 0 0 4px var(--red); z-index: 3; }
+.map-cell--selected:hover { box-shadow: inset 0 0 0 3px var(--map-selected); z-index: 4; }
 .map-cell-content { width: 100%; height: 100%; display: grid; place-items: center; overflow: visible; }
 
 /* ── Markers ────────────────────────────────────────────────────────────────── */
-.map-marker { position: relative; display: inline-flex; }
-.marker-rel-dot { position: absolute; top: -5px; right: -6px; width: 11px; height: 11px; border-radius: 50%; border: 1px solid var(--brass-dark); background: var(--rel-neutral); z-index: 3; }
-/* crest sticker — a small gold-rimmed slate medallion (rhymes .legion-crest/.unit-tally) */
+.map-marker { position: relative; display: inline-flex; transition: transform .1s ease; }
+/* crest sticker — a small gold-rimmed medallion (rhymes .legion-crest/.unit-tally).
+   The neutral default is a light parchment fill so foreign kingdoms read
+   clearly against the biome tints; own tiles override to brass below. */
 .map-marker--crest .marker-crest {
   width: 32px; height: 32px; display: grid; place-items: center;
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  background: linear-gradient(180deg, var(--card), var(--card-2));
   border: 1px solid var(--brass); border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.28), var(--shadow-ink-xs);
 }
-.map-marker--crest .marker-crest svg { width: 18px; height: 18px; stroke: var(--brass-light); }
+.map-marker--crest .marker-crest svg { width: 18px; height: 18px; stroke: var(--brass-dark); }
+/* selected marker — a small scale-up so the active kingdom pops without
+   resorting to a heavy ring (keeps the border itself small, as requested). */
+.map-cell--selected .map-marker--crest { transform: scale(1.12); }
 /* own tile — a bright brass seal with glow + engraved-dark crown */
 .rel-self .marker-crest {
   background: linear-gradient(180deg, var(--brass-light), var(--brass));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 3px var(--brass-dark), var(--glow-gold);
 }
 .rel-self .marker-crest svg { stroke: var(--brass-dark); }
-.rel-self .marker-rel-dot { background: var(--rel-self); }
-/* at war — red-tinted slate medallion, light crown */
+/* at war — red-tinted medallion, light crown (parked until war state is wired) */
 .rel-war .marker-crest {
   background: linear-gradient(180deg, color-mix(in srgb, var(--red) 38%, var(--slate-edge)), var(--slate-2));
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
 }
 .rel-war .marker-crest svg { stroke: var(--white); }
-.rel-war .marker-rel-dot { background: var(--rel-war); }
 /* tooltip — on hover or keyboard focus (cells are focusable, see flatCell) */
 .map-marker[data-tip]::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); white-space: nowrap;
@@ -3060,14 +3072,18 @@ input.field:focus, select.field:focus {
 .cmd-section-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); }
 .cmd-coords { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); opacity: .8; font-variant-numeric: tabular-nums; }
 .cmd-minimap-wrap { display: flex; justify-content: center; }
-.cmd-nav-hint { margin: var(--space-2) 0 0; text-align: center; font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: var(--fs-xs); color: var(--ink-soft); opacity: .8; }
 
-/* find bar — the search input reuses the shared .field well (20-shared.css) */
-.cmd-search { display: flex; gap: var(--space-2); margin-top: var(--space-3); padding-top: var(--space-3); border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); }
-.cmd-search .field { flex: 1; min-width: 0; }
+/* find bar — a single attached row: magnifier lead + field + attached Find
+   button sharing the field's edges. Reuses the shared .field well (20-shared.css). */
+.cmd-search { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent); }
+.cmd-search-row { display: flex; gap: var(--space-2); }
+.cmd-search-field { flex: 1; min-width: 0; display: flex; align-items: center; }
+.cmd-search-field .field { flex: 1; min-width: 0; }
+.cmd-search-btn { flex: none; }
 
-/* minimap — 8×8 region grid on a slate ground */
-.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: var(--space-2); padding: var(--space-2); background: var(--slate-2); border: 1px solid var(--brass); border-radius: var(--radius-lg); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
+/* minimap — 8×8 region grid on a slate ground. Tight gap so the dark
+   ground reads as a thin grout line, not thick black borders. */
+.map-minimap { display: grid; grid-template-columns: repeat(8, 18px); gap: 3px; padding: 5px; background: var(--slate-2); border: 1px solid var(--brass); border-radius: var(--radius-lg); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.5), var(--shadow-ink-xs); }
 .map-minimap-cell { height: 18px; background: var(--tile); border-radius: 1px; cursor: pointer; }
 .map-minimap-cell:hover { box-shadow: inset 0 0 0 2px var(--brass-light); }
 .map-minimap-cell--current { box-shadow: inset 0 0 0 2px var(--brass-light), 0 0 6px rgb(var(--brass-light-rgb) / .5); }
@@ -3085,13 +3101,23 @@ input.field:focus, select.field:focus {
 
 /* ── Kingdom detail panel ───────────────────────────────────────────────────── */
 .kd-head { display: flex; align-items: flex-start; gap: var(--space-3); }
+/* deselect × button — a small quiet icon button pinned to the head's right edge */
+.kd-close {
+  flex: none; margin-left: auto;
+  display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  font-size: var(--fs-lg); line-height: 1; color: var(--brass-dark);
+  background: transparent; border: 1px solid transparent; border-radius: var(--radius-md);
+  cursor: pointer; transition: background .1s, color .1s, border-color .1s;
+}
+.kd-close:hover { color: var(--brass-dark); background: var(--card-2); border-color: color-mix(in srgb, var(--brass-dark) 40%, transparent); }
+.kd-close:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 1px; }
 .kd-crest {
   flex: none; width: 50px; height: 50px; display: grid; place-items: center;
-  background: linear-gradient(180deg, var(--slate-edge), var(--slate-2));
+  background: linear-gradient(180deg, var(--card), var(--card-2));
   border: 1px solid var(--brass); border-radius: 11px;
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.5), var(--shadow-ink-xs);
+  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 -2px 3px rgba(0,0,0,.28), var(--shadow-ink-xs);
 }
-.kd-crest svg { width: 28px; height: 28px; stroke: var(--brass-light); }
+.kd-crest svg { width: 28px; height: 28px; stroke: var(--brass-dark); }
 .kd-crest.is-self {
   background: linear-gradient(180deg, var(--brass-light), var(--brass));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 3px var(--brass-dark), var(--glow-gold);
@@ -3100,8 +3126,15 @@ input.field:focus, select.field:focus {
 .kd-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); line-height: 1.05; letter-spacing: .06em; color: var(--brass-dark); text-shadow: 0 1px 0 rgba(255,255,255,.5); margin: 0; }
 .kd-sub  { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 2px; }
 
-/* action buttons stack */
-.kd-actions { display: flex; flex-direction: column; gap: var(--space-2); }
+/* guild affiliation row beneath the profile */
+.kd-guild { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--fs-sm); }
+.kd-guild-label { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark); opacity: .7; }
+.kd-guild-name { font-family: var(--font-body); font-weight: 700; color: var(--link-color); }
+.kd-guild-name:hover { color: var(--link-hover-color); }
+.kd-guild--none { font-family: var(--font-body); font-weight: 600; font-style: italic; color: var(--ink-soft); opacity: .8; }
+
+/* action buttons stack — spaced away from the profile + guild rows above */
+.kd-actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
 .kd-actions .btn { width: 100%; }
 .kd-self-note { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: var(--fs-sm); color: var(--ink-soft); opacity: .85; text-wrap: pretty; margin: var(--space-3) 0 0; padding: var(--space-3) var(--space-3); border-radius: var(--radius-lg); background: var(--card-2); border: 1px dashed color-mix(in srgb, var(--brass-dark) 60%, transparent); }
 
@@ -3112,6 +3145,20 @@ input.field:focus, select.field:focus {
 }
 @media (max-width: 480px) {
   .map-flat { --map-cell-size: 38px; }
+}
+
+/* The single-column layout kicks in at 900px, but the board (8 cells + side
+   nav buttons + axis labels) is ~504px wide at 44px cells and only shrinks to
+   ~456px at 38px. On viewports below ~560px that exceeds the board's content
+   box and the E nav button gets clipped. Let the stage pan horizontally as
+   one compass unit (board + all nav buttons and labels), with a thin visible
+   scrollbar as the affordance. The minimap in the stacked command panel below
+   stays reachable as an alternative nav on the smallest screens. */
+@media (max-width: 560px) {
+  .board-stage { overflow-x: auto; scrollbar-width: thin; }
+  .board-stage::-webkit-scrollbar { height: 6px; }
+  .board-stage::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--brass-dark) 55%, transparent); border-radius: var(--radius-sm); }
+  .map-grid-container { width: max-content; margin-inline: auto; }
 }/* ── Page rhythm: small gap between the three framed surfaces ─────────── */
 .army-content > * + * { margin-top: var(--space-5); }
 

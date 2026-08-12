@@ -57,8 +57,41 @@ func (h *handler) handleMapPage() http.HandlerFunc {
 			return
 		}
 
-		KingdomLayout(r, "World Map", r.URL.Path, kingdom, mapContent(kingdoms, kingdom.ID, pageX, pageY, tileX0, tileY0, r.URL.Query().Get("highlight"))).Render(w)
+		guilds, err := h.queries.GetGuildsForKingdoms(r.Context(), kingdomIDs(kingdoms))
+		if err != nil {
+			log.Printf("map page: get guilds: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		KingdomLayout(r, "World Map", r.URL.Path, kingdom, mapContent(kingdoms, guildIndex(guilds), kingdom.ID, pageX, pageY, tileX0, tileY0, r.URL.Query().Get("highlight"))).Render(w)
 	}
+}
+
+// kingdomIDs returns the IDs of the viewport kingdoms, for the guild lookup.
+// An empty slice is fine (ANY of empty array returns no rows), so the guild
+// query is skipped implicitly when the viewport is empty.
+func kingdomIDs(ks []db.GetKingdomsInViewportRow) []int {
+	ids := make([]int, 0, len(ks))
+	for i := range ks {
+		ids = append(ids, ks[i].ID)
+	}
+	return ids
+}
+
+// guildInfo is the guild affiliation shown for a single kingdom in the detail panel.
+type guildInfo struct {
+	Slug string
+	Name string
+}
+
+// guildIndex builds a kingdom ID → guild lookup from the bulk query result.
+func guildIndex(rows []db.GetGuildsForKingdomsRow) map[int]guildInfo {
+	m := make(map[int]guildInfo, len(rows))
+	for _, r := range rows {
+		m[r.KingdomID] = guildInfo{Slug: r.GuildSlug, Name: r.GuildName}
+	}
+	return m
 }
 
 type findInput struct {
@@ -79,18 +112,18 @@ func (h *handler) handleMapFind() http.HandlerFunc {
 
 		name := strings.TrimSpace(input.Name)
 		if name == "" {
-			sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Please enter a kingdom name."))))
+			sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Please enter a kingdom name."))))
 			return
 		}
 
 		k, err := h.queries.GetKingdomByName(r.Context(), name)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Kingdom not found."))))
+				sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Kingdom not found."))))
 				return
 			}
 			log.Printf("map find: get kingdom by name: %v", err)
-			sse.PatchElementGostar(findAlertComponent(P(Class("alert-error"), Text("Something went wrong. Please try again."))))
+			sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Something went wrong. Please try again."))))
 			return
 		}
 
@@ -136,7 +169,7 @@ func tileURL(tileX, tileY int) string {
 	return fmt.Sprintf("%s?x=%d&y=%d", routes.KingdomMapPath, tileX, tileY)
 }
 
-func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
+func mapContent(kingdoms []db.GetKingdomsInViewportRow, guilds map[int]guildInfo, myKingdomID, pageX, pageY, tileX0, tileY0 int, highlight string) Node {
 	initialSelectedID := 0
 	for _, k := range kingdoms {
 		if strings.EqualFold(k.Name, highlight) {
@@ -152,8 +185,8 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 		Div(Class("world-main"),
 			Div(Class("card world-board"),
 				Div(Class("board-head"),
-					H1(Class("board-name"), Text("World Map")),
-					P(Class("board-region"), Text(fmt.Sprintf("Page %d · %d", pageX, pageY))),
+					H1(Class("board-name"), Text(game.RegionAt(tileX0, tileY0).Name)),
+					P(Class("board-region"), Text(fmt.Sprintf("Region %d · %d", pageX, pageY))),
 				),
 				Div(Class("board-stage"),
 					flatBoard(kingdoms, myKingdomID, tileX0, tileY0, initialSelectedID, pageX, pageY),
@@ -177,7 +210,7 @@ func mapContent(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, pageX, page
 						emptyState(),
 					),
 					Map(kingdoms, func(k db.GetKingdomsInViewportRow) Node {
-						return kingdomDetail(k, k.ID == myKingdomID, initialSelectedID)
+						return kingdomDetail(k, guilds[k.ID], k.ID == myKingdomID, initialSelectedID)
 					}),
 				),
 			),
@@ -202,15 +235,16 @@ func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tile
 
 	rowLabels := make([]Node, game.PageSize)
 	for y := range game.PageSize {
-		rowLabels[y] = Div(Class("map-flat-axis"), Text(strconv.Itoa(tileY0+(game.PageSize-1-y))))
+		rowLabels[y] = Div(Class("map-flat-axis"), Text(strconv.Itoa(tileY0+y)))
 	}
 
-	// Visual y=0 is the top row, which corresponds to the highest tile Y coordinate.
+	// Top-left origin (ADR 0004): row 0 is the north (lowest tile Y). X
+	// increases east, Y increases south.
 	cells := make([]Node, 0, game.PageSize*game.PageSize)
 	for y := range game.PageSize {
 		for x := range game.PageSize {
 			tx := tileX0 + x
-			ty := tileY0 + (game.PageSize - 1 - y)
+			ty := tileY0 + y
 			k := index[game.Coord{X: tx, Y: ty}]
 			isOwn := k != nil && k.ID == myKingdomID
 			cells = append(cells, flatCell(k, isOwn, initialSelectedID, tx, ty))
@@ -218,7 +252,7 @@ func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tile
 	}
 
 	return Div(Class("map-grid-container"),
-		navLink("N", tileX0, tileY0+game.PageSize, pageY < maxPage),
+		navLink("N", tileX0, tileY0-game.PageSize, pageY > 0),
 		Div(Class("map-grid-middle"),
 			navLink("W", tileX0-game.PageSize, tileY0, pageX > 0),
 			Div(Class("map-flat"),
@@ -229,19 +263,24 @@ func flatBoard(kingdoms []db.GetKingdomsInViewportRow, myKingdomID, tileX0, tile
 			),
 			navLink("E", tileX0+game.PageSize, tileY0, pageX < maxPage),
 		),
-		navLink("S", tileX0, tileY0-game.PageSize, pageY > 0),
+		navLink("S", tileX0, tileY0+game.PageSize, pageY < maxPage),
 	)
 }
 
 // flatCell renders a single tile in the flat board grid.
 func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx, ty int) Node {
-	tile := biomeColor(tx, ty)
+	tile := biomeFill(game.BiomeAt(tx, ty))
 	selected := k != nil && k.ID == initialSelectedID
 
 	var cellAttrs []Node
 	if k != nil {
 		cellAttrs = []Node{
 			Data("kingdom-id", strconv.Itoa(k.ID)),
+			// Reactive selected ring. The key is quoted (hyphens) and emitted raw
+			// because ds.Class's object builder doesn't quote keys. Keeps the
+			// ring in sync with $selected_kingdom_id for find-a-kingdom, marker
+			// clicks, and the panel × button — not just the initial SSR paint.
+			Attr("data-class", fmt.Sprintf(`{"map-cell--selected":$selected_kingdom_id===%d}`, k.ID)),
 			ds.On("click", "$selected_kingdom_id = +el.dataset.kingdomId"),
 			ds.On("keydown", "evt.key === 'Enter' && ($selected_kingdom_id = +el.dataset.kingdomId)"),
 			TabIndex("0"),
@@ -265,33 +304,34 @@ func flatCell(k *db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID, tx,
 	)
 }
 
-// biomeTints maps each deterministic terrain slot to a heraldic biome wash
-// token (defined in 01-tokens.css). The flat fill reads as terrain "feel";
-// the ink gap-grout between tiles supplies the grid lines.
-var biomeTints = []string{
-	"var(--bio-p)", // Plains
-	"var(--bio-f)", // Woodland
-	"var(--bio-h)", // Downs
-	"var(--bio-w)", // Coast
-	"var(--bio-m)", // Fen
-	"var(--bio-r)", // Crags
-}
-
-// biomeColor returns the --tile CSS value for a tile at world position (x, y).
-func biomeColor(x, y int) string {
-	return biomeTints[(x*3+y*5)%len(biomeTints)]
+// biomeFill maps a game.Biome to its heraldic wash CSS token (defined in
+// 01-tokens.css). The board reads per-tile biomes via game.BiomeAt; the
+// minimap reads each region's game.RegionDef.MainBiome.
+func biomeFill(b game.Biome) string {
+	switch b {
+	case game.BiomePlains:
+		return "var(--bio-p)"
+	case game.BiomeForest:
+		return "var(--bio-f)"
+	case game.BiomeWater:
+		return "var(--bio-w)"
+	case game.BiomeMountain:
+		return "var(--bio-r)" // retinted gray in 01-tokens.css
+	case game.BiomeMarsh:
+		return "var(--bio-m)"
+	default:
+		return "var(--bio-p)"
+	}
 }
 
 // crestMarker renders the kingdom marker on an occupied tile.
-// A flat crest sticker (.marker-crest) bearing a crown glyph, with a small
-// relation dot (.marker-rel-dot) whose colour is driven by the rel-* class
-// via the --rel-* tokens.
+// A flat crest sticker (.marker-crest) bearing a crown glyph. The medallion
+// fill distinguishes owner (brass, rel-self) from others (parchment,
+// rel-neutral); the diplomacy relation dot is parked until war state is wired.
 func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
 	relClass := "rel-neutral"
-	dotColor := "var(--rel-neutral)"
 	if isOwn {
 		relClass = "rel-self"
-		dotColor = "var(--rel-self)"
 	}
 	return Div(
 		Classes{
@@ -301,17 +341,17 @@ func crestMarker(k *db.GetKingdomsInViewportRow, isOwn bool) Node {
 		},
 		Attr("data-tip", k.Name),
 		Div(Class("marker-crest"), Icon("crown", 18, false)),
-		Span(Class("marker-rel-dot"), Style("background:"+dotColor)),
 	)
 }
 
 // kingdomDetail renders the right-panel detail card for one kingdom.
 // The card is hidden until $selected_kingdom_id matches k.ID.
-func kingdomDetail(k db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID int) Node {
+// guild is the selected kingdom's guild affiliation (zero value when none).
+func kingdomDetail(k db.GetKingdomsInViewportRow, guild guildInfo, isOwn bool, initialSelectedID int) Node {
 	selected := k.ID == initialSelectedID
+	msgHref := routes.KingdomMessagesComposePath + "?to=" + url.QueryEscape(k.Name)
 	attackHref := routes.KingdomArmyPath + "?target=" + url.QueryEscape(k.Name) + "&action=attack"
 	defendHref := routes.KingdomArmyPath + "?target=" + url.QueryEscape(k.Name) + "&action=defend"
-	msgHref := routes.KingdomMessagesComposePath + "?to=" + url.QueryEscape(k.Name)
 
 	return Div(
 		Class("kd-panel"),
@@ -323,15 +363,36 @@ func kingdomDetail(k db.GetKingdomsInViewportRow, isOwn bool, initialSelectedID 
 				P(Class("kd-name"), Text(k.Name)),
 				P(Class("kd-sub"), Text(fmt.Sprintf("%d, %d", k.X, k.Y))),
 			),
+			Button(
+				Type("button"),
+				Class("kd-close"),
+				Aria("label", "Deselect"),
+				ds.On("click", "$selected_kingdom_id = 0"),
+				Text("\u00d7"),
+			),
 		),
+		guildLine(guild),
 		If(!isOwn, Div(Class("kd-actions"),
-			A(Class("btn kd-action-btn kd-action-btn--attack"), Href(attackHref), Text("Attack")),
-			A(Class("btn kd-action-btn kd-action-btn--defend"), Href(defendHref), Text("Defend")),
 			A(Class("btn kd-action-btn"), Href(msgHref), Text("Message")),
+			A(Class("btn kd-action-btn btn--danger"), Href(attackHref), Text("Attack")),
+			A(Class("btn kd-action-btn btn--accent"), Href(defendHref), Text("Defend")),
 		)),
 		Iff(isOwn, func() Node {
 			return P(Class("kd-self-note"), Text("This is your home tile."))
 		}),
+	)
+}
+
+// guildLine renders the affiliation row beneath the kingdom profile. A linked
+// guild name when affiliated, a muted note otherwise.
+func guildLine(g guildInfo) Node {
+	if g.Name == "" {
+		return P(Class("kd-guild kd-guild--none"), Text("No guild affiliation"))
+	}
+	href := strings.ReplaceAll(routes.GuildViewPath, "{slug}", g.Slug)
+	return P(Class("kd-guild"),
+		Span(Class("kd-guild-label"), Text("Guild")),
+		A(Class("kd-guild-name"), Href(href), Text(g.Name)),
 	)
 }
 
@@ -373,57 +434,68 @@ func compassRose(class string) Node {
 // navLink renders a navigation link to an adjacent page. When disabled (at a
 // world edge) it renders a non-interactive span instead.
 func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node {
-	labels := map[string]string{
+	glyphs := map[string]string{
 		"N": "▲", "S": "▼", "W": "◀", "E": "▶",
 	}
-	label := labels[direction]
+	names := map[string]string{
+		"N": "North", "S": "South", "W": "West", "E": "East",
+	}
+	label := glyphs[direction]
+	name := names[direction]
 	classes := Classes{
 		"map-nav-btn":               true,
 		"map-nav-btn--" + direction: true,
 		"map-nav-btn--disabled":     !enabled,
 	}
 	if !enabled {
-		return Span(classes, Text(label))
+		return Span(classes, Role("button"), Aria("label", name), Aria("disabled", "true"), Text(label))
 	}
-	return A(Href(tileURL(targetTileX, targetTileY)), classes, Text(label))
+	return A(Href(tileURL(targetTileX, targetTileY)), classes, Aria("label", name), Text(label))
 }
 
-// miniMap renders a compact PageCount×PageCount grid showing all world pages.
-// The current page is highlighted; each other page is a navigation link.
-// Rows are rendered top-to-bottom with py = PageCount-1-row so that py=0
-// sits at the visual bottom, matching the Y-flipped main grid.
+// miniMap renders a compact PageCount×PageCount grid showing all world
+// pages. The current page is highlighted; each other page is a navigation
+// link. Top-left origin (ADR 0004): row 0 is py=0 (north), rendered at the
+// top. Each cell's colour is the region's MainBiome — so the minimap always
+// matches the dominant biome a player sees when they open that page.
 func miniMap(pageX, pageY int) Node {
 	cells := make([]Node, 0, game.PageCount*game.PageCount)
 	for row := range game.PageCount {
-		py := game.PageCount - 1 - row
+		py := row
 		for px := range game.PageCount {
-			tile := biomeColor(px, py)
+			region := game.RegionDefs[py][px]
+			tile := biomeFill(region.MainBiome)
 			tileStyle := Style("--tile:" + tile)
+			label := fmt.Sprintf("%s (Region %d, %d)", region.Name, px, py)
 			if px == pageX && py == pageY {
-				cells = append(cells, Div(Class("map-minimap-cell map-minimap-cell--current"), tileStyle))
+				cells = append(cells, Div(Class("map-minimap-cell map-minimap-cell--current"), Aria("label", label), Aria("current", "true"), tileStyle))
 			} else {
-				cells = append(cells, A(Href(tileURL(px*game.PageSize, py*game.PageSize)), Class("map-minimap-cell"), tileStyle))
+				cells = append(cells, A(Href(tileURL(px*game.PageSize, py*game.PageSize)), Class("map-minimap-cell"), Aria("label", label), tileStyle))
 			}
 		}
 	}
 	return Div(Class("map-minimap"), Group(cells))
 }
 
-// findBar renders the kingdom search form in the command panel.
+// findBar renders the kingdom search form in the command panel as a single
+// attached row: a leading magnifier glyph, the name input, and an attached
+// "Find" submit button sharing the field's edges.
 func findBar() Node {
 	return Div(Class("cmd-search"),
-		Form(
+		Form(Class("cmd-search-row"),
 			ds.On("submit", datastar.PostSSE(routes.KingdomMapFindPath)),
-			Input(
-				Type("text"),
-				Placeholder("Kingdom name…"),
-				Class("field"),
-				ds.Bind("find_name"),
+			Div(Class("cmd-search-field"),
+				Input(
+					Type("text"),
+					Placeholder("Find a kingdom…"),
+					Class("field"),
+					Aria("label", "Kingdom name"),
+					ds.Bind("find_name"),
+				),
 			),
 			Button(
 				Class("btn cmd-search-btn"),
 				Type("submit"),
-				Disabled(),
 				ds.Indicator("find_fetching"),
 				ds.Attr("disabled", "$find_fetching || $find_name === ''"),
 				Text("Find"),
@@ -435,5 +507,5 @@ func findBar() Node {
 
 // findAlertComponent is the SSE patch target for find errors.
 func findAlertComponent(inner Node) Node {
-	return Div(ID("map-find-alert"), inner)
+	return AlertContainer("map-find-alert", inner)
 }

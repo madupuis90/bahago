@@ -11,7 +11,7 @@
       container; flat colour is delivered by a chip behind the glyph
       (see .gem / .crest in the CSS), never baked into these paths.
 
-      Kept set (9): the six resources + idle + sandglass + crown.
+      Kept set (10): the six resources + idle + sandglass + crown + search.
       See docs/design/icons.md.
     -->
 
@@ -26,6 +26,14 @@
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M5 16.5 L19 16.5"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- Search — magnifier, used as the lead glyph on the world-map find bar. -->
+    <symbol id="search" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10.5" cy="10.5" r="6"/>
+        <line x1="15" y1="15" x2="20" y2="20"/>
+      </g>
     </symbol>
 
     <!-- Envelope — used by the auth crest on the recovery-sent state. -->

@@ -268,6 +268,21 @@ UPDATE guilds
 SET settings = @settings, updated_at = NOW()
 WHERE id = @id;
 
+-- name: GetGuildsForKingdoms :many
+-- The active guild commitment for each listed kingdom (one per kingdom via
+-- guild_memberships_one_active_per_kingdom). applicant/supporter are included
+-- to match GetKingdomGuildMembership's notion of a kingdom's guild; applicant
+-- rows have not yet joined but signal the intended affiliation.
+SELECT
+    gm.kingdom_id,
+    g.id   AS guild_id,
+    g.slug AS guild_slug,
+    g.name AS guild_name
+FROM guild_memberships gm
+JOIN guilds g ON g.id = gm.guild_id
+WHERE gm.kingdom_id = ANY(@kingdom_ids::bigint[])
+  AND gm.role IN ('applicant', 'supporter', 'member', 'officer', 'leader');
+
 -- name: ListActiveGuilds :many
 SELECT
     g.name,

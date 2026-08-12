@@ -105,13 +105,15 @@
 
   --unread: #e8dcc0;        /* messages: warm parchment-unread row tint on the page */
 
-  /* heraldic map washes — biome fills (terrain "feel") for the World board */
+  /* heraldic map washes — biome fills (terrain "feel") for the World board.
+     Five biomes (see internal/game/region_defs.go): Plains, Forest, Water,
+     Mountain, Marsh. MainBiome drives the minimap; per-tile fills drive the
+     board. Mountain was retinted from the old khaki Crags to a true gray. */
   --bio-p: #bcd089;   /* Plains   */
-  --bio-f: #7aa356;   /* Woodland */
-  --bio-h: #e8c562;   /* Downs    */
-  --bio-r: #b5a585;   /* Crags    */
-  --bio-w: #86b7d0;   /* Coast    */
-  --bio-m: #9cb079;   /* Fen      */
+  --bio-f: #7aa356;   /* Forest   */
+  --bio-r: #9a958c;   /* Mountain */
+  --bio-w: #86b7d0;   /* Water    */
+  --bio-m: #9cb079;   /* Marsh    */
 
   /* diplomacy relation accents — marker fills, own-tile ring, relation dots */
   --rel-self:    var(--brass);
@@ -157,6 +159,7 @@
 
   /* ── World map — must match game.PageSize ─────────────────────────────── */
   --map-cell-size: 4rem;
+  --map-selected: var(--ink);   /* selected-tile ring — engraved dark outline, max contrast, no diplomacy hue */
 
   /* dark-slate frame background for the chrome shells */
   --chrome-bg:
