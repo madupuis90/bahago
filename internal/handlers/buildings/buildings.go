@@ -341,8 +341,8 @@ func buildingsBanner(construction *db.KingdomConstruction) Node {
 		)
 	}
 	def := game.BuildingDefs[construction.BuildingType]
-	notches := make([]Node, 0, int(construction.TicksTotal))
-	for range int(construction.TicksTotal) {
+	notches := make([]Node, 0, construction.TicksTotal)
+	for range construction.TicksTotal {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 	fillPct := 0.0
@@ -386,8 +386,7 @@ func buildingConnectors(tree game.PlacedTree, counts map[string]int) Node {
 			if !ok {
 				continue
 			}
-			dim := counts[prereq.Type] < prereq.Min
-			lit := !dim
+			lit := counts[prereq.Type] >= prereq.Min
 			a := game.Point{X: parent.CX, Y: parent.Bottom}
 			b := game.Point{X: pn.CX, Y: pn.Top}
 			d := game.ElbowPath(a, b)

@@ -16,8 +16,8 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input struct ──────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ func (h *handler) handleSettings() http.HandlerFunc {
 		slug := r.PathValue("slug")
 
 		guild, viewerRole, err := h.getGuildAndViewerRole(r.Context(), slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
+		if errors.Is(err, ErrGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
 		}
@@ -91,10 +91,14 @@ func (h *handler) handleSettingsSave() http.HandlerFunc {
 	}
 }
 
-// ── Validation ────────────────────────────────────────────────────────────────
+// ── Sentinel errors ───────────────────────────────────────────────────────────
 
-var ErrInvalidPermissionValue = errors.New("invalid permission value")
-var ErrOnlyLeaderCanChangeSettings = errors.New("only the guild leader can change settings")
+var (
+	ErrInvalidPermissionValue      = errors.New("invalid permission value")
+	ErrOnlyLeaderCanChangeSettings = errors.New("only the guild leader can change settings")
+)
+
+// ── Validation ────────────────────────────────────────────────────────────────
 
 func validateSettingsInput(in *settingsSignals) []error {
 	var errs []error
@@ -159,7 +163,7 @@ func guildSettingsContent(guild db.Guild, perms _guild.MessagePermissions) Node 
 
 	return Group([]Node{
 		Breadcrumb("← Manage "+guild.Name, slugURL(routes.GuildManagePath, guild.Slug)),
-		PageHeader("Settings — "+guild.Name),
+		PageHeader("Settings — " + guild.Name),
 		guildSettingsAlert(nil),
 		Div(Class("card"), Div(Class("card-inner"),
 			ds.Signals(map[string]any{

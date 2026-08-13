@@ -9,10 +9,10 @@ func TestSymbolSize(t *testing.T) {
 		sizePx     int
 		wantHeight int
 	}{
-		{"crown", 24, 24, 24, 24},        // square
-		{"res-wood", 24, 24, 24, 24},     // square
-		{"sandglass", 24, 24, 24, 24},    // square (redrawn from 10×14)
-		{"idle", 24, 24, 32, 32},         // square (renamed from zzz)
+		{"crown", 24, 24, 24, 24},     // square
+		{"res-wood", 24, 24, 24, 24},  // square
+		{"sandglass", 24, 24, 24, 24}, // square (redrawn from 10×14)
+		{"idle", 24, 24, 32, 32},      // square (renamed from zzz)
 	}
 	for _, c := range cases {
 		vb, ok := symbolSize[c.id]

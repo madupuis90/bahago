@@ -9,13 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/starfederation/datastar-go/datastar"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
@@ -460,8 +459,7 @@ func navLink(direction string, targetTileX, targetTileY int, enabled bool) Node 
 // matches the dominant biome a player sees when they open that page.
 func miniMap(pageX, pageY int) Node {
 	cells := make([]Node, 0, game.PageCount*game.PageCount)
-	for row := range game.PageCount {
-		py := row
+	for py := range game.PageCount {
 		for px := range game.PageCount {
 			region := game.RegionDefs[py][px]
 			tile := biomeFill(region.MainBiome)

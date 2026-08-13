@@ -7,9 +7,9 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 func RegisterRoutes(r router.Router) {
@@ -18,8 +18,7 @@ func RegisterRoutes(r router.Router) {
 	r.HandleFunc("GET "+routes.HomePath, h.handleHomePage())
 }
 
-type handler struct {
-}
+type handler struct{}
 
 func newHandler() *handler {
 	return &handler{}
@@ -64,10 +63,10 @@ func homeContent() Node {
 	})
 }
 
-// homeHeroScene is the additive decorative SVG band for the hero: a flat
-// ligne-claire landscape (meadow + castle + banners) with a sun, distant
-// the hero reads fine without it. All strokes inherit var(--ink) via the
-// .home-hero-* CSS.
+// homeHeroScene renders the decorative SVG band behind the hero: a flat
+// ligne-claire landscape (meadow, castle, banners) with a sun and birds.
+// It is purely additive — the hero reads fine without it. All strokes
+// inherit var(--ink) via the .home-hero-* CSS.
 func homeHeroScene() Node {
 	return Group([]Node{
 		Raw(`<svg class="home-hero-sun" viewBox="0 0 80 80" fill="none" aria-hidden="true">

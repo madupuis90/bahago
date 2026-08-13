@@ -140,7 +140,6 @@ func overviewCard(tabVariant, tabLabel string, content Node) Node {
 	)
 }
 
-
 func combatLogEntry(e combatLogDisplay) Node {
 	attackerNames := participantNames(e.Attackers)
 	defenderNames := participantNames(e.Defenders)

@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/starfederation/datastar-go/datastar"
+
 	"bahago/internal/contextkeys"
 	"bahago/internal/routes"
-
-	"github.com/starfederation/datastar-go/datastar"
 )
 
 // ── Logout ──────────────────────────────────────────────────────────

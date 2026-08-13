@@ -4,11 +4,12 @@ import (
 	"log"
 	"net/http"
 
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Verify ──────────────────────────────────────────────────────────
+
 func (h *handler) verify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get(tokenParam)

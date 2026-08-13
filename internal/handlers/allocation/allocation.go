@@ -64,27 +64,14 @@ func newHandler(queries db.Querier, tickHub *hub.Hub) *handler {
 
 func (h *handler) handleAllocationPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), kingdom.ID)
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		content, err := h.loadAllocationContent(r.Context(), *kingdom)
 		if err != nil {
-			log.Printf("allocation page: get buildings: %v", err)
+			log.Printf("allocation page: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		prayers, err := h.queries.ListKingdomPrayers(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("allocation page: get prayers: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), kingdom.ID)
-		if err != nil {
-			log.Printf("allocation page: get targeted prayers: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		rates := game.ComputeRates(*kingdom, buildings, targetedPrayers, prayers)
-		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, allocationContent(*kingdom, rates)).Render(w)
+		KingdomLayout(r, "Allocation", r.URL.Path, kingdom, content).Render(w)
 	}
 }
 
@@ -101,26 +88,12 @@ func (h *handler) handleAllocationRefresh() http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			case k := <-ch:
-				buildings, err := h.queries.GetKingdomBuildings(r.Context(), k.ID)
+				page, err := h.loadAllocationContent(r.Context(), k)
 				if err != nil {
-					log.Printf("allocation refresh: get buildings: %v", err)
+					log.Printf("allocation refresh: %v", err)
 					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 					return
 				}
-				prayers, err := h.queries.ListKingdomPrayers(r.Context(), k.ID)
-				if err != nil {
-					log.Printf("allocation refresh: get prayers: %v", err)
-					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
-					return
-				}
-				targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), k.ID)
-				if err != nil {
-					log.Printf("allocation refresh: get targeted prayers: %v", err)
-					sse.PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
-					return
-				}
-				rates := game.ComputeRates(k, buildings, targetedPrayers, prayers)
-				page := allocationContent(k, rates)
 				if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 					log.Printf("allocation refresh: patch: %v", err)
 					return
@@ -153,26 +126,12 @@ func (h *handler) handleSaveAllocation() http.HandlerFunc {
 			return
 		}
 
-		buildings, err := h.queries.GetKingdomBuildings(r.Context(), updatedKingdom.ID)
+		page, err := h.loadAllocationContent(r.Context(), updatedKingdom)
 		if err != nil {
-			log.Printf("save-allocation: get buildings: %v", err)
+			log.Printf("save-allocation: %v", err)
 			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
 			return
 		}
-		prayers, err := h.queries.ListKingdomPrayers(r.Context(), updatedKingdom.ID)
-		if err != nil {
-			log.Printf("save-allocation: get prayers: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(r.Context(), updatedKingdom.ID)
-		if err != nil {
-			log.Printf("save-allocation: get targeted prayers: %v", err)
-			datastar.NewSSE(w, r).PatchElementGostar(allocationAlert(AlertError(errors.New("internal error"))))
-			return
-		}
-		rates := game.ComputeRates(updatedKingdom, buildings, targetedPrayers, prayers)
-		page := allocationContent(updatedKingdom, rates)
 		sse := datastar.NewSSE(w, r)
 		if err := sse.PatchElementGostar(MainContent(page)); err != nil {
 			log.Printf("save-allocation: patch: %v", err)
@@ -227,6 +186,28 @@ func (h *handler) updateAllocations(ctx context.Context, userID int, input *allo
 		return db.Kingdom{}, fmt.Errorf("update allocations: %w", err)
 	}
 	return updated, nil
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+
+// loadAllocationContent fetches the buildings and prayers (both owned and
+// targeting the kingdom), computes the current rates, and renders the page
+// content for the given kingdom state.
+func (h *handler) loadAllocationContent(ctx context.Context, kingdom db.Kingdom) (Node, error) {
+	buildings, err := h.queries.GetKingdomBuildings(ctx, kingdom.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get buildings: %w", err)
+	}
+	prayers, err := h.queries.ListKingdomPrayers(ctx, kingdom.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get prayers: %w", err)
+	}
+	targetedPrayers, err := h.queries.ListPrayersTargetingKingdom(ctx, kingdom.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get targeted prayers: %w", err)
+	}
+	rates := game.ComputeRates(kingdom, buildings, targetedPrayers, prayers)
+	return allocationContent(kingdom, rates), nil
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -405,7 +386,7 @@ func idleRow(net int) Node {
 		Div(
 			Div(Class("alloc-role-name"), Text("Idle")),
 		),
-		P(Class("alloc-assign-note"), Text("Idle allocation speed up the growth of population.")),
+		P(Class("alloc-assign-note"), Text("Idle allocation speeds up population growth.")),
 
 		Div(
 			Class("alloc-net-cell"),

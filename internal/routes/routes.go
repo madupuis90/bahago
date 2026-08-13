@@ -14,10 +14,10 @@ const (
 	KingdomRefreshPath           = "/kingdom/refresh"
 	KingdomAllocationRefreshPath = "/kingdom/allocation/refresh"
 
-	KingdomBuildingsPath         = "/kingdom/buildings"
-	KingdomBuildingsRefreshPath  = "/kingdom/buildings/refresh"
-	KingdomBuildingsDetailPath   = "/kingdom/buildings/detail"
-	KingdomBuildingsRaisePath    = "/kingdom/buildings/raise"
+	KingdomBuildingsPath        = "/kingdom/buildings"
+	KingdomBuildingsRefreshPath = "/kingdom/buildings/refresh"
+	KingdomBuildingsDetailPath  = "/kingdom/buildings/detail"
+	KingdomBuildingsRaisePath   = "/kingdom/buildings/raise"
 
 	KingdomUnitsPath        = "/kingdom/units"
 	KingdomUnitsRefreshPath = "/kingdom/units/refresh"

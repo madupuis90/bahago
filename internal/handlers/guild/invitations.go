@@ -17,8 +17,8 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input structs ─────────────────────────────────────────────────────────────

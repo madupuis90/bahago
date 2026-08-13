@@ -22,9 +22,9 @@ import (
 	"bahago/internal/database/db"
 	g "bahago/internal/guild"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input structs ─────────────────────────────────────────────────────────────
@@ -45,20 +45,20 @@ type guildMsgInput struct {
 
 var (
 	// Validator sentinels.
-	ErrRecipientRequired = errors.New("recipient is required")
-	ErrSubjectRequired   = errors.New("subject is required")
-	ErrBodyRequired      = errors.New("message body is required")
-	ErrBodyTooLong       = errors.New("message body must be 5000 characters or fewer")
+	ErrRecipientRequired     = errors.New("recipient is required")
+	ErrSubjectRequired       = errors.New("subject is required")
+	ErrBodyRequired          = errors.New("message body is required")
+	ErrBodyTooLong           = errors.New("message body must be 5000 characters or fewer")
 	ErrInvalidRecipientGroup = errors.New("invalid recipient group")
 
 	// Orchestrator sentinels.
-	ErrTooManyRecipients      = errors.New("cannot send to more than 20 recipients at once")
-	ErrSelfSend               = errors.New("cannot send a message to yourself")
-	ErrUnknownRecipients      = errors.New("unknown kingdom(s)")
-	ErrNotInGuild             = errors.New("not authorized to send guild messages")
-	ErrNotAuthorizedAll       = errors.New("not authorized to message all members")
-	ErrNotAuthorizedOfficers  = errors.New("not authorized to message officers")
-	ErrNoGuildRecipients      = errors.New("no recipients found in your guild")
+	ErrTooManyRecipients     = errors.New("cannot send to more than 20 recipients at once")
+	ErrSelfSend              = errors.New("cannot send a message to yourself")
+	ErrUnknownRecipients     = errors.New("unknown kingdom(s)")
+	ErrNotInGuild            = errors.New("not authorized to send guild messages")
+	ErrNotAuthorizedAll      = errors.New("not authorized to message all members")
+	ErrNotAuthorizedOfficers = errors.New("not authorized to message officers")
+	ErrNoGuildRecipients     = errors.New("no recipients found in your guild")
 )
 
 // ── Guild message context ─────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ func classifyKind(isGuild, hasAction bool) string {
 	return "post"
 }
 
-// kindFromDetail returns the kind key ("post", "guild", "action") for a detail row.
+// kindFromDetail returns the kind key ("post", "guild", "decree") for a detail row.
 func kindFromDetail(m *db.GetInboxMessageByIDRow) string {
 	return classifyKind(m.IsGuildMessage, m.ActionUrl != "")
 }
@@ -591,10 +591,22 @@ func (h *handler) sendGuildMessage(ctx context.Context, fromKingdomID int, input
 		return fmt.Errorf("bulk create: %w", err)
 	}
 
-	for _, id := range toIDs {
-		h.hub.Publish(db.Kingdom{ID: id})
-	}
+	h.publishKingdoms(ctx, toIDs)
 	return nil
+}
+
+// publishKingdoms notifies the given kingdoms' live SSE connections. It must
+// publish full kingdom rows: subscribers re-render from the published struct,
+// so a zero-value Kingdom would blank out their topbar until the next tick.
+func (h *handler) publishKingdoms(ctx context.Context, kingdomIDs []int) {
+	kingdoms, err := h.queries.GetKingdomsByIDs(ctx, kingdomIDs)
+	if err != nil {
+		log.Printf("messages: publish updates: fetch kingdoms: %v", err)
+		return
+	}
+	for _, k := range kingdoms {
+		h.hub.Publish(k)
+	}
 }
 
 func isSendUserError(err error) bool {

@@ -278,7 +278,9 @@ func TestLeaveGuild_CannotLeaveSupporter(t *testing.T) {
 // the loadGuildAndMembership call inside promoteToOfficer.
 func promoteStubFor(actorID, guildID int, members []db.ListGuildMembersWithNamesRow) *manageStub {
 	return &manageStub{
-		onGetGuildBySlug:                 func(_ context.Context, _ string) (db.Guild, error) { return db.Guild{ID: guildID, Name: "Knights"}, nil },
+		onGetGuildBySlug: func(_ context.Context, _ string) (db.Guild, error) {
+			return db.Guild{ID: guildID, Name: "Knights"}, nil
+		},
 		onGetMembershipByKingdomAndGuild: roleStub(actorID, guildID, _guild.RoleLeader, _guild.RoleMember),
 		onListGuildMembersWithNames:      func(_ context.Context, _ int) ([]db.ListGuildMembersWithNamesRow, error) { return members, nil },
 		onGetKingdomGuildMembership: func(_ context.Context, _ int) (db.GetKingdomGuildMembershipRow, error) {

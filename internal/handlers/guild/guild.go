@@ -21,8 +21,8 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 	. "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
+	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
@@ -55,11 +55,11 @@ func generateSlug(name string) string {
 }
 
 // slugURL substitutes {slug} into a route path constant.
-// memberActionURL substitutes both {slug} and {id} into a route path constant.
 func slugURL(pattern, slug string) string {
 	return strings.ReplaceAll(pattern, "{slug}", slug)
 }
 
+// memberActionURL substitutes both {slug} and {id} into a route path constant.
 func memberActionURL(pattern, slug string, id int) string {
 	s := strings.ReplaceAll(pattern, "{slug}", slug)
 	return strings.ReplaceAll(s, "{id}", strconv.Itoa(id))
@@ -321,7 +321,7 @@ func (h *handler) handleView() http.HandlerFunc {
 		slug := r.PathValue("slug")
 
 		guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
+		if errors.Is(err, ErrGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
 		}
@@ -362,7 +362,7 @@ func (h *handler) handleViewRefresh() http.HandlerFunc {
 				return
 			case k := <-ch:
 				guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, k.ID)
-				if errors.Is(err, errGuildNotFound) {
+				if errors.Is(err, ErrGuildNotFound) {
 					if err := sse.Redirect(routes.GuildPath); err != nil {
 						log.Printf("guild view refresh: redirect: %v", err)
 					}
@@ -567,11 +567,6 @@ func (h *handler) handleCancelProposal() http.HandlerFunc {
 	}
 }
 
-// errGuildNotFound is an unexported alias kept for backwards-compatibility with
-// existing handlers (handleView, handleViewRefresh) that switch on it directly.
-// Prefer ErrGuildNotFound externally.
-var errGuildNotFound = ErrGuildNotFound
-
 func (h *handler) loadGuildAndMembership(ctx context.Context, slug string, kingdomID int) (db.Guild, []db.ListGuildMembersWithNamesRow, _guild.MemberRole, error) {
 	g, err := h.queries.GetGuildBySlug(ctx, slug)
 	if err != nil {
@@ -666,7 +661,6 @@ func (h *handler) sendNotifications(ctx context.Context, fromKingdomID int, toKi
 
 // ── Page components ───────────────────────────────────────────────────────────
 
-
 func guildAlert(inner Node) Node { return AlertContainer("guild-alert", inner) }
 
 // guildCrest renders an empty escutcheon slot (the crest-upload feature is
@@ -687,19 +681,19 @@ func guildCrest(size, tag string) Node {
 }
 
 // supportMeterNode renders the seals-of-support meter (green fill, N notches).
-func supportMeterNode(count, cap int) Node {
+func supportMeterNode(count, max int) Node {
 	pct := 0.0
-	if cap > 0 {
-		pct = float64(count) / float64(cap) * 100
+	if max > 0 {
+		pct = float64(count) / float64(max) * 100
 	}
-	notches := make([]Node, 0, cap)
-	for range cap {
+	notches := make([]Node, 0, max)
+	for range max {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 	return Div(Class("meter"),
 		Div(Class("meter-top"),
 			Span(Class("meter-name"), Text("Seals of support")),
-			Span(Class("meter-eta"), Text(fmt.Sprintf("%d of %d pledged", count, cap))),
+			Span(Class("meter-eta"), Text(fmt.Sprintf("%d of %d pledged", count, max))),
 		),
 		Div(Class("meter-track"),
 			Div(Class("meter-fill meter-fill--support"), Style(fmt.Sprintf("width:%.0f%%", pct))),
@@ -709,13 +703,13 @@ func supportMeterNode(count, cap int) Node {
 }
 
 // sealCell renders a compact seal meter + count for ledger rows.
-func sealCell(count, cap int) Node {
+func sealCell(count, max int) Node {
 	pct := 0.0
-	if cap > 0 {
-		pct = float64(count) / float64(cap) * 100
+	if max > 0 {
+		pct = float64(count) / float64(max) * 100
 	}
-	notches := make([]Node, 0, cap)
-	for range cap {
+	notches := make([]Node, 0, max)
+	for range max {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 	return Div(Class("mark-cell"),
@@ -725,7 +719,7 @@ func sealCell(count, cap int) Node {
 		),
 		Span(Class("mark-count"),
 			Text(fmt.Sprintf("%d", count)),
-			El("span", Class("num-cap"), Text(fmt.Sprintf(" / %d", cap))),
+			El("span", Class("num-cap"), Text(fmt.Sprintf(" / %d", max))),
 		),
 	)
 }
@@ -1239,7 +1233,7 @@ func guildViewerStanding(g db.Guild, viewerRole _guild.MemberRole, invitationID 
 		}}
 	case isActive && viewerRole == _guild.RoleLeader:
 		return guildStanding{banner: banner, foot: foot,
-			note:    "To quit the fellowship, the banner must first pass to another.",
+			note: "To quit the fellowship, the banner must first pass to another.",
 			buttons: []guildBtn{
 				{label: "Manage the Guild", action: fmt.Sprintf(`window.location="%s"`, slugURL(routes.GuildManagePath, slug))},
 			},

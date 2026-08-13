@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"bahago/internal/router"
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
+
+	"bahago/internal/router"
 )
 
 // RegisterRoutes mounts the dev identity-mark preview at /dev/identity.

@@ -12,15 +12,15 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/components"
 	ds "maragu.dev/gomponents-datastar"
+	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	_guild "bahago/internal/guild"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input structs ─────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ func (h *handler) handleManage() http.HandlerFunc {
 		slug := r.PathValue("slug")
 
 		guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, kingdom.ID)
-		if errors.Is(err, errGuildNotFound) {
+		if errors.Is(err, ErrGuildNotFound) {
 			http.Error(w, "guild not found", http.StatusNotFound)
 			return
 		}
@@ -134,7 +134,7 @@ func (h *handler) handleManageRefresh() http.HandlerFunc {
 				return
 			case k := <-ch:
 				guild, members, viewerRole, err := h.loadGuildAndMembership(r.Context(), slug, k.ID)
-				if errors.Is(err, errGuildNotFound) {
+				if errors.Is(err, ErrGuildNotFound) {
 					if err := sse.Redirect(routes.GuildPath); err != nil {
 						log.Printf("guild manage refresh: redirect: %v", err)
 					}

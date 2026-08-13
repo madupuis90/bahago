@@ -13,8 +13,8 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Forgot password ─────────────────────────────────────────────────

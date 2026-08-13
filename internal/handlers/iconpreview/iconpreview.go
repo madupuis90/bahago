@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"bahago/internal/router"
-	"bahago/web"
-	. "bahago/internal/ui"
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
+
+	"bahago/internal/router"
+	. "bahago/internal/ui"
+	"bahago/web"
 )
 
 const spriteFile = "static/sprite.svg"
@@ -145,5 +146,5 @@ func groupByPrefix(ids []string) (glyphs, resources, utility []string) {
 
 // shortName is the id with its category prefix stripped, shown as a hint.
 func shortName(id string) string {
-	return strings.TrimPrefix(strings.TrimPrefix(id, "res-"), "")
+	return strings.TrimPrefix(id, "res-")
 }

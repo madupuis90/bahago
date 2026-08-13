@@ -50,10 +50,10 @@ func emptyMap() func(context.Context, db.GetKingdomsInViewportParams) ([]db.GetK
 
 func TestValidateKingdomName(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		want     string
-		wantErr  error
+		name    string
+		input   string
+		want    string
+		wantErr error
 	}{
 		{"simple_lowercase_titlecased", "bobtown", "Bobtown", nil},
 		{"mixed_case_titlecased", "bObTown", "Bobtown", nil},

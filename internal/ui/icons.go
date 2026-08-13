@@ -128,9 +128,9 @@ var gemIDToResKey = map[string]string{
 // GemIDForResource to get the gem colour for ResourceGem.
 var ResKeyToGemID = map[string]string{
 	"wood":      "tree",
-	"stone":    "mountain",
-	"food":     "wheat",
-	"mana":     "flame",
+	"stone":     "mountain",
+	"food":      "wheat",
+	"mana":      "flame",
 	"devotion":  "sun",
 	"knowledge": "star",
 }

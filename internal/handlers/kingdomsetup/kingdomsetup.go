@@ -23,9 +23,9 @@ import (
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
 	"bahago/internal/game"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Input struct ─────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ func (h *handler) handleSetupPage() http.HandlerFunc {
 
 func (h *handler) handleCreateKingdom() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, _ := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
+		user := r.Context().Value(contextkeys.User).(*contextkeys.SessionUser)
 
 		form := &kingdomCreateForm{}
 		if err := datastar.ReadSignals(r, form); err != nil {

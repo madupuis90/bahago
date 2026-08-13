@@ -82,7 +82,7 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, tickHub *hub.Hub) *handl
 
 func (h *handler) handlePrayersPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
 		prayers, err := h.queries.ListKingdomPrayers(r.Context(), kingdom.ID)
 		if err != nil {
@@ -124,7 +124,7 @@ func (h *handler) handlePrayersRefresh() http.HandlerFunc {
 
 func (h *handler) handleCast() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
 		input := &castInput{}
 		if err := datastar.ReadSignals(r, input); err != nil {
@@ -154,7 +154,7 @@ func (h *handler) handleCast() http.HandlerFunc {
 
 func (h *handler) handleCancel() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		kingdom, _ := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
+		kingdom := r.Context().Value(contextkeys.Kingdom).(*db.Kingdom)
 
 		prayerID, err := validatePrayerID(r.PathValue("id"))
 		if err != nil {
@@ -332,11 +332,9 @@ func sanctumSection(kingdom db.Kingdom, prayers []db.KingdomPrayer, prayerKeys [
 // drain, a brass tick meter, and a cancel footer.
 func activePrayerView(p db.KingdomPrayer) Node {
 	def, ok := game.PrayerDefs[p.PrayerType]
-	name, effect, upkeep := p.PrayerType, "", 0
-	gemID := "sun"
+	name, upkeep, gemID := p.PrayerType, 0, "sun"
 	if ok {
 		name = def.Name
-		effect = resourceBonusText(def)
 		upkeep = def.DevotionUpkeep
 		gemID = prayerGemID(def)
 	}
@@ -346,7 +344,7 @@ func activePrayerView(p db.KingdomPrayer) Node {
 		fillPct = float64(p.TicksTotal-p.TicksRemaining) / float64(p.TicksTotal) * 100
 	}
 	notches := make([]Node, 0, p.TicksTotal)
-	for range int(p.TicksTotal) {
+	for range p.TicksTotal {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 
@@ -359,7 +357,7 @@ func activePrayerView(p db.KingdomPrayer) Node {
 					Text("Upon your realm"),
 				),
 				Span(Class("active-prayer-name"), Text(name)),
-				Iff(effect != "", func() Node {
+				Iff(ok, func() Node {
 					return Span(Class("active-prayer-effect"), Raw(effectHTML(def)))
 				}),
 			),
@@ -569,7 +567,7 @@ func prayerGemID(def game.PrayerDef) string {
 }
 
 // effectHTML returns the bonus text wrapped so the boosted resource reads as an
-// ink-stroked <b>. It mirrors resourceBonusText but allows inline emphasis.
+// ink-stroked <b>.
 func effectHTML(def game.PrayerDef) string {
 	b := def.ResourceBonusPct
 	var parts []string
@@ -598,30 +596,3 @@ func effectHTML(def game.PrayerDef) string {
 }
 
 func prayerAlert(inner Node) Node { return AlertContainer("prayer-alert", inner) }
-
-func resourceBonusText(def game.PrayerDef) string {
-	b := def.ResourceBonusPct
-	var parts []string
-	if b.Wood != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% wood production", b.Wood))
-	}
-	if b.Stone != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% stone production", b.Stone))
-	}
-	if b.Food != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% food production", b.Food))
-	}
-	if b.Mana != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% mana production", b.Mana))
-	}
-	if b.Devotion != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% devotion production", b.Devotion))
-	}
-	if b.Knowledge != 0 {
-		parts = append(parts, fmt.Sprintf("+%d%% knowledge production", b.Knowledge))
-	}
-	if len(parts) == 0 {
-		return "No resource bonus"
-	}
-	return strings.Join(parts, ", ")
-}

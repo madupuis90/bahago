@@ -13,16 +13,10 @@ import (
 
 	"bahago/internal/database/db"
 	"bahago/internal/email"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
-
-/*
-Send reset link:
-Error: PatchElementsNoTargetsFound
-More info: https://data-star.dev/errors/patch_elements_no_targets_found?metadata=%7B%22plugin%22%3A%7B%22type%22%3A%22watcher%22%2C%22name%22%3A%22datastar-patch-elements%22%7D%2C%22element%22%3A%7B%7D%7D
-*/
 
 // Query parameter names used across the auth flow.
 const (
@@ -71,11 +65,8 @@ func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 // authCrest renders the yellow shield crest (.crest.crest-lg) that sits atop
 // every auth card. glyph is the sprite symbol id shown inside the shield —
 // "crown" for the standard auth screens, "envelope" for the recovery-sent
-// state. An empty glyph falls back to "crown".
+// state.
 func authCrest(glyph string) Node {
-	if glyph == "" {
-		glyph = "crown"
-	}
 	return Crest(glyph, 78, "crest-lg")
 }
 
@@ -154,18 +145,18 @@ func isValidToken(token string) bool {
 
 var (
 	// Validation sentinels (per-handler validators).
-	ErrInvalidEmail   = errors.New("invalid email format")
+	ErrInvalidEmail     = errors.New("invalid email format")
 	ErrPasswordTooShort = errors.New("password must be at least 8 characters")
 	ErrPasswordTooLong  = errors.New("password must be at most 72 characters")
 	ErrMissingToken     = errors.New("missing token")
 	ErrInvalidRequest   = errors.New("invalid request")
 
 	// Orchestrator sentinels.
-	ErrInvalidCredentials      = errors.New("invalid email or password")
-	ErrUnverifiedEmail         = errors.New("please verify your email before logging in")
-	ErrEmailTaken              = errors.New("email already in use")
-	ErrEmailSendFailed         = errors.New("failed to send verification email — please try again")
-	ErrInvalidOrExpiredToken   = errors.New("reset link is invalid or has expired")
+	ErrInvalidCredentials    = errors.New("invalid email or password")
+	ErrUnverifiedEmail       = errors.New("please verify your email before logging in")
+	ErrEmailTaken            = errors.New("email already in use")
+	ErrEmailSendFailed       = errors.New("failed to send verification email — please try again")
+	ErrInvalidOrExpiredToken = errors.New("reset link is invalid or has expired")
 )
 
 // ── Shared field validators ─────────────────────────────────────────

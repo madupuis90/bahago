@@ -15,8 +15,8 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/database/db"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Reset password ──────────────────────────────────────────────────
@@ -88,7 +88,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 		}
 
 		if err := h.resetUserPassword(r.Context(), data.Token, data.Password); err != nil {
-			if isResetPasswordUserError(err) {
+			if errors.Is(err, ErrInvalidOrExpiredToken) {
 				datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(err)))
 				return
 			}
@@ -161,8 +161,4 @@ func (h *handler) resetUserPassword(ctx context.Context, token, newPassword stri
 		return fmt.Errorf("commit: %w", err)
 	}
 	return nil
-}
-
-func isResetPasswordUserError(err error) bool {
-	return errors.Is(err, ErrInvalidOrExpiredToken)
 }

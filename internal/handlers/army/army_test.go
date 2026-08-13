@@ -532,8 +532,8 @@ func TestArmyContent_GroupsAfieldLegionsFirst(t *testing.T) {
 		}},
 	}
 	html := renderArmy(attacker, data)
-	afield := strings.Index(html, "Attack")        // order chip only on afield cards
-	home := strings.Index(html, "At home")          // status-pill label for an at-home legion
+	afield := strings.Index(html, "Attack") // order chip only on afield cards
+	home := strings.Index(html, "At home")  // status-pill label for an at-home legion
 	if afield == -1 {
 		t.Fatalf("afield legion order chip not found; html:\n%s", html)
 	}

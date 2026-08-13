@@ -19,8 +19,8 @@ import (
 
 	"bahago/internal/contextkeys"
 	"bahago/internal/database/db"
-	. "bahago/internal/ui"
 	"bahago/internal/routes"
+	. "bahago/internal/ui"
 )
 
 // ── Login ───────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ type LoginForm struct {
 	Password string `json:"password"`
 }
 
-func loginContent(verified bool, reset bool) Node {
+func loginContent(verified, reset bool) Node {
 	return Div(Class("auth-wrap"),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
@@ -115,7 +115,7 @@ func (h *handler) login() http.HandlerFunc {
 				sse.PatchElementGostar(resendVerificationComponent())
 				return
 			}
-			if isLoginUserError(err) {
+			if errors.Is(err, ErrInvalidCredentials) {
 				datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(err)))
 				return
 			}
@@ -217,8 +217,4 @@ func parseRemoteIP(remoteAddr string) (netip.Addr, error) {
 		host = remoteAddr
 	}
 	return netip.ParseAddr(host)
-}
-
-func isLoginUserError(err error) bool {
-	return errors.Is(err, ErrInvalidCredentials)
 }

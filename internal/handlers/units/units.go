@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
@@ -21,14 +22,12 @@ import (
 	"bahago/internal/database/db"
 	"bahago/internal/game"
 	"bahago/internal/hub"
-	. "bahago/internal/ui"
 	"bahago/internal/router"
 	"bahago/internal/routes"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	. "bahago/internal/ui"
 )
 
-// ── Input struct (for ReadSignals) ────────────────────────────────────────────
+// ── Input struct ──────────────────────────────────────────────────────────────
 
 type trainInput struct {
 	UnitType string `json:"unit_type"`
@@ -444,8 +443,8 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 	if training.TicksTotal > 0 {
 		fillPct = float64(training.TicksTotal-training.TicksRemaining) / float64(training.TicksTotal) * 100
 	}
-	notches := make([]Node, 0, int(training.TicksTotal))
-	for range int(training.TicksTotal) {
+	notches := make([]Node, 0, training.TicksTotal)
+	for range training.TicksTotal {
 		notches = append(notches, Span(Class("meter-notch")))
 	}
 	return Div(Class("card progress-banner"),
@@ -617,8 +616,6 @@ func lockBanner() Node {
 		P(Text("Summoning is locked — a skill is required to unlock.")),
 	)
 }
-
-
 
 func upkeepPill(def game.UnitDef) Node {
 	if def.FoodUpkeep > 0 {
