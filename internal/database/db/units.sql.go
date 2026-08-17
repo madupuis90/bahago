@@ -118,24 +118,6 @@ func (q *Queries) DecrementAndListTrainingAtZero(ctx context.Context) ([]Decreme
 	return items, nil
 }
 
-const deductKingdomUnitsCasualties = `-- name: DeductKingdomUnitsCasualties :exec
-UPDATE kingdom_units
-SET count = GREATEST(0, count - $1), updated_at = NOW()
-WHERE kingdom_id = $2
-  AND unit_type = $3
-`
-
-type DeductKingdomUnitsCasualtiesParams struct {
-	Casualties int
-	KingdomID  int
-	UnitType   string
-}
-
-func (q *Queries) DeductKingdomUnitsCasualties(ctx context.Context, arg DeductKingdomUnitsCasualtiesParams) error {
-	_, err := q.db.Exec(ctx, deductKingdomUnitsCasualties, arg.Casualties, arg.KingdomID, arg.UnitType)
-	return err
-}
-
 const deductUnitCost = `-- name: DeductUnitCost :one
 UPDATE kingdoms SET
     wood       = wood  - $1,
@@ -176,37 +158,6 @@ WHERE kingdom_id = $1
 func (q *Queries) DeleteTraining(ctx context.Context, kingdomID int) error {
 	_, err := q.db.Exec(ctx, deleteTraining, kingdomID)
 	return err
-}
-
-const getAllKingdomUnits = `-- name: GetAllKingdomUnits :many
-SELECT kingdom_id, unit_type, count, created_at, updated_at FROM kingdom_units
-ORDER BY kingdom_id
-`
-
-func (q *Queries) GetAllKingdomUnits(ctx context.Context) ([]KingdomUnit, error) {
-	rows, err := q.db.Query(ctx, getAllKingdomUnits)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []KingdomUnit
-	for rows.Next() {
-		var i KingdomUnit
-		if err := rows.Scan(
-			&i.KingdomID,
-			&i.UnitType,
-			&i.Count,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getAvailableKingdomUnits = `-- name: GetAvailableKingdomUnits :many

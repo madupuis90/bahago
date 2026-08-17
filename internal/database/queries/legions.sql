@@ -18,17 +18,10 @@ JOIN kingdom_legions kl ON kl.id = klu.legion_id
 WHERE kl.kingdom_id = $1
 ORDER BY klu.legion_id, klu.unit_type;
 
--- name: GetLegion :one
-SELECT * FROM kingdom_legions
-WHERE id = $1 AND kingdom_id = $2;
-
 -- name: GetLegionForUpdate :one
 SELECT * FROM kingdom_legions
 WHERE id = $1 AND kingdom_id = $2
 FOR UPDATE;
-
--- name: CountLegionsForKingdom :one
-SELECT COUNT(*) FROM kingdom_legions WHERE kingdom_id = $1;
 
 -- name: CreateLegion :one
 INSERT INTO kingdom_legions (kingdom_id, number, name)

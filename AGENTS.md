@@ -174,7 +174,6 @@ prefers accurate instructions over silent divergence.
 | `web/css/44-units.css` | units |
 | `web/css/45-world-map.css` | world map |
 | `web/css/46-army.css` | army |
-| `web/css/47-flipcard.css` | home/about flip card |
 | `web/css/48-messages.css` | messages |
 | `web/css/49-guild.css` | guild |
 | `web/css/50-prayers.css` | prayers |

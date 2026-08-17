@@ -10,23 +10,6 @@ import (
 	"time"
 )
 
-const advanceCampaignStatus = `-- name: AdvanceCampaignStatus :exec
-UPDATE kingdom_campaigns
-SET status = $2, ticks_remaining = $3
-WHERE id = $1
-`
-
-type AdvanceCampaignStatusParams struct {
-	ID             int
-	Status         string
-	TicksRemaining int
-}
-
-func (q *Queries) AdvanceCampaignStatus(ctx context.Context, arg AdvanceCampaignStatusParams) error {
-	_, err := q.db.Exec(ctx, advanceCampaignStatus, arg.ID, arg.Status, arg.TicksRemaining)
-	return err
-}
-
 const bulkActivateCampaigns = `-- name: BulkActivateCampaigns :exec
 UPDATE kingdom_campaigns
 SET status = 'active', ticks_remaining = action_ticks
@@ -245,16 +228,6 @@ func (q *Queries) DecrementAndListCampaignsAtZero(ctx context.Context) ([]Decrem
 		return nil, err
 	}
 	return items, nil
-}
-
-const deleteCampaign = `-- name: DeleteCampaign :exec
-DELETE FROM kingdom_campaigns
-WHERE id = $1
-`
-
-func (q *Queries) DeleteCampaign(ctx context.Context, id int) error {
-	_, err := q.db.Exec(ctx, deleteCampaign, id)
-	return err
 }
 
 const getActiveCampaignsReadyForCombat = `-- name: GetActiveCampaignsReadyForCombat :many

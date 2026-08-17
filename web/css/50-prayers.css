@@ -79,7 +79,7 @@
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
 /* The total-devotion value is rendered by the shared .cost-pill (20-shared.css);
-   its .is-short state replaces the former .offer-cost-val.is-short rule. */
+   .is-short reddens the pill when devotion is short. */
 
 /* ── Available Prayers — catalogue ───────────────────────────────────────── */
 .prayer-grid {
@@ -118,13 +118,11 @@
      full width (align-items defaults to stretch). Keep them content-sized. */
   align-items: flex-start;
 }
-.prayer-effect,
-.prayer-upkeep {
+.prayer-effect {
   display: inline-flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-sm); color: var(--slate);
 }
-.prayer-effect .icon,
-.prayer-upkeep .icon { stroke: var(--brass-dark); flex: none; }
+.prayer-effect .icon { stroke: var(--brass-dark); flex: none; }
 .prayer-effect b { color: var(--brass); font-weight: 800; }
 
 .prayer-card-foot { margin-top: auto; }

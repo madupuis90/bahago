@@ -241,15 +241,6 @@
   }
 }
 
-.alloc-total-note {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-style: italic;
-  font-size: .92rem;
-  color: var(--slate);
-  opacity: .7;
-}
-
 .alloc-section {
   display: flex;
   align-items: center;

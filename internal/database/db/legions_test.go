@@ -110,32 +110,6 @@ func TestCreateLegion_ReclaimsDeletedSlot(t *testing.T) {
 	_ = l2
 }
 
-func TestCountLegionsForKingdom(t *testing.T) {
-	q := testhelper.WithRollback(t, testPool)
-	ctx := context.Background()
-	k, _ := seedKingdomPair(t, q)
-
-	count, err := q.CountLegionsForKingdom(ctx, k.ID)
-	if err != nil {
-		t.Fatalf("CountLegionsForKingdom: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("initial count = %d, want 0", count)
-	}
-
-	if _, err := q.CreateLegion(ctx, db.CreateLegionParams{KingdomID: k.ID, Cap: game.MaxLegionsPerKingdom}); err != nil {
-		t.Fatalf("CreateLegion: %v", err)
-	}
-
-	count, err = q.CountLegionsForKingdom(ctx, k.ID)
-	if err != nil {
-		t.Fatalf("CountLegionsForKingdom after create: %v", err)
-	}
-	if count != 1 {
-		t.Errorf("count after create = %d, want 1", count)
-	}
-}
-
 func TestUpsertLegionUnit_AddsAndAccumulates(t *testing.T) {
 	q := testhelper.WithRollback(t, testPool)
 	ctx := context.Background()

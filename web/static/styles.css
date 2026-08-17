@@ -578,22 +578,9 @@ code {
   a + a { border-top: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
 }
 
-/* ── Footer — small Cinzel line ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .home-chrome { flex-wrap: wrap; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
   .home-chrome-name { font-size: var(--fs-lg); }
-}
-
-.home-foot {
-  text-align: center;
-  padding: var(--space-5);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-xs);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--brass);
-  opacity: .7;
 }.page-title {
   margin-bottom: 1.5rem;
 }
@@ -629,10 +616,7 @@ code {
     var(--shadow-ink);
   color: var(--ink);
 
-  
-  &.is-lit,
-  &.is-frost,
-  &.is-framed { background: var(--card-fill-lit); }
+  &.is-lit { background: var(--card-fill-lit); }
 }
 
 /* Padding hull — card content sits inside this, clear of the gold edge. */
@@ -684,20 +668,9 @@ code {
 }
 .card-tab--red    { --card-accent: var(--red); }
 .card-tab--green  { --card-accent: var(--green); }
-.card-tab--blue   { --card-accent: var(--blue); }
-.card-tab--yellow { --card-accent: var(--brass); color: var(--brass-light); }
 .card-tab--summon { --card-accent: var(--purple); }
-/* alias — retire once templates migrate .card-tab--wood → .card-tab--blue */
-.card-tab--wood   { --card-accent: var(--blue); }
 
 .card-header { margin-bottom: var(--space-4); }
-.card-header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
 .card-title {
   font-family: var(--font-display);
   font-weight: 700;
@@ -790,8 +763,6 @@ code {
     &:active { box-shadow: var(--shadow-btn-active); }
   }
 
-  &.btn--step5 { background: linear-gradient(180deg, var(--slate), var(--slate-2)); }
-
   &.btn--quiet {
     background: transparent; border-color: transparent; box-shadow: none;
     color: var(--blue); text-decoration: underline; text-underline-offset: 3px;
@@ -805,7 +776,7 @@ code {
     background: linear-gradient(180deg, color-mix(in srgb, var(--yellow) 92%, var(--white) 8%), var(--yellow)); color: var(--ink);
   }
   &.is-locked,
-  &:disabled, &.is-disabled {
+  &:disabled {
     opacity: .42; cursor: default; pointer-events: none;
     box-shadow: none; filter: grayscale(.5);
   }
@@ -929,7 +900,6 @@ code {
 .field-group { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .field-label { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--brass-dark); display: flex; align-items: baseline; gap: var(--space-2); }
 .field-hint  { font-family: var(--font-body); font-weight: 700; font-size: var(--fs-xs); color: var(--ink-soft); }
-.field-hint.is-invalid { color: var(--red); }
 
 .field, .select,
 input.field, select.field {
@@ -949,7 +919,6 @@ input.field:focus, select.field:focus {
   box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.55), 0 0 0 2px color-mix(in srgb, var(--brass) 55%, transparent);
 }
 .field:disabled, .select:disabled { background: var(--card-2); opacity: .55; cursor: not-allowed; }
-.field.is-invalid { border-color: var(--red); box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 4px rgba(0,0,0,.55), 0 0 0 2px color-mix(in srgb, var(--red) 55%, transparent); }
 
 .field--num { font-family: var(--font-display); text-align: right; letter-spacing: .02em; }
 
@@ -1033,12 +1002,6 @@ input.field:focus, select.field:focus {
 .meter-fill--support {
   background: linear-gradient(180deg, color-mix(in srgb, var(--green) 100%, var(--white) 24%), var(--green));   /* pledges / positive accrual (Guild support) */
 }
-.meter-fill--foreign {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--gem-mountain) 100%, var(--white) 24%), var(--gem-mountain));   /* steel — another kingdom's effect (incoming prayers) */
-}
-.meter-fill--danger {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 100%, var(--white) 24%), var(--red));   /* shortfall / overdue / over-cap */
-}
 
 .meter-notches { position: absolute; inset: 0; display: flex; pointer-events: none; }
 .meter-notch {
@@ -1090,30 +1053,6 @@ input.field:focus, select.field:focus {
   margin-top: 3px; text-wrap: pretty;
 }
 
-.slot-gauge { display: inline-flex; align-items: center; gap: var(--space-2); }
-.slot-gauge-dots { display: flex; gap: var(--space-1); }
-.slot-gauge-dot {
-  width: 13px; height: 13px; border-radius: var(--radius-sm);
-  border: 1px solid var(--brass-dark); background: var(--slate-2);
-  box-shadow: inset 0 1px 0 var(--brass-light), inset 0 2px 2px rgba(0,0,0,.5);
-}
-.slot-gauge-dot.is-on {
-  background: linear-gradient(180deg, var(--brass-light), var(--brass));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), inset 0 -1px 2px var(--brass-dark), var(--glow-gold);
-  border-color: var(--brass-dark);
-}
-.slot-gauge-label {
-  font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs); letter-spacing: .08em;
-  text-transform: uppercase; color: var(--brass-dark); opacity: .85; white-space: nowrap;
-}
-
-.train-ctl {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-}
 .stepper {
   display: flex;
   align-items: center;
@@ -1226,11 +1165,10 @@ input.field:focus, select.field:focus {
   &:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.55), inset 0 0 0 1px var(--brass-dark); }
 }
 
-/* ── Cost pills — shared resource cost chip ──────────────────────────────── */
+/* ── Cost pills — shared resource cost pill ──────────────────────────────── */
 /* Used by buildings (StaticCostPill) and units/prayers (DynamicCostPill).
-   Matches the units look (round pill, card bg, ink text); the old buildings
-   .cost-chip gold-on-gradient style is retired. Affordability is whole-pill:
-   .is-short reddens the entire pill when any resource is short. */
+   Matches the units look (round pill, card bg, ink text). Affordability is
+   whole-pill: .is-short reddens the entire pill when any resource is short. */
 .cost-pill {
   display: inline-flex;
   align-items: center;
@@ -1334,8 +1272,6 @@ input.field:focus, select.field:focus {
   }
   .card.is-lit { background: var(--card-fill-lit); }
 }
-
-.auth-wrap--wide { max-width: var(--content-max-wide); }
 
 .auth-body { padding: var(--space-7) var(--space-7) var(--space-7); }
 
@@ -1696,16 +1632,6 @@ input.field:focus, select.field:focus {
   }
 }
 
-.home-rule {
-  height: 12px;
-  border: 0;
-  border-radius: 0;
-  background:
-    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3px, var(--brass) 3px 4px, transparent 4.1px) center / 12px 12px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass) 6%, var(--brass) 94%, transparent) center / 100% 1px no-repeat;
-  margin: var(--space-1) 0 var(--space-5);
-}
-
 /* ── Info cards ──────────────────────────────────────────────────────── */
 .home-cards {
   display: grid;
@@ -1752,21 +1678,9 @@ input.field:focus, select.field:focus {
 }
 .panel-title--red   { --card-accent: var(--red); }
 .panel-title--blue  { --card-accent: var(--blue); }
-.panel-title--green { --card-accent: var(--green); }
 
 /* card content helpers */
 .ci { padding: 0; }
-
-.c-eye {
-  font-family: var(--font-body);
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  font-size: var(--fs-2xs);
-  color: var(--brass-dark);
-  opacity: .85;
-  margin-bottom: var(--space-2);
-}
 
 .c-hed {
   font-family: var(--font-display);
@@ -1900,44 +1814,11 @@ input.field:focus, select.field:focus {
 }
 
 /* Typography helpers */
-.caps-label {
-  font-family: var(--font-caps);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  font-size: var(--fs-2xs);
-  color: var(--ink-soft);
-
-  &.text-highlight { color: var(--brass-dark); }
-}
-
-.text-highlight {
-  color: var(--brass-dark);
-  font-family: var(--font-body);
-}
-
 .text-muted {
   font-family: var(--font-body);
   font-style: italic;
   color: var(--ink-soft);
   font-size: 1rem;
-}
-
-.italic { font-style: italic; }
-
-/* Double rule — now two gold engraved lines */
-.rule-dbl {
-  height: 4px;
-  background:
-    linear-gradient(90deg, transparent, var(--brass) 8%, var(--brass) 92%, transparent) 0 0 / 100% 1px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass-dark) 8%, var(--brass-dark) 92%, transparent) 0 2px / 100% 1px no-repeat;
-}
-
-.rule-filigree {
-  height: 12px;
-  margin: var(--space-3) 0;
-  background:
-    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3.5px, var(--brass) 3.5px 4.5px, transparent 4.6px) center / 12px 12px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass) 82%, transparent) center / 100% 1px no-repeat;
 }
 
 /* ── Sprite glyphs (bare line-art) ───────────────────────────────────────── */
@@ -1946,7 +1827,6 @@ input.field:focus, select.field:focus {
   color: var(--ink);
 
   &.icon--active { color: var(--red); }
-  &.icon--dim    { opacity: .5; }
 }
 
 .gly { display: block; color: inherit; }
@@ -1970,8 +1850,6 @@ input.field:focus, select.field:focus {
     0 2px 4px rgb(var(--ink-shadow-rgb) / .30);
 }
 .crest .icon { color: var(--crest-glyph); }
-.crest--ghost { --crest-fill: transparent; box-shadow: 0 0 0 1px var(--brass-dark); }
-
 /* ── Resource medallions — brass-rimmed, muted metal tint, gold glyph ───── */
 .gem {
   position: relative;
@@ -2029,8 +1907,6 @@ input.field:focus, select.field:focus {
   border-top: 1px solid var(--brass-dark);
   background: linear-gradient(180deg, var(--slate-2), var(--slate));
 }
-.barB2-nav--ico { padding: var(--space-1) var(--space-6); }
-
 /* a thin gold filigree seam between the nav band and the content */
 .barB2-nav::after {
   content: '';
@@ -2136,13 +2012,11 @@ input.field:focus, select.field:focus {
   50%      { box-shadow: var(--shadow-ink-xs), var(--glow-gold); }
 }
 
-.frame-body--desk { align-items: stretch; }
-
 /* ── Small screens — wrap the resource row, scroll the nav, tighten gutters ── */
 @media (max-width: 900px) {
   .barB2-info { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); }
   .barB2-res { grid-column: 1 / -1; justify-content: flex-start; }
-  .barB2-nav, .barB2-nav--ico { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
+  .barB2-nav { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
   .barB2-nav::-webkit-scrollbar { display: none; }
   .id { min-width: 0; }
   .id > div { min-width: 0; }
@@ -2220,12 +2094,6 @@ input.field:focus, select.field:focus {
   padding: 0;
   transform: none;
   text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
-}
-
-.page-header h1 .italic {
-  color: var(--brass-dark);
-  font-style: normal;
-  font-weight: 700;
 }
 
 .overview-grid {
@@ -2583,15 +2451,6 @@ input.field:focus, select.field:focus {
   }
 }
 
-.alloc-total-note {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-style: italic;
-  font-size: .92rem;
-  color: var(--slate);
-  opacity: .7;
-}
-
 .alloc-section {
   display: flex;
   align-items: center;
@@ -2811,7 +2670,7 @@ input.field:focus, select.field:focus {
 .unit-portrait--lg { width: 84px; height: 84px; }
 .unit-portrait--sm { width: 46px; height: 46px; border-radius: var(--radius-lg); }
 
-/* --- attribute chips (was .kattr) ----------------------------------------- */
+/* --- attribute chips ------------------------------------------------------- */
 .attribute-row { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
 .attribute {
   font-family: var(--font-body);
@@ -2836,8 +2695,7 @@ input.field:focus, select.field:focus {
 /* --- roster roll (muster roll — domain term kept) ------------------------- */
 .muster-roll { display: flex; flex-direction: column; }
 .muster-roll-head,
-.unit-row,
-.muster-roll-foot {
+.unit-row {
   display: grid;
   grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 104px 92px;
   align-items: center;
@@ -2870,23 +2728,10 @@ input.field:focus, select.field:focus {
 }
 .unit-row.is-locked { opacity: .62; }
 .unit-name { font-family: var(--font-display); font-size: var(--fs-md); line-height: 1.05; color: var(--ink); }
-.unit-flavour { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-xs); color: var(--ink); opacity: .72; margin: 3px 0 0; text-wrap: pretty; }
 .unit-upkeep--none { font-style: italic; font-weight: 700; font-size: var(--fs-xs); opacity: .7; }
-
-.muster-roll-foot {
-  padding: var(--space-3) var(--space-1) 2px;
-  border-top: 1px solid var(--brass);
-  align-items: baseline;
-}
-.muster-roll-foot-num {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  color: var(--red);
-}
 
 /* --- inline train control (Qty stepper in col 6, Train button in col 7) ----- */
 .unit-train { display: flex; align-items: center; justify-content: center; }
-/* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
 
 /* The Cost cell wraps an inline-flex .cost-pill in a block div. Without this,
    the div's line box carries the font's leading above the pill, so the grid's
@@ -2936,7 +2781,7 @@ input.field:focus, select.field:focus {
 /* ── Small screens — the roll keeps its columns and scrolls sideways ──────── */
 @media (max-width: 820px) {
   .muster-roll { overflow-x: auto; }
-  .muster-roll-head, .unit-row, .muster-roll-foot {
+  .muster-roll-head, .unit-row {
     min-width: 620px;
     grid-template-columns: 56px minmax(120px, 1fr) 64px 68px 100px 90px 78px;
     column-gap: var(--space-3);
@@ -3205,7 +3050,6 @@ input.field:focus, select.field:focus {
 .sl-item { display: inline-flex; align-items: baseline; gap: var(--space-2); }
 .sl-item b { font-family: var(--font-display); font-weight: 400; font-size: var(--fs-md); }
 .sl-sep { opacity: .35; }
-/* NOTE: upkeep / .sl-drain is dropped permanently — strength line is power · units only. */
 
 /* ── Reserve — strip + transfer form ─────────────────────────── */
 .qm-strip {
@@ -3452,61 +3296,7 @@ input.field:focus, select.field:focus {
    `.legion-slot` is a thin local hook: it carries the shared look and drops
    the default bottom margin (slots sit inside the flex `.legion-stack`, which
    gaps its children — a trailing margin would break rhythm). */
-.legion-slot { /* == .open-slot */ margin-bottom: 0; }.flip-scene {
-  width: 192px;
-  height: 288px;
-  perspective: 600px;
-  margin-top: 1.5rem;
-  cursor: pointer;
-}
-
-.flip-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 1s;
-  transform-style: preserve-3d;
-  transform-origin: center left;
-}
-
-.flip-card--flipped {
-  transform: translateX(100%) rotateY(-180deg);
-}
-
-.flip-card__face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 2px solid var(--red-deep);
-  border-radius: 25px;
-  box-shadow: var(--panel-shadow);
-  backface-visibility: hidden;
-  user-select: none;
-  overflow: hidden;
-
-  &.flip-card__face--front {
-    background-color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    & img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
-
-  &.flip-card__face--back {
-    background-color: var(--ink-deep);
-    background-image:
-      linear-gradient(to right, transparent calc(50% - 6px), var(--gold-line) calc(50% - 6px), var(--gold-line) calc(50% + 6px), transparent calc(50% + 6px)),
-      linear-gradient(to bottom, transparent calc(50% - 6px), var(--gold-line) calc(50% - 6px), var(--gold-line) calc(50% + 6px), transparent calc(50% + 6px));
-    transform: rotateY(180deg);
-  }
-}
-
-/* ── the desk — two panes ───────────────────────────────────────────────── */
+.legion-slot { /* == .open-slot */ margin-bottom: 0; }/* ── the desk — two panes ───────────────────────────────────────────────── */
 .messages-panel {
   display: grid;
   grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
@@ -3795,13 +3585,6 @@ input.field:focus, select.field:focus {
 .table .is-urgent { color: var(--red); font-weight: 900; text-transform: uppercase; font-size: var(--fs-xs); }
 .table tbody tr.is-you td { background: color-mix(in srgb, var(--brass) 12%, var(--card)); }
 .table tbody tr.is-you:hover td { background: color-mix(in srgb, var(--brass) 18%, var(--card)); }
-.footnote {
-  margin: var(--space-4) 2px 0; padding-top: var(--space-3);
-  border-top: 2px dotted color-mix(in srgb, var(--brass-dark) 55%, transparent);
-  font-family: var(--font-body); font-weight: 600; font-style: italic;
-  font-size: var(--fs-xs); opacity: .6;
-}
-
 .role-tag {
   display: inline-flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xs);
@@ -3993,9 +3776,6 @@ input.field:focus, select.field:focus {
   gap: var(--space-6); align-items: start; margin-top: var(--space-6);
 }
 @media (max-width: 820px) { .manage-leader-grid { grid-template-columns: 1fr; } }
-.danger-zone { margin-top: var(--space-6); border-top: 1px solid var(--brass); padding-top: var(--space-5); }
-.danger-zone .section-title { color: var(--red); }
-.danger-zone .section-rule { background: var(--red); }
 .danger-note {
   font-family: var(--font-body); font-weight: 600; font-style: italic;
   font-size: var(--fs-sm); opacity: .78; margin: 0 0 var(--space-4); max-width: 52ch;
@@ -4084,7 +3864,7 @@ input.field:focus, select.field:focus {
   letter-spacing: .06em; text-transform: uppercase; color: var(--brass-dark);
 }
 /* The total-devotion value is rendered by the shared .cost-pill (20-shared.css);
-   its .is-short state replaces the former .offer-cost-val.is-short rule. */
+   .is-short reddens the pill when devotion is short. */
 
 /* ── Available Prayers — catalogue ───────────────────────────────────────── */
 .prayer-grid {
@@ -4123,13 +3903,11 @@ input.field:focus, select.field:focus {
      full width (align-items defaults to stretch). Keep them content-sized. */
   align-items: flex-start;
 }
-.prayer-effect,
-.prayer-upkeep {
+.prayer-effect {
   display: inline-flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-body); font-weight: 800; font-size: var(--fs-sm); color: var(--slate);
 }
-.prayer-effect .icon,
-.prayer-upkeep .icon { stroke: var(--brass-dark); flex: none; }
+.prayer-effect .icon { stroke: var(--brass-dark); flex: none; }
 .prayer-effect b { color: var(--brass); font-weight: 800; }
 
 .prayer-card-foot { margin-top: auto; }
@@ -4160,10 +3938,6 @@ input.field:focus, select.field:focus {
 /* ── responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 760px) {
   .offering-form { grid-template-columns: 1fr; }
-}.text-positive {
-  color: var(--color-positive);
-}
-
-.text-negative {
+}.text-negative {
   color: var(--color-negative);
 }

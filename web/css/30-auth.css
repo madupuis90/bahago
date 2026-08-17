@@ -24,8 +24,6 @@
   .card.is-lit { background: var(--card-fill-lit); }
 }
 
-.auth-wrap--wide { max-width: var(--content-max-wide); }
-
 .auth-body { padding: var(--space-7) var(--space-7) var(--space-7); }
 
 /* centered crest + wordmark + tagline lockup */

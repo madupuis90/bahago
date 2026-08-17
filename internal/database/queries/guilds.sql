@@ -11,10 +11,10 @@ WITH new_guild AS (
 SELECT * FROM new_guild;
 
 -- name: GetGuildBySlug :one
-SELECT * FROM guilds WHERE slug = $1 LIMIT 1;
+SELECT * FROM guilds WHERE slug = $1;
 
 -- name: GetGuildByID :one
-SELECT * FROM guilds WHERE id = $1 LIMIT 1;
+SELECT * FROM guilds WHERE id = $1;
 
 -- name: UpdateGuildDescription :exec
 UPDATE guilds
@@ -59,11 +59,10 @@ SELECT gm.*, g.slug AS guild_slug, g.name AS guild_name
 FROM guild_memberships gm
 JOIN guilds g ON g.id = gm.guild_id
 WHERE gm.kingdom_id = $1
-  AND gm.role IN ('applicant', 'supporter', 'member', 'officer', 'leader')
-LIMIT 1;
+  AND gm.role IN ('applicant', 'supporter', 'member', 'officer', 'leader');
 
 -- name: GetMembershipByID :one
-SELECT * FROM guild_memberships WHERE id = $1 AND guild_id = $2 LIMIT 1;
+SELECT * FROM guild_memberships WHERE id = $1 AND guild_id = $2;
 
 -- name: GetMembershipByKingdomAndGuild :one
 SELECT * FROM guild_memberships
@@ -73,8 +72,6 @@ LIMIT 1;
 -- name: CreateGuildMembership :exec
 INSERT INTO guild_memberships (guild_id, kingdom_id, role)
 VALUES (@guild_id, @kingdom_id, @role);
-
-
 
 -- name: ListGuildMembersWithNames :many
 SELECT gm.id, gm.guild_id, gm.kingdom_id, gm.role, gm.joined_at, gm.created_at,
@@ -208,7 +205,7 @@ WHERE gm.kingdom_id = $1 AND gm.role = 'invited'
 ORDER BY gm.created_at DESC;
 
 -- name: GetKingdomGuildInvitation :one
-SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited' LIMIT 1;
+SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited';
 
 -- name: RevokeGuildInvitation :one
 DELETE FROM guild_memberships WHERE id = $1 AND guild_id = $2 AND role = 'invited' RETURNING kingdom_id;

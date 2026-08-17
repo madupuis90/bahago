@@ -181,7 +181,6 @@ CSS is split into one file per feature area. Read only the file relevant to the 
 | `web/css/44-units.css` | Units |
 | `web/css/45-world-map.css` | World map: `.map-*` |
 | `web/css/46-army.css` | Army: `.army-*` |
-| `web/css/47-flipcard.css` | Home/about flip card |
 | `web/css/48-messages.css` | Messages |
 | `web/css/49-guild.css` | Guild |
 | `web/css/50-prayers.css` | Prayers |

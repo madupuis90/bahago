@@ -20,7 +20,7 @@ DO UPDATE SET
 
 -- name: StartConstruction :exec
 INSERT INTO kingdom_constructions (kingdom_id, building_type, ticks_remaining, ticks_total)
-VALUES ($1, $2, $3, $3);
+VALUES (@kingdom_id, @building_type, @ticks_remaining, @ticks_remaining);
 
 -- name: DecrementAndListConstructionAtZero :many
 WITH decremented AS (

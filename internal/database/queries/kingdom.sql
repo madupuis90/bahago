@@ -12,7 +12,7 @@ WHERE name = $1;
 
 -- name: CreateKingdom :one
 INSERT INTO kingdoms (user_id, name, x, y)
-VALUES ($1, $2, $3, $4)
+VALUES (@user_id, @name, @x, @y)
 RETURNING *;
 
 -- name: GetKingdomsInViewport :many
@@ -23,15 +23,15 @@ WHERE x >= $1 AND x <= $2
 -- name: UpdateKingdomAllocations :one
 UPDATE kingdoms
 SET
-    wood_pct      = $2,
-    stone_pct     = $3,
-    food_pct      = $4,
-    mana_pct      = $5,
-    devotion_pct  = $6,
-    knowledge_pct = $7,
-    idle_pct      = $8,
+    wood_pct      = @wood_pct,
+    stone_pct     = @stone_pct,
+    food_pct      = @food_pct,
+    mana_pct      = @mana_pct,
+    devotion_pct  = @devotion_pct,
+    knowledge_pct = @knowledge_pct,
+    idle_pct      = @idle_pct,
     updated_at    = NOW()
-WHERE user_id = $1
+WHERE user_id = @user_id
 RETURNING *;
 
 -- name: ListAllKingdoms :many

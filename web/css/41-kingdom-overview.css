@@ -67,12 +67,6 @@
   text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgb(var(--brass-dark-rgb) / .25);
 }
 
-.page-header h1 .italic {
-  color: var(--brass-dark);
-  font-style: normal;
-  font-weight: 700;
-}
-
 .overview-grid {
   display: grid;
   grid-template-columns: 1.05fr 1fr;

@@ -116,16 +116,6 @@
   }
 }
 
-.home-rule {
-  height: 12px;
-  border: 0;
-  border-radius: 0;
-  background:
-    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3px, var(--brass) 3px 4px, transparent 4.1px) center / 12px 12px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass) 6%, var(--brass) 94%, transparent) center / 100% 1px no-repeat;
-  margin: var(--space-1) 0 var(--space-5);
-}
-
 /* ── Info cards ──────────────────────────────────────────────────────── */
 .home-cards {
   display: grid;
@@ -172,21 +162,9 @@
 }
 .panel-title--red   { --card-accent: var(--red); }
 .panel-title--blue  { --card-accent: var(--blue); }
-.panel-title--green { --card-accent: var(--green); }
 
 /* card content helpers */
 .ci { padding: 0; }
-
-.c-eye {
-  font-family: var(--font-body);
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  font-size: var(--fs-2xs);
-  color: var(--brass-dark);
-  opacity: .85;
-  margin-bottom: var(--space-2);
-}
 
 .c-hed {
   font-family: var(--font-display);

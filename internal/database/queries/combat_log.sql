@@ -7,7 +7,14 @@ INSERT INTO kingdom_combat_log (
     winner,
     attacker_casualties, defender_casualties,
     population_stolen
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+) VALUES (
+    @tick_id, @target_kingdom_id,
+    @attacker_units, @defender_units,
+    @attacker_power, @defender_power,
+    @winner,
+    @attacker_casualties, @defender_casualties,
+    @population_stolen
+)
 RETURNING id;
 
 -- name: BulkInsertCombatLogParticipants :exec

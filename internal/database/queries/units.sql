@@ -13,10 +13,6 @@ WHERE kingdom_id = $1;
 SELECT kingdom_id, unit_type, count FROM kingdom_available_units
 WHERE kingdom_id = ANY(@ids::bigint[]);
 
--- name: GetAllKingdomUnits :many
-SELECT * FROM kingdom_units
-ORDER BY kingdom_id;
-
 -- name: UpsertKingdomUnits :exec
 INSERT INTO kingdom_units (kingdom_id, unit_type, count)
 VALUES (@kingdom_id, @unit_type, @count)
@@ -43,7 +39,7 @@ WHERE kingdom_id = $1;
 
 -- name: StartTraining :exec
 INSERT INTO kingdom_training (kingdom_id, unit_type, count, ticks_remaining, ticks_total)
-VALUES ($1, $2, $3, $4, $4);
+VALUES (@kingdom_id, @unit_type, @count, @ticks_remaining, @ticks_remaining);
 
 -- name: DecrementAndListTrainingAtZero :many
 WITH decremented AS (
@@ -73,12 +69,6 @@ UPDATE kingdoms SET
     updated_at = NOW()
 FROM deleted
 WHERE kingdoms.id = @kingdom_id;
-
--- name: DeductKingdomUnitsCasualties :exec
-UPDATE kingdom_units
-SET count = GREATEST(0, count - @casualties), updated_at = NOW()
-WHERE kingdom_id = @kingdom_id
-  AND unit_type = @unit_type;
 
 -- name: BulkDeductKingdomUnitsCasualties :exec
 UPDATE kingdom_units

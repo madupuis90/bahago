@@ -292,20 +292,7 @@
   a + a { border-top: 1px solid color-mix(in srgb, var(--brass-dark) 55%, transparent); }
 }
 
-/* ── Footer — small Cinzel line ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .home-chrome { flex-wrap: wrap; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
   .home-chrome-name { font-size: var(--fs-lg); }
-}
-
-.home-foot {
-  text-align: center;
-  padding: var(--space-5);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-xs);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--brass);
-  opacity: .7;
 }

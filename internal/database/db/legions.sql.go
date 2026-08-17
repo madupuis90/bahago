@@ -62,17 +62,6 @@ func (q *Queries) ClearLegionUnits(ctx context.Context, legionID int) error {
 	return err
 }
 
-const countLegionsForKingdom = `-- name: CountLegionsForKingdom :one
-SELECT COUNT(*) FROM kingdom_legions WHERE kingdom_id = $1
-`
-
-func (q *Queries) CountLegionsForKingdom(ctx context.Context, kingdomID int) (int, error) {
-	row := q.db.QueryRow(ctx, countLegionsForKingdom, kingdomID)
-	var count int
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createLegion = `-- name: CreateLegion :one
 INSERT INTO kingdom_legions (kingdom_id, number, name)
 SELECT $1, s, 'Legion ' || s
@@ -182,29 +171,6 @@ func (q *Queries) GetAtHomeLegionUnitsByKingdomIDs(ctx context.Context, ids []in
 		return nil, err
 	}
 	return items, nil
-}
-
-const getLegion = `-- name: GetLegion :one
-SELECT id, kingdom_id, number, name, created_at FROM kingdom_legions
-WHERE id = $1 AND kingdom_id = $2
-`
-
-type GetLegionParams struct {
-	ID        int
-	KingdomID int
-}
-
-func (q *Queries) GetLegion(ctx context.Context, arg GetLegionParams) (KingdomLegion, error) {
-	row := q.db.QueryRow(ctx, getLegion, arg.ID, arg.KingdomID)
-	var i KingdomLegion
-	err := row.Scan(
-		&i.ID,
-		&i.KingdomID,
-		&i.Number,
-		&i.Name,
-		&i.CreatedAt,
-	)
-	return i, err
 }
 
 const getLegionForUpdate = `-- name: GetLegionForUpdate :one

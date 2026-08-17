@@ -49,11 +49,6 @@ SELECT @campaign_id, unit_type, count
 FROM kingdom_legion_units
 WHERE legion_id = @legion_id;
 
--- name: AdvanceCampaignStatus :exec
-UPDATE kingdom_campaigns
-SET status = $2, ticks_remaining = $3
-WHERE id = $1;
-
 -- name: DecrementAndListCampaignsAtZero :many
 WITH decremented AS (
     UPDATE kingdom_campaigns
@@ -108,10 +103,6 @@ JOIN kingdom_campaigns kc ON kc.id = kcu.campaign_id
 WHERE kc.id = ANY(@ids::bigint[])
 ON CONFLICT (legion_id, unit_type)
 DO UPDATE SET count = kingdom_legion_units.count + EXCLUDED.count;
-
--- name: DeleteCampaign :exec
-DELETE FROM kingdom_campaigns
-WHERE id = $1;
 
 -- name: CancelCampaign :one
 -- Atomically verifies ownership and non-returning status, then sets the campaign

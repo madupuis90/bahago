@@ -26,7 +26,7 @@
 .unit-portrait--lg { width: 84px; height: 84px; }
 .unit-portrait--sm { width: 46px; height: 46px; border-radius: var(--radius-lg); }
 
-/* --- attribute chips (was .kattr) ----------------------------------------- */
+/* --- attribute chips ------------------------------------------------------- */
 .attribute-row { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
 .attribute {
   font-family: var(--font-body);
@@ -51,8 +51,7 @@
 /* --- roster roll (muster roll — domain term kept) ------------------------- */
 .muster-roll { display: flex; flex-direction: column; }
 .muster-roll-head,
-.unit-row,
-.muster-roll-foot {
+.unit-row {
   display: grid;
   grid-template-columns: 72px minmax(150px, 1fr) 86px 78px 116px 104px 92px;
   align-items: center;
@@ -85,23 +84,10 @@
 }
 .unit-row.is-locked { opacity: .62; }
 .unit-name { font-family: var(--font-display); font-size: var(--fs-md); line-height: 1.05; color: var(--ink); }
-.unit-flavour { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-xs); color: var(--ink); opacity: .72; margin: 3px 0 0; text-wrap: pretty; }
 .unit-upkeep--none { font-style: italic; font-weight: 700; font-size: var(--fs-xs); opacity: .7; }
-
-.muster-roll-foot {
-  padding: var(--space-3) var(--space-1) 2px;
-  border-top: 1px solid var(--brass);
-  align-items: baseline;
-}
-.muster-roll-foot-num {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  color: var(--red);
-}
 
 /* --- inline train control (Qty stepper in col 6, Train button in col 7) ----- */
 .unit-train { display: flex; align-items: center; justify-content: center; }
-/* .train-ctl + .stepper / .step-btn / .count-box now live in 20-shared.css */
 
 /* The Cost cell wraps an inline-flex .cost-pill in a block div. Without this,
    the div's line box carries the font's leading above the pill, so the grid's
@@ -151,7 +137,7 @@
 /* ── Small screens — the roll keeps its columns and scrolls sideways ──────── */
 @media (max-width: 820px) {
   .muster-roll { overflow-x: auto; }
-  .muster-roll-head, .unit-row, .muster-roll-foot {
+  .muster-roll-head, .unit-row {
     min-width: 620px;
     grid-template-columns: 56px minmax(120px, 1fr) 64px 68px 100px 90px 78px;
     column-gap: var(--space-3);

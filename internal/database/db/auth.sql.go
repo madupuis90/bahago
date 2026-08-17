@@ -165,7 +165,6 @@ func (q *Queries) DeleteSessionsByUserID(ctx context.Context, userID int) error 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, pw_hash, is_active, is_verified, created_at, updated_at, last_login_at FROM users
 WHERE email = $1
-LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -185,16 +184,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserBySessionID = `-- name: GetUserBySessionID :one
-SELECT 
-    u.id, 
-    u.email, 
-    u.is_active, 
+SELECT
+    u.id,
+    u.email,
+    u.is_active,
     u.is_verified,
     s.id AS session_id,
     s.expires_at
 FROM sessions s
 JOIN users u ON s.user_id = u.id
-WHERE s.id = $1 
+WHERE s.id = $1
   AND s.expires_at > CURRENT_TIMESTAMP
 `
 

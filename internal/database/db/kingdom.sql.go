@@ -471,20 +471,19 @@ func (q *Queries) StealKingdomPopulation(ctx context.Context, arg StealKingdomPo
 const updateKingdomAllocations = `-- name: UpdateKingdomAllocations :one
 UPDATE kingdoms
 SET
-    wood_pct      = $2,
-    stone_pct     = $3,
-    food_pct      = $4,
-    mana_pct      = $5,
-    devotion_pct  = $6,
-    knowledge_pct = $7,
-    idle_pct      = $8,
+    wood_pct      = $1,
+    stone_pct     = $2,
+    food_pct      = $3,
+    mana_pct      = $4,
+    devotion_pct  = $5,
+    knowledge_pct = $6,
+    idle_pct      = $7,
     updated_at    = NOW()
-WHERE user_id = $1
+WHERE user_id = $8
 RETURNING id, user_id, name, population, wood_pct, stone_pct, food_pct, mana_pct, devotion_pct, knowledge_pct, idle_pct, wood, stone, food, mana, devotion, knowledge, created_at, updated_at, x, y
 `
 
 type UpdateKingdomAllocationsParams struct {
-	UserID       int
 	WoodPct      int
 	StonePct     int
 	FoodPct      int
@@ -492,11 +491,11 @@ type UpdateKingdomAllocationsParams struct {
 	DevotionPct  int
 	KnowledgePct int
 	IdlePct      int
+	UserID       int
 }
 
 func (q *Queries) UpdateKingdomAllocations(ctx context.Context, arg UpdateKingdomAllocationsParams) (Kingdom, error) {
 	row := q.db.QueryRow(ctx, updateKingdomAllocations,
-		arg.UserID,
 		arg.WoodPct,
 		arg.StonePct,
 		arg.FoodPct,
@@ -504,6 +503,7 @@ func (q *Queries) UpdateKingdomAllocations(ctx context.Context, arg UpdateKingdo
 		arg.DevotionPct,
 		arg.KnowledgePct,
 		arg.IdlePct,
+		arg.UserID,
 	)
 	var i Kingdom
 	err := row.Scan(

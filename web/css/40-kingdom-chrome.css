@@ -20,44 +20,11 @@
 }
 
 /* Typography helpers */
-.caps-label {
-  font-family: var(--font-caps);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  font-size: var(--fs-2xs);
-  color: var(--ink-soft);
-
-  &.text-highlight { color: var(--brass-dark); }
-}
-
-.text-highlight {
-  color: var(--brass-dark);
-  font-family: var(--font-body);
-}
-
 .text-muted {
   font-family: var(--font-body);
   font-style: italic;
   color: var(--ink-soft);
   font-size: 1rem;
-}
-
-.italic { font-style: italic; }
-
-/* Double rule — now two gold engraved lines */
-.rule-dbl {
-  height: 4px;
-  background:
-    linear-gradient(90deg, transparent, var(--brass) 8%, var(--brass) 92%, transparent) 0 0 / 100% 1px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass-dark) 8%, var(--brass-dark) 92%, transparent) 0 2px / 100% 1px no-repeat;
-}
-
-.rule-filigree {
-  height: 12px;
-  margin: var(--space-3) 0;
-  background:
-    radial-gradient(circle at 50% 50%, var(--brass-light) 0 3.5px, var(--brass) 3.5px 4.5px, transparent 4.6px) center / 12px 12px no-repeat,
-    linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass) 82%, transparent) center / 100% 1px no-repeat;
 }
 
 /* ── Sprite glyphs (bare line-art) ───────────────────────────────────────── */
@@ -66,7 +33,6 @@
   color: var(--ink);
 
   &.icon--active { color: var(--red); }
-  &.icon--dim    { opacity: .5; }
 }
 
 .gly { display: block; color: inherit; }
@@ -90,8 +56,6 @@
     0 2px 4px rgb(var(--ink-shadow-rgb) / .30);
 }
 .crest .icon { color: var(--crest-glyph); }
-.crest--ghost { --crest-fill: transparent; box-shadow: 0 0 0 1px var(--brass-dark); }
-
 /* ── Resource medallions — brass-rimmed, muted metal tint, gold glyph ───── */
 .gem {
   position: relative;
@@ -149,8 +113,6 @@
   border-top: 1px solid var(--brass-dark);
   background: linear-gradient(180deg, var(--slate-2), var(--slate));
 }
-.barB2-nav--ico { padding: var(--space-1) var(--space-6); }
-
 /* a thin gold filigree seam between the nav band and the content */
 .barB2-nav::after {
   content: '';
@@ -256,13 +218,11 @@
   50%      { box-shadow: var(--shadow-ink-xs), var(--glow-gold); }
 }
 
-.frame-body--desk { align-items: stretch; }
-
 /* ── Small screens — wrap the resource row, scroll the nav, tighten gutters ── */
 @media (max-width: 900px) {
   .barB2-info { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); }
   .barB2-res { grid-column: 1 / -1; justify-content: flex-start; }
-  .barB2-nav, .barB2-nav--ico { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
+  .barB2-nav { overflow-x: auto; padding-inline: var(--space-3); scrollbar-width: none; }
   .barB2-nav::-webkit-scrollbar { display: none; }
   .id { min-width: 0; }
   .id > div { min-width: 0; }

@@ -300,7 +300,7 @@ func (q *Queries) ExpirePendingGuilds(ctx context.Context) error {
 }
 
 const getGuildByID = `-- name: GetGuildByID :one
-SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE id = $1 LIMIT 1
+SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE id = $1
 `
 
 func (q *Queries) GetGuildByID(ctx context.Context, id int) (Guild, error) {
@@ -321,7 +321,7 @@ func (q *Queries) GetGuildByID(ctx context.Context, id int) (Guild, error) {
 }
 
 const getGuildBySlug = `-- name: GetGuildBySlug :one
-SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE slug = $1 LIMIT 1
+SELECT id, name, slug, description, status, founding_kingdom_ids, created_at, updated_at, settings FROM guilds WHERE slug = $1
 `
 
 func (q *Queries) GetGuildBySlug(ctx context.Context, slug string) (Guild, error) {
@@ -390,7 +390,7 @@ func (q *Queries) GetGuildsForKingdoms(ctx context.Context, kingdomIds []int) ([
 }
 
 const getKingdomGuildInvitation = `-- name: GetKingdomGuildInvitation :one
-SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited' LIMIT 1
+SELECT id FROM guild_memberships WHERE kingdom_id = $1 AND guild_id = $2 AND role = 'invited'
 `
 
 type GetKingdomGuildInvitationParams struct {
@@ -411,7 +411,6 @@ FROM guild_memberships gm
 JOIN guilds g ON g.id = gm.guild_id
 WHERE gm.kingdom_id = $1
   AND gm.role IN ('applicant', 'supporter', 'member', 'officer', 'leader')
-LIMIT 1
 `
 
 type GetKingdomGuildMembershipRow struct {
@@ -442,7 +441,7 @@ func (q *Queries) GetKingdomGuildMembership(ctx context.Context, kingdomID int) 
 }
 
 const getMembershipByID = `-- name: GetMembershipByID :one
-SELECT id, guild_id, kingdom_id, role, joined_at, created_at FROM guild_memberships WHERE id = $1 AND guild_id = $2 LIMIT 1
+SELECT id, guild_id, kingdom_id, role, joined_at, created_at FROM guild_memberships WHERE id = $1 AND guild_id = $2
 `
 
 type GetMembershipByIDParams struct {
