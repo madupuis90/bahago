@@ -617,9 +617,9 @@ func (h *handler) loadArmyData(r *http.Request, kingdomID int) (armyData, error)
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-// firstKingdomUnit returns the first unit type (in canonical order) that exists
-// anywhere in the kingdom — reserve or any legion.
-func firstKingdomUnit(data armyData) string {
+// kingdomUnitTypes returns the set of unit types the kingdom currently holds,
+// in the reserve or any legion.
+func kingdomUnitTypes(data armyData) map[string]bool {
 	existing := make(map[string]bool)
 	for _, u := range data.reserve {
 		if u.Count > 0 {
@@ -633,6 +633,13 @@ func firstKingdomUnit(data armyData) string {
 			}
 		}
 	}
+	return existing
+}
+
+// firstKingdomUnit returns the first unit type (in canonical order) that exists
+// anywhere in the kingdom — reserve or any legion.
+func firstKingdomUnit(data armyData) string {
+	existing := kingdomUnitTypes(data)
 	for _, utype := range game.AllUnitOrder() {
 		if existing[utype] {
 			return utype
@@ -857,19 +864,7 @@ func legionCrest(n int, afield bool) Node {
 }
 
 func quartermasterCard(data armyData) Node {
-	existing := make(map[string]bool)
-	for _, u := range data.reserve {
-		if u.Count > 0 {
-			existing[u.UnitType] = true
-		}
-	}
-	for _, units := range data.legionUnits {
-		for _, u := range units {
-			if u.Count > 0 {
-				existing[u.UnitType] = true
-			}
-		}
-	}
+	existing := kingdomUnitTypes(data)
 	allOrdered := game.AllUnitOrder()
 
 	var atHomeLegions []db.ListLegionsForKingdomRow
@@ -944,11 +939,10 @@ func quartermasterCard(data armyData) Node {
 	)
 }
 
-// marchOrdersCard is the single place a legion is sent to war. Centralising
-// it (mirroring the Quartermaster transfer card) avoids the previous per-legion
-// dispatch forms, which all shared one send_* signal set and so looked
-// independent but were not. The selected legion, order, target, and duration
-// all live in shared datastar signals bound here; the March button just posts.
+// marchOrdersCard is the single place a legion is sent to war (mirroring the
+// Quartermaster transfer card). The selected legion, order, target, and
+// duration all live in the page-level send_* datastar signals bound here; the
+// March button just posts.
 func marchOrdersCard(data armyData) Node {
 	var atHome []db.ListLegionsForKingdomRow
 	for _, l := range data.legions {
@@ -1013,7 +1007,7 @@ func marchOrdersCard(data armyData) Node {
 				),
 				Div(Class("march-preview"),
 					Group(Map(atHome, func(l db.ListLegionsForKingdomRow) Node {
-						return Div(Classes{"march-preview-legion": true},
+						return Div(Class("march-preview-legion"),
 							ds.Show(fmt.Sprintf("$send_legion == %d", l.ID)),
 							Span(Class("march-preview-name"), Text(l.Name)),
 							strengthLine(data.legionUnits[l.ID]),

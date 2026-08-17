@@ -18,7 +18,7 @@ import (
 
 // ── Resend verification ─────────────────────────────────────────────
 
-type ResendVerificationForm struct {
+type resendVerificationForm struct {
 	Email string `json:"email"`
 }
 
@@ -33,7 +33,7 @@ func resendVerificationComponent() Node {
 
 func (h *handler) resendVerification() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := &ResendVerificationForm{}
+		data := &resendVerificationForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
 			genericResendMessage(w, r)
 			return

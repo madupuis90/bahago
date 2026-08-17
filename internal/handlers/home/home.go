@@ -120,7 +120,7 @@ func realmStatusCard() Node {
 	return Div(Class("panel"),
 		Span(Class("panel-title panel-title--red"), Text("Realm Status")),
 		Div(Class("ci"),
-			H3(Class("c-hed"), Text("Round I · Dawn of the Realm")),
+			H2(Class("c-hed"), Text("Round I · Dawn of the Realm")),
 			P(Class("c-p"), Text("The realm stirs. New kingdoms rise from the soil. Alliances form and ancient grudges ignite.")),
 			Div(Class("stat-row"),
 				Div(Class("stat"), Div(Class("stat-n"), Text("0")), Div(Class("stat-l"), Text("Kingdoms"))),

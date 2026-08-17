@@ -111,18 +111,18 @@ func (h *handler) handleMapFind() http.HandlerFunc {
 
 		name := strings.TrimSpace(input.Name)
 		if name == "" {
-			sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Please enter a kingdom name."))))
+			sse.PatchElementGostar(findAlert(AlertError(errors.New("Please enter a kingdom name."))))
 			return
 		}
 
 		k, err := h.queries.GetKingdomByName(r.Context(), name)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Kingdom not found."))))
+				sse.PatchElementGostar(findAlert(AlertError(errors.New("Kingdom not found."))))
 				return
 			}
 			log.Printf("map find: get kingdom by name: %v", err)
-			sse.PatchElementGostar(findAlertComponent(AlertError(errors.New("Something went wrong. Please try again."))))
+			sse.PatchElementGostar(findAlert(AlertError(errors.New("Something went wrong. Please try again."))))
 			return
 		}
 
@@ -131,7 +131,7 @@ func (h *handler) handleMapFind() http.HandlerFunc {
 		tileX0 := pageX * game.PageSize
 		tileY0 := pageY * game.PageSize
 
-		sse.PatchElementGostar(findAlertComponent(nil))
+		sse.PatchElementGostar(findAlert(nil))
 		sse.Redirect(tileURL(tileX0, tileY0) + "&highlight=" + url.QueryEscape(k.Name))
 	}
 }
@@ -367,7 +367,7 @@ func kingdomDetail(k db.GetKingdomsInViewportRow, guild guildInfo, isOwn bool, i
 				Class("kd-close"),
 				Aria("label", "Deselect"),
 				ds.On("click", "$selected_kingdom_id = 0"),
-				Text("\u00d7"),
+				Text("×"),
 			),
 		),
 		guildLine(guild),
@@ -499,11 +499,11 @@ func findBar() Node {
 				Text("Find"),
 			),
 		),
-		findAlertComponent(nil),
+		findAlert(nil),
 	)
 }
 
-// findAlertComponent is the SSE patch target for find errors.
-func findAlertComponent(inner Node) Node {
+// findAlert is the SSE patch target for find errors.
+func findAlert(inner Node) Node {
 	return AlertContainer("map-find-alert", inner)
 }

@@ -19,7 +19,7 @@ import (
 
 // ── Forgot password ─────────────────────────────────────────────────
 
-type ForgotPasswordForm struct {
+type forgotPasswordForm struct {
 	Email string `json:"email"`
 }
 
@@ -33,7 +33,7 @@ func forgotPasswordContent() Node {
 	return Div(Class("auth-wrap"),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
-				authCrest("crown"),
+				authCrest(),
 				Div(Class("auth-wordmark"), Text("Bahago")),
 				Div(Class("auth-tagline"), Text("Recover access to your realm")),
 			),
@@ -62,7 +62,7 @@ func forgotPasswordContent() Node {
 func (h *handler) forgotPassword() http.HandlerFunc {
 	// TODO: add rate limiting to prevent email spam (cost + deliverability risk).
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := &ForgotPasswordForm{}
+		data := &forgotPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
@@ -84,7 +84,7 @@ func (h *handler) forgotPassword() http.HandlerFunc {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-func validateForgotPasswordInput(in *ForgotPasswordForm) []error {
+func validateForgotPasswordInput(in *forgotPasswordForm) []error {
 	var errs []error
 	if err := validateEmail(in.Email); err != nil {
 		errs = append(errs, err)

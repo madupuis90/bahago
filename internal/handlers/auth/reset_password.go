@@ -21,7 +21,7 @@ import (
 
 // ── Reset password ──────────────────────────────────────────────────
 
-type ResetPasswordForm struct {
+type resetPasswordForm struct {
 	Token    string `json:"token"`
 	Password string `json:"password"`
 }
@@ -45,7 +45,7 @@ func resetPasswordContent(token string) Node {
 		}),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
-				authCrest("crown"),
+				authCrest(),
 				Div(Class("auth-wordmark"), Text("Bahago")),
 				Div(Class("auth-tagline"), Text("Choose a new password")),
 			),
@@ -76,7 +76,7 @@ func resetPasswordContent(token string) Node {
 
 func (h *handler) resetPassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := &ResetPasswordForm{}
+		data := &resetPasswordForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
@@ -106,7 +106,7 @@ func (h *handler) resetPassword() http.HandlerFunc {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-func validateResetPasswordInput(in *ResetPasswordForm) []error {
+func validateResetPasswordInput(in *resetPasswordForm) []error {
 	var errs []error
 	if in.Token == "" {
 		errs = append(errs, ErrMissingToken)

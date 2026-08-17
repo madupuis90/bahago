@@ -36,8 +36,7 @@ import (
 //     never goes short (undefined signals are falsy).
 //
 // Affordability is whole-pill: if any resource is short, the entire pill is
-// red. Per-resource affordability was the previous buildings behaviour but
-// was dropped to keep the component's look uniform across pages (Fork A).
+// red; there is no per-resource affordability state.
 
 // CostEntry pairs a resource key (wood/stone/food/mana/devotion/knowledge)
 // with a static integer amount.
@@ -57,7 +56,7 @@ type DynamicCostEntry struct {
 // per-tick direction marker. It keys off the glossary's two per-tick flows —
 // Production Rate and Upkeep — with Flat being the default (one-time cost).
 //
-//   - CostFlat       — one-time cost; no marker (today's behaviour).
+//   - CostFlat       — one-time cost; no marker.
 //   - CostUpkeep     — a per-tick drain; renders the sandglass + arrow-down
 //     marker after the amount.
 //   - CostProduction — a per-tick gain; renders the sandglass + arrow-up
@@ -174,9 +173,8 @@ func DynamicCostPill(entries []DynamicCostEntry, opts ...CostOpt) Node {
 }
 
 // costItem is the internal, source-agnostic representation of one entry.
-// For static pills, need + amount (Text) are set. For dynamic pills, expr +
-// amount (ds.Text) are set. amount is always the node that renders the value;
-// need/expr drive the affordability expression.
+// amount is always the node that renders the value; need (static) or expr
+// (dynamic) drives the affordability check.
 type costItem struct {
 	Resource string
 	amount   Node

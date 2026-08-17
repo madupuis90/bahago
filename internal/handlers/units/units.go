@@ -439,32 +439,18 @@ func trainingGrounds(training *db.KingdomTraining) Node {
 		)
 	}
 	def := game.UnitDefs[training.UnitType]
-	fillPct := 0.0
-	if training.TicksTotal > 0 {
-		fillPct = float64(training.TicksTotal-training.TicksRemaining) / float64(training.TicksTotal) * 100
-	}
-	notches := make([]Node, 0, training.TicksTotal)
-	for range training.TicksTotal {
-		notches = append(notches, Span(Class("meter-notch")))
-	}
 	return Div(Class("card progress-banner"),
 		Div(Class("progress-banner-gem "+portraitClass(def)),
 			Div(Class("unit-portrait unit-portrait--sm "+portraitMod(def))),
 		),
 		Div(Class("progress-banner-body"),
-			Div(Class("meter"),
-				Div(Class("meter-top"),
-					Span(Class("meter-name"),
-						Text(def.Name+" "),
-						Span(Class("meter-qty"), Text(fmt.Sprintf("× %d", training.Count))),
-					),
-					Span(Class("meter-eta"), Text(fmt.Sprintf("%d ticks", training.TicksRemaining))),
-				),
-				Div(Class("meter-track"),
-					Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
-					Div(Class("meter-notches"), Group(notches)),
-				),
-			),
+			TickMeter(
+				Group([]Node{
+					Text(def.Name + " "),
+					Span(Class("meter-qty"), Text(fmt.Sprintf("× %d", training.Count))),
+				}),
+				fmt.Sprintf("%d ticks", training.TicksRemaining),
+				training.TicksRemaining, training.TicksTotal),
 		),
 		Button(Class("btn"), ds.On("click", datastar.PostSSE(routes.KingdomUnitsCancelPath)), Text("Cancel")),
 	)

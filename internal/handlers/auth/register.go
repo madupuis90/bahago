@@ -23,7 +23,7 @@ import (
 
 // ── Register ────────────────────────────────────────────────────────
 
-type RegisterForm struct {
+type registerForm struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -41,7 +41,7 @@ func registerContent() Node {
 		}),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
-				authCrest("crown"),
+				authCrest(),
 				Div(Class("auth-wordmark"), Text("Bahago")),
 				Div(Class("auth-tagline"), Text("Forge your kingdom. Command your realm.")),
 			),
@@ -80,7 +80,7 @@ func registerContent() Node {
 
 func (h *handler) register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := &RegisterForm{}
+		data := &registerForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
@@ -109,7 +109,7 @@ func (h *handler) register() http.HandlerFunc {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-func validateRegisterInput(in *RegisterForm) []error {
+func validateRegisterInput(in *registerForm) []error {
 	var errs []error
 	if err := validateEmail(in.Email); err != nil {
 		errs = append(errs, err)

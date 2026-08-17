@@ -177,7 +177,7 @@ func combatLogEntry(e combatLogDisplay) Node {
 		}
 	}
 
-	return El("article", Class("combat-log-entry"),
+	return Article(Class("combat-log-entry"),
 		Div(Class("combat-log-entry-main"),
 			Div(Class("combat-log-entry-time"), Text(fmt.Sprintf("tick %d", e.TickID))),
 			Div(Class("combat-log-entry-head"), Text(head)),

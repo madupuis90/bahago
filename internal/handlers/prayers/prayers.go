@@ -314,17 +314,14 @@ func prayersContent(kingdom db.Kingdom, prayers []db.KingdomPrayer) Node {
 // active prayer with a brass tick meter and a cancel button; when the altar
 // is free it shows the offering form (prayer · duration stepper · cost · Pray).
 func sanctumSection(kingdom db.Kingdom, prayers []db.KingdomPrayer, prayerKeys []string) Node {
-	busy := len(prayers) > 0
-
-	body := Iff(busy, func() Node { return activePrayerView(prayers[0]) })
-	if !busy {
+	var body Node
+	if len(prayers) > 0 {
+		body = activePrayerView(prayers[0])
+	} else {
 		body = offeringForm(kingdom, prayerKeys)
 	}
-
 	return Div(Class("card sanctum"),
-		Div(Class("card-inner"),
-			body,
-		),
+		Div(Class("card-inner"), body),
 	)
 }
 
@@ -337,15 +334,6 @@ func activePrayerView(p db.KingdomPrayer) Node {
 		name = def.Name
 		upkeep = def.DevotionUpkeep
 		gemID = prayerGemID(def)
-	}
-
-	fillPct := 0.0
-	if p.TicksTotal > 0 {
-		fillPct = float64(p.TicksTotal-p.TicksRemaining) / float64(p.TicksTotal) * 100
-	}
-	notches := make([]Node, 0, p.TicksTotal)
-	for range p.TicksTotal {
-		notches = append(notches, Span(Class("meter-notch")))
 	}
 
 	return Div(Class("active-prayer"),
@@ -375,17 +363,9 @@ func activePrayerView(p db.KingdomPrayer) Node {
 				),
 			),
 		),
-		Div(Class("meter"),
-			Div(Class("meter-top"),
-				Span(Class("meter-name"), Text("Time burning")),
-				Span(Class("meter-eta"),
-					Text(fmt.Sprintf("%d of %d ticks left", p.TicksRemaining, p.TicksTotal))),
-			),
-			Div(Class("meter-track"),
-				Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
-				Div(Class("meter-notches"), Group(notches)),
-			),
-		),
+		TickMeter(Text("Time burning"),
+			fmt.Sprintf("%d of %d ticks left", p.TicksRemaining, p.TicksTotal),
+			p.TicksRemaining, p.TicksTotal),
 		Div(Class("active-prayer-foot"),
 			P(Class("active-prayer-foot-note"),
 				Text("The prayer drains devotion each tick and ends when it runs dry or the ticks elapse.")),
@@ -469,12 +449,7 @@ func availablePrayersSection(active []db.KingdomPrayer, prayerKeys []string) Nod
 	}
 
 	return Group([]Node{
-		Div(Class("section-header"),
-			Span(Class("section-title"), Text("Available Prayers")),
-			Span(Class("section-rule")),
-			Span(Class("section-meta"),
-				Text(fmt.Sprintf("%d prayers", len(prayerKeys)))),
-		),
+		SectionHeader("Available Prayers", fmt.Sprintf("%d prayers", len(prayerKeys))),
 		Div(Class("prayer-grid"), Group(cards)),
 	})
 }
@@ -516,22 +491,17 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 		),
 		P(Class("prayer-flavour"), Text(def.Description)),
 		Div(Class("prayer-stats"),
-			// Per-tick production modifier: a StaticCostPill marked CostProduction +
-			// WithPercent renders the bonus resource gem + "+N%" + sandglass/arrow-up
-			// (green). The bonus is a percentage applied to production each tick, not
-			// a flat amount; the +% distinguishes a multiplier from an absolute
-			// amount (glossary: Production Rate / Upkeep). Replaces the old
-			// "+20% wood" effect text line. Prayers with no resource bonus render
-			// nil here (StaticCostPill returns nil for all-zero amounts).
+			// Production modifier: gem + "+N%" + sandglass/arrow-up. The +%
+			// distinguishes a per-tick multiplier from an absolute amount
+			// (glossary: Production Rate / Upkeep). Prayers with no resource
+			// bonus render nil here (StaticCostPill skips all-zero amounts).
 			StaticCostPill(
 				game.ResourceValues(def.ResourceBonusPct),
 				WithGemSize(18),
 				WithCostKind(CostProduction),
 				WithPercent(),
 			),
-			// Per-tick devotion upkeep: a StaticCostPill marked CostUpkeep renders
-			// the devotion gem + amount + sandglass/arrow-down marker, replacing
-			// the old "20 devotion/tick" text line (see WithCostKind).
+			// Devotion upkeep: gem + amount + sandglass/arrow-down.
 			StaticCostPill(
 				game.ResourceValues{Devotion: def.DevotionUpkeep},
 				WithGemSize(18),
@@ -545,20 +515,13 @@ func availablePrayerCard(key string, def game.PrayerDef, isActive, capReached bo
 // prayerResKey returns the sprite resource-symbol key (wood/stone/food/mana/
 // devotion/knowledge) for a prayer's boosted resource, defaulting to "devotion".
 func prayerResKey(def game.PrayerDef) string {
-	switch {
-	case def.ResourceBonusPct.Wood > 0:
-		return "wood"
-	case def.ResourceBonusPct.Stone > 0:
-		return "stone"
-	case def.ResourceBonusPct.Food > 0:
-		return "food"
-	case def.ResourceBonusPct.Mana > 0:
-		return "mana"
-	case def.ResourceBonusPct.Knowledge > 0:
-		return "knowledge"
-	default:
-		return "devotion"
+	bonus := game.ResourceValues(def.ResourceBonusPct)
+	for _, res := range game.ResourceOrder {
+		if bonus.Amount(res) > 0 {
+			return res
+		}
 	}
+	return "devotion"
 }
 
 // prayerGemID returns the gem colour id for a prayer's boosted resource.
@@ -569,25 +532,12 @@ func prayerGemID(def game.PrayerDef) string {
 // effectHTML returns the bonus text wrapped so the boosted resource reads as an
 // ink-stroked <b>.
 func effectHTML(def game.PrayerDef) string {
-	b := def.ResourceBonusPct
+	bonus := game.ResourceValues(def.ResourceBonusPct)
 	var parts []string
-	if b.Wood > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> wood", b.Wood))
-	}
-	if b.Stone > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> stone", b.Stone))
-	}
-	if b.Food > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> food", b.Food))
-	}
-	if b.Mana > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> mana", b.Mana))
-	}
-	if b.Devotion > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> devotion", b.Devotion))
-	}
-	if b.Knowledge > 0 {
-		parts = append(parts, fmt.Sprintf("<b>+%d%%</b> knowledge", b.Knowledge))
+	for _, res := range game.ResourceOrder {
+		if n := bonus.Amount(res); n > 0 {
+			parts = append(parts, fmt.Sprintf("<b>+%d%%</b> %s", n, res))
+		}
 	}
 	if len(parts) == 0 {
 		return "No resource bonus"

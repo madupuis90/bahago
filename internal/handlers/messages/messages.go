@@ -113,11 +113,6 @@ func classifyKind(isGuild, hasAction bool) string {
 	return "post"
 }
 
-// kindFromDetail returns the kind key ("post", "guild", "decree") for a detail row.
-func kindFromDetail(m *db.GetInboxMessageByIDRow) string {
-	return classifyKind(m.IsGuildMessage, m.ActionUrl != "")
-}
-
 // kindLabel maps a kind key to its display label.
 func kindLabel(k string) string {
 	switch k {
@@ -706,11 +701,6 @@ func groupByDate(msgs []db.ListInboxMessagesRow, now time.Time) []MsgGroup {
 	return groups
 }
 
-// kind returns "guild", "decree", or "post" for a message row.
-func kind(m db.ListInboxMessagesRow) string {
-	return classifyKind(m.IsGuildMessage, m.HasAction)
-}
-
 // messageMark renders a kind seal: a coloured shape (blue square for post, red
 // disc for guild, brass square for decree) with a crown glyph on decrees. lg
 // selects the larger size used in the reading pane + compose headers.
@@ -744,26 +734,26 @@ func messagesShell(groups []MsgGroup, selectedMessageID int, panel Node, gc *gui
 			A(Href(routes.KingdomMessagesGuildComposePath), Class("btn btn--accent"), Text("Guild Dispatch")))
 	}
 
+	rightPanel := panel
+	if rightPanel == nil {
+		rightPanel = Div(Class("card"),
+			Div(Class("card-inner"),
+				Div(Class("empty-state"),
+					Crest("", 58, ""),
+					P(Class("empty-state-title"), Text("No letter in hand")),
+					P(Text("Choose a message from the pile, or write a new one.")),
+				),
+			),
+		)
+	}
+
 	return Group([]Node{
 		PageHeader("Messages", Group(actions)),
 		Div(Class("messages-panel"),
 			Div(Class("messages-left"),
 				messagesList(groups, selectedMessageID),
 			),
-			Div(Class("messages-right"),
-				Iff(panel == nil, func() Node {
-					return Div(Class("card"),
-						Div(Class("card-inner"),
-							Div(Class("empty-state"),
-								Crest("", 58, ""),
-								P(Class("empty-state-title"), Text("No letter in hand")),
-								P(Text("Choose a message from the pile, or write a new one.")),
-							),
-						),
-					)
-				}),
-				Iff(panel != nil, func() Node { return panel }),
-			),
+			Div(Class("messages-right"), rightPanel),
 		),
 		Div(ds.Init(GetSSENoSignals(routes.KingdomMessagesRefreshPath+"?active=%d", selectedMessageID))),
 	})
@@ -854,7 +844,7 @@ func filterTab(value, label string, count int) Node {
 }
 
 func messageListItem(m db.ListInboxMessagesRow, selectedMessageID int) Node {
-	k := kind(m)
+	k := classifyKind(m.IsGuildMessage, m.HasAction)
 	showExpr := fmt.Sprintf("$filter === 'all' || ($filter === 'unread' && %t) || ($filter === 'guild' && %t)",
 		!m.ReadAt.Valid, m.IsGuildMessage)
 	return Div(
@@ -893,7 +883,7 @@ func viewPanel(m *db.GetInboxMessageByIDRow) Node {
 		replySubject = "RE: " + replySubject
 	}
 	replyURL := fmt.Sprintf("%s?to=%s&subject=%s", routes.KingdomMessagesComposePath, url.QueryEscape(m.FromKingdomName), url.QueryEscape(replySubject))
-	k := kindFromDetail(m)
+	k := classifyKind(m.IsGuildMessage, m.ActionUrl != "")
 	hasAction := m.ActionUrl != ""
 	return Div(
 		messagesAlert(nil),

@@ -677,7 +677,7 @@ func guildCrest(size, tag string) Node {
 	if tag != "" {
 		children = append(children, Span(Class("guild-crest-tag"), Text(tag)))
 	}
-	return El("span", children...)
+	return Span(children...)
 }
 
 // supportMeterNode renders the seals-of-support meter (green fill, N notches).
@@ -719,7 +719,7 @@ func sealCell(count, max int) Node {
 		),
 		Span(Class("mark-count"),
 			Text(fmt.Sprintf("%d", count)),
-			El("span", Class("num-cap"), Text(fmt.Sprintf(" / %d", max))),
+			Span(Class("num-cap"), Text(fmt.Sprintf(" / %d", max))),
 		),
 	)
 }
@@ -735,7 +735,7 @@ func swornDays(valid bool, t time.Time) Node {
 	}
 	return Group([]Node{
 		Text(fmt.Sprintf("%d", d)),
-		El("span", Class("num-cap"), Text("d")),
+		Span(Class("num-cap"), Text("d")),
 	})
 }
 
@@ -810,7 +810,7 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 	}
 	actions := A(Href(routes.GuildNewPath), Class("btn btn--primary"), Text("Found a Guild"))
 	return Div(Class("guild"),
-		Breadcrumb("← The Guild Hall", routes.GuildPath),
+		Breadcrumb("The Guild Hall", routes.GuildPath),
 		PageHeader("Guilds", actions),
 		SectionHeader("Active Fellowships",
 			fmt.Sprintf("%d fellowships · %d kingdoms sworn", len(activeGuilds), sworn)),
@@ -845,7 +845,7 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 							Td(Text(leader)),
 							Td(Class("is-num"),
 								Text(fmt.Sprintf("%d", g.MemberCount)),
-								El("span", Class("num-cap"), Text(" / 20")),
+								Span(Class("num-cap"), Text(" / 20")),
 							),
 							Td(Class("is-actions"), Div(Class("table-actions"),
 								A(Href(slugURL(routes.GuildViewPath, g.Slug)), Class("btn btn--sm"), Text("View")),
@@ -888,7 +888,7 @@ func guildListContent(activeGuilds []db.ListActiveGuildsRow, pendingGuilds []db.
 							Td(Text(founder)),
 							Td(sealCell(g.SupporterCount, 5)),
 							Td(If(urgent,
-								El("span", Class("is-urgent"), Text(expiry))),
+								Span(Class("is-urgent"), Text(expiry))),
 								If(!urgent, Text(expiry))),
 							Td(Class("is-actions"), Div(Class("table-actions"),
 								A(Href(slugURL(routes.GuildViewPath, g.Slug)), Class("btn btn--sm"), Text("View")),
@@ -912,7 +912,7 @@ func metaForCharters(charters []db.ListPendingGuildsRow) string {
 
 func guildNewContent() Node {
 	return Div(Class("guild"),
-		Breadcrumb("← The Guild Hall", routes.GuildPath),
+		Breadcrumb("The Guild Hall", routes.GuildPath),
 		PageHeader("Create Guild"),
 		Div(Class("guild-grid"),
 			Div(Class("card"), Div(Class("card-inner"),
@@ -929,7 +929,7 @@ func guildNewContent() Node {
 					),
 					Div(Class("field-group"),
 						Label(Class("field-label"), For("guild-desc-input"), Text("Charter")),
-						El("textarea", ID("guild-desc-input"),
+						Textarea(ID("guild-desc-input"),
 							Classes{"field": true, "field--area": true},
 							ds.Bind("guild_description"),
 							Placeholder("Set down the fellowship’s purpose…"),
@@ -956,7 +956,7 @@ func guildNewContent() Node {
 func foundingStepsCard() Node {
 	return Div(Class("card"), Div(Class("card-inner"),
 		Span(Class("eyebrow"), Text("How a guild is founded")),
-		El("ol", Class("steps-list"),
+		Ol(Class("steps-list"),
 			foundingStep("1", "Draft the charter",
 				"A name and a purpose, set down for the realm to read.", nil),
 			foundingStep("2", "Gather the seals",
@@ -979,7 +979,7 @@ func foundingStep(num, name, text string, meter Node) Node {
 	if meter != nil {
 		children = append(children, Div(Class("steps-meter"), meter))
 	}
-	return El("li", Group(children))
+	return Li(Group(children))
 }
 
 // ── View — /guild/{slug} (active + pending) ───────────────────────────────────
@@ -996,15 +996,16 @@ func guildViewContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, vie
 		}
 	}
 	standing := guildViewerStanding(g, viewerRole, invitationID, supportCount)
+	standingEl := standingNode(standing)
 	return Div(Class("guild"),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildViewRefreshPath, g.Slug)))),
-		Breadcrumb("← The Guild Roll", routes.GuildListPath),
+		Breadcrumb("The Guild Roll", routes.GuildListPath),
 		guildHead(g),
 		guildMetaStrip(g, members, isPending, supportCount, activeCount),
-		If(!standing.foot, standingNode(standing)),
+		If(!standing.foot, standingEl),
 		If(isPending, guildSealSection(members, supportCount, viewerKingdomID)),
 		If(!isPending, guildMemberSection(members, activeCount, viewerKingdomID)),
-		If(standing.foot, standingNode(standing)),
+		If(standing.foot, standingEl),
 		guildAlert(nil),
 	)
 }
@@ -1027,9 +1028,9 @@ func guildMetaStrip(g db.Guild, members []db.ListGuildMembersWithNamesRow, isPen
 		}
 		return Div(Class("guild-meta"),
 			Span(Class("meta-chip"),
-				Text("Set down by "), El("b", Text(founder))),
+				Text("Set down by "), B(Text(founder))),
 			Span(Class("meta-chip"),
-				El("b", Text(strconv.Itoa(supportCount))), Text(" of 5 seals")),
+				B(Text(strconv.Itoa(supportCount))), Text(" of 5 seals")),
 		)
 	}
 	leader := "—"
@@ -1045,11 +1046,11 @@ func guildMetaStrip(g db.Guild, members []db.ListGuildMembersWithNamesRow, isPen
 	return Div(Class("guild-meta"),
 		Span(Class("meta-chip"),
 			Icon("crown", 13, false),
-			Text("Led by "), El("b", Text(leader))),
+			Text("Led by "), B(Text(leader))),
 		Span(Class("meta-chip"),
-			El("b", Text(strconv.Itoa(activeCount))), Text(" of 20 kingdoms")),
+			B(Text(strconv.Itoa(activeCount))), Text(" of 20 kingdoms")),
 		Span(Class("meta-chip"),
-			El("b", Text(strconv.Itoa(officers))), Text(" of 4 officers")),
+			B(Text(strconv.Itoa(officers))), Text(" of 4 officers")),
 	)
 }
 
@@ -1107,7 +1108,7 @@ func guildSealSection(members []db.ListGuildMembersWithNamesRow, supportCount in
 						role := _guild.MemberRole(m.Role)
 						var roleNode Node
 						if role == _guild.RoleApplicant {
-							roleNode = El("span", Class("role-tag role-tag--founder"), Text("Founder"))
+							roleNode = Span(Class("role-tag role-tag--founder"), Text("Founder"))
 						} else {
 							roleNode = guildRoleTag(role)
 						}
@@ -1136,7 +1137,7 @@ func guildRoleTag(role _guild.MemberRole) Node {
 	case _guild.RoleSupporter:
 		mod = " role-tag--supporter"
 	}
-	return El("span", Class("role-tag"+mod),
+	return Span(Class("role-tag"+mod),
 		If(role == _guild.RoleLeader, Icon("crown", 12, false)),
 		Text(role.Display()),
 	)

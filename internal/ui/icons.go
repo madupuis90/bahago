@@ -17,9 +17,7 @@ const spritePath = "/static/sprite.svg"
 
 // symbolSize maps each <symbol id="…"> in sprite.svg to its viewBox
 // (width, height). It is parsed once at package init from the embedded FS so
-// Icon can derive the correct height for any symbol's aspect ratio. Every
-// symbol in the slim sprite is 24×24 square, but the helper stays
-// aspect-ratio-aware so a future non-square symbol needs no code change.
+// Icon can derive the correct height for any symbol's aspect ratio.
 var symbolSize = loadSymbolSizes()
 
 type viewBox struct{ w, h float64 }
@@ -48,7 +46,8 @@ func loadSymbolSizes() map[string]viewBox {
 				id = attr.Value
 			case "viewBox":
 				// "min-x min-y width height" — we only keep w/h.
-				fmt.Sscanf(attr.Value, "%f %f %f %f", &vb.w, &vb.h, &vb.w, &vb.h)
+				var minX, minY float64
+				fmt.Sscanf(attr.Value, "%f %f %f %f", &minX, &minY, &vb.w, &vb.h)
 			}
 		}
 		if id != "" && vb.w > 0 && vb.h > 0 {
@@ -100,9 +99,7 @@ func Crest(id string, sizePx int, extraClass string) Node {
 }
 
 // iconHeight derives the pixel height for sizePx using id's viewBox aspect
-// ratio. Every symbol in the slim sprite is square (24×24), so this returns
-// sizePx for known ids and falls back to sizePx (square) for unknowns too —
-// the sprite no longer mixes coordinate spaces.
+// ratio. Unknown ids fall back to a square (sizePx × sizePx).
 func iconHeight(id string, sizePx int) int {
 	if vb, ok := symbolSize[id]; ok && vb.w > 0 {
 		return int(float64(sizePx)*vb.h/vb.w + 0.5)
@@ -123,10 +120,10 @@ var gemIDToResKey = map[string]string{
 	"star":     "knowledge",
 }
 
-// ResKeyToGemID is the inverse of gemIDToResKey: resource symbol key → gem
-// colour id. Cost pills and other callers that think in resource keys use
-// GemIDForResource to get the gem colour for ResourceGem.
-var ResKeyToGemID = map[string]string{
+// resKeyToGemID is the inverse of gemIDToResKey: resource symbol key → gem
+// colour id. Callers that think in resource keys use GemIDForResource to get
+// the gem colour for ResourceGem.
+var resKeyToGemID = map[string]string{
 	"wood":      "tree",
 	"stone":     "mountain",
 	"food":      "wheat",
@@ -139,7 +136,7 @@ var ResKeyToGemID = map[string]string{
 // (wood/stone/food/mana/devotion/knowledge). Unknown keys fall back to the
 // key itself — ResourceGem tolerates either namespace.
 func GemIDForResource(resKey string) string {
-	if id, ok := ResKeyToGemID[resKey]; ok {
+	if id, ok := resKeyToGemID[resKey]; ok {
 		return id
 	}
 	return resKey

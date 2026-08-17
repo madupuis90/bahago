@@ -187,11 +187,11 @@ func TestAuthenticateUser_Success(t *testing.T) {
 func TestValidateLoginInput(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    *LoginForm
+		input    *loginForm
 		wantErrs []error
 	}{
-		{"valid", &LoginForm{Email: "u@example.com", Password: "12345678"}, nil},
-		{"invalid_email", &LoginForm{Email: "bad", Password: "12345678"}, []error{ErrInvalidEmail}},
+		{"valid", &loginForm{Email: "u@example.com", Password: "12345678"}, nil},
+		{"invalid_email", &loginForm{Email: "bad", Password: "12345678"}, []error{ErrInvalidEmail}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -211,13 +211,13 @@ func TestValidateLoginInput(t *testing.T) {
 func TestValidateRegisterInput(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    *RegisterForm
+		input    *registerForm
 		wantErrs []error
 	}{
-		{"valid", &RegisterForm{Email: "u@example.com", Password: "12345678"}, nil},
-		{"both_bad", &RegisterForm{Email: "bad", Password: "short"}, []error{ErrInvalidEmail, ErrPasswordTooShort}},
-		{"email_bad", &RegisterForm{Email: "bad", Password: "12345678"}, []error{ErrInvalidEmail}},
-		{"password_bad", &RegisterForm{Email: "u@example.com", Password: "short"}, []error{ErrPasswordTooShort}},
+		{"valid", &registerForm{Email: "u@example.com", Password: "12345678"}, nil},
+		{"both_bad", &registerForm{Email: "bad", Password: "short"}, []error{ErrInvalidEmail, ErrPasswordTooShort}},
+		{"email_bad", &registerForm{Email: "bad", Password: "12345678"}, []error{ErrInvalidEmail}},
+		{"password_bad", &registerForm{Email: "u@example.com", Password: "short"}, []error{ErrPasswordTooShort}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -237,12 +237,12 @@ func TestValidateRegisterInput(t *testing.T) {
 func TestValidateResetPasswordInput(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    *ResetPasswordForm
+		input    *resetPasswordForm
 		wantErrs []error
 	}{
-		{"valid", &ResetPasswordForm{Token: "abc", Password: "12345678"}, nil},
-		{"missing_token", &ResetPasswordForm{Token: "", Password: "12345678"}, []error{ErrMissingToken}},
-		{"both_bad", &ResetPasswordForm{Token: "", Password: "short"}, []error{ErrMissingToken, ErrPasswordTooShort}},
+		{"valid", &resetPasswordForm{Token: "abc", Password: "12345678"}, nil},
+		{"missing_token", &resetPasswordForm{Token: "", Password: "12345678"}, []error{ErrMissingToken}},
+		{"both_bad", &resetPasswordForm{Token: "", Password: "short"}, []error{ErrMissingToken, ErrPasswordTooShort}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

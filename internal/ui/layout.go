@@ -34,10 +34,10 @@ func HomeLayout(r *http.Request, title string, content ...Node) Node {
 	return shell(title, nil,
 		homeTopNav(user, currentPath),
 		Div(Class("content-area"),
-			Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
+			Nav(Class("side-nav panel"), homeSideNav(currentPath)),
 			MainContent(content...),
 		),
-		Footer(Text("✧ Bahago · All rights reserved")),
+		siteFooter(),
 	)
 }
 
@@ -48,11 +48,15 @@ func AuthLayout(r *http.Request, title string, content ...Node) Node {
 	return shell(title, nil,
 		homeTopNav(user, currentPath),
 		Div(Class("content-area"),
-			Nav(Class("side-nav panel"), HomeSideNav(currentPath)),
+			Nav(Class("side-nav panel"), homeSideNav(currentPath)),
 			Main(ID("main-content"), Class("auth-stage"), Group(content)),
 		),
-		Footer(Text("✧ Bahago · All rights reserved")),
+		siteFooter(),
 	)
+}
+
+func siteFooter() Node {
+	return Footer(Text("✧ Bahago · All rights reserved"))
 }
 
 // KingdomLayout renders a full page with the CommandBar chrome.
@@ -93,7 +97,7 @@ func ResourceSignals(kingdom *db.Kingdom) map[string]any {
 	}
 }
 
-// MainContent wraps page content in the main element used by all kingdom pages.
+// MainContent wraps page content in the shared main element.
 // Use this in SSE handlers when patching page content with WithSelector("#main-content").
 func MainContent(content ...Node) Node {
 	return Main(ID("main-content"), Group(content))
@@ -148,7 +152,7 @@ func homeTopNav(user *contextkeys.SessionUser, currentPath string) Node {
 		Nav(Class("home-chrome-nav"),
 			A(Classes{"nav-link": true, "is-on": currentPath == routes.HomePath},
 				Href(routes.HomePath), Text("Home")),
-			A(Classes{"nav-link": true},
+			A(Class("nav-link"),
 				Href(routes.KingdomPath),
 				If(user == nil, Attr("aria-disabled", "true")),
 				Text("Kingdom")),
@@ -239,18 +243,17 @@ var kingdomNavItems = []navItem{
 func commandBarNav(currentPath string, msgCount int) Node {
 	links := make([]Node, len(kingdomNavItems))
 	for i, item := range kingdomNavItems {
-		isMessages := item.label == "Messages"
-		badgeNode := Iff(isMessages && msgCount > 0, func() Node {
-			badgeText := "99+"
-			if msgCount <= 99 {
-				badgeText = strconv.Itoa(msgCount)
-			}
-			return Span(Class("nav-badge"), Text(badgeText))
-		})
+		showBadge := item.label == "Messages" && msgCount > 0
 		links[i] = A(
-			Classes{"nav-link": true, "is-on": currentPath == item.href, "is-alert": isMessages && msgCount > 0},
+			Classes{"nav-link": true, "is-on": currentPath == item.href, "is-alert": showBadge},
 			Href(item.href),
-			If(badgeNode != nil, badgeNode),
+			Iff(showBadge, func() Node {
+				badgeText := "99+"
+				if msgCount <= 99 {
+					badgeText = strconv.Itoa(msgCount)
+				}
+				return Span(Class("nav-badge"), Text(badgeText))
+			}),
 			Span(Class("nav-link-l"), Text(item.label)),
 		)
 	}
@@ -259,11 +262,11 @@ func commandBarNav(currentPath string, msgCount int) Node {
 
 // ── Home nav helpers ──────────────────────────────────────────────────────────
 
-func NavItem(href, name, currentPath string) Node {
+func sideNavItem(href, name, currentPath string) Node {
 	return A(Href(href), If(currentPath == href, Attr("aria-current", "page")), Text(name))
 }
 
-func NavGroup(name string, items ...Node) Node {
+func sideNavGroup(name string, items ...Node) Node {
 	return Div(Class("nav-group"),
 		Span(Class("nav-group-name"), Text(name)),
 		Div(Class("nav-group-content"), Group(items)),
@@ -271,7 +274,7 @@ func NavGroup(name string, items ...Node) Node {
 }
 
 // URLs are placeholder for now, no need to create routes
-func HomeSideNav(currentPath string) Node {
+func homeSideNav(currentPath string) Node {
 	return Group([]Node{
 		Div(Class("nav-live"),
 			Span(Class("nav-live-dot")),
@@ -280,20 +283,20 @@ func HomeSideNav(currentPath string) Node {
 				Div(Class("nav-live-l"), Text("active")),
 			),
 		),
-		NavGroup("Lore",
-			NavItem("/beginning", "The beginning", ""),
-			NavItem("/state", "State of the World", ""),
+		sideNavGroup("Lore",
+			sideNavItem("/beginning", "The beginning", ""),
+			sideNavItem("/state", "State of the World", ""),
 		),
-		NavGroup("Resources",
-			NavItem("/how-to", "How to Play", ""),
-			NavItem("/rules", "Rules", ""),
-			NavItem("/tech-tree", "Tech. Tree", ""),
-			NavItem("/units", "Units", ""),
+		sideNavGroup("Resources",
+			sideNavItem("/how-to", "How to Play", ""),
+			sideNavItem("/rules", "Rules", ""),
+			sideNavItem("/tech-tree", "Tech. Tree", ""),
+			sideNavItem("/units", "Units", ""),
 		),
-		NavGroup("Community",
-			NavItem("/discord", "Discord", ""),
-			NavItem(routes.ChatPath, "Chat", currentPath),
-			NavItem("/about", "About", ""),
+		sideNavGroup("Community",
+			sideNavItem("/discord", "Discord", ""),
+			sideNavItem(routes.ChatPath, "Chat", currentPath),
+			sideNavItem("/about", "About", ""),
 		),
 	})
 }

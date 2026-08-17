@@ -700,7 +700,7 @@ func guildManageContent(g db.Guild, members []db.ListGuildMembersWithNamesRow, v
 	}
 
 	return Div(Class("guild"),
-		Breadcrumb("← "+g.Name, slugURL(routes.GuildViewPath, slug)),
+		Breadcrumb(g.Name, slugURL(routes.GuildViewPath, slug)),
 		PageHeader("Manage "+g.Name),
 		Div(ds.Init(GetSSENoSignals("%s", slugURL(routes.GuildManageRefreshPath, slug)))),
 		guildAlert(nil),
@@ -836,11 +836,11 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 		Div(Class("manage-leader-grid"),
 			// Edit charter
 			Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("card-header"), H3(Class("card-title"), Text("The Charter"))),
+				Div(Class("card-header"), H2(Class("card-title"), Text("The Charter"))),
 				ds.Signals(map[string]any{"guild_description": g.Description}),
 				Div(Class("field-group"),
 					Label(Class("field-label"), For("guild-desc-edit"), Text("Description")),
-					El("textarea", ID("guild-desc-edit"),
+					Textarea(ID("guild-desc-edit"),
 						Classes{"field": true, "field--area": true},
 						ds.Bind("guild_description"), MaxLength("500")),
 					Span(Class("field-hint"), Text("The cause and code other kingdoms read before they join.")),
@@ -851,7 +851,7 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 			)),
 			// Transfer leadership
 			Div(Class("card"), Div(Class("card-inner"),
-				Div(Class("card-header"), H3(Class("card-title"), Text("Transfer Leadership"))),
+				Div(Class("card-header"), H2(Class("card-title"), Text("Transfer Leadership"))),
 				Iff(len(eligibleMembers) == 0, func() Node {
 					return Div(Class("empty-state empty-state--row"),
 						Div(Class("empty-state-hint"), Text("No eligible members to transfer to.")),
@@ -862,10 +862,10 @@ func guildLeaderActions(g db.Guild, eligibleMembers []db.ListGuildMembersWithNam
 						ds.Signals(map[string]any{"target_kingdom_id": eligibleMembers[0].KingdomID}),
 						Div(Class("field-group"),
 							Label(Class("field-label"), For("guild-transfer-select"), Text("New leader")),
-							El("select", ID("guild-transfer-select"), Class("select"),
+							Select(ID("guild-transfer-select"), Class("select"),
 								ds.Bind("target_kingdom_id"),
 								Map(eligibleMembers, func(m db.ListGuildMembersWithNamesRow) Node {
-									return El("option", Value(strconv.Itoa(m.KingdomID)), Text(m.KingdomName))
+									return Option(Value(strconv.Itoa(m.KingdomID)), Text(m.KingdomName))
 								}),
 							),
 						),

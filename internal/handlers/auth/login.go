@@ -33,7 +33,7 @@ func (h *handler) loginPage() http.HandlerFunc {
 	}
 }
 
-type LoginForm struct {
+type loginForm struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -42,7 +42,7 @@ func loginContent(verified, reset bool) Node {
 	return Div(Class("auth-wrap"),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
-				authCrest("crown"),
+				authCrest(),
 				Div(Class("auth-wordmark"), Text("Bahago")),
 				Div(Class("auth-tagline"), Text("A realm awaits your command")),
 			),
@@ -96,7 +96,7 @@ func init() {
 
 func (h *handler) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := &LoginForm{}
+		data := &loginForm{}
 		if err := datastar.ReadSignals(r, data); err != nil {
 			datastar.NewSSE(w, r).PatchElementGostar(authAlert(AlertError(ErrInvalidRequest)))
 			return
@@ -157,7 +157,7 @@ func (h *handler) login() http.HandlerFunc {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-func validateLoginInput(in *LoginForm) []error {
+func validateLoginInput(in *loginForm) []error {
 	var errs []error
 	if err := validateEmail(in.Email); err != nil {
 		errs = append(errs, err)

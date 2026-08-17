@@ -341,27 +341,12 @@ func buildingsBanner(construction *db.KingdomConstruction) Node {
 		)
 	}
 	def := game.BuildingDefs[construction.BuildingType]
-	notches := make([]Node, 0, construction.TicksTotal)
-	for range construction.TicksTotal {
-		notches = append(notches, Span(Class("meter-notch")))
-	}
-	fillPct := 0.0
-	if construction.TicksTotal > 0 {
-		fillPct = float64(construction.TicksTotal-construction.TicksRemaining) / float64(construction.TicksTotal) * 100
-	}
 	return Div(Class("card progress-banner"),
 		Div(Class("progress-banner-gem"), buildingGlyph(def, 34)),
 		Div(Class("progress-banner-body"),
-			Div(Class("meter"),
-				Div(Class("meter-top"),
-					Span(Class("meter-name"), Text(def.Name)),
-					Span(Class("meter-eta"), Text(fmt.Sprintf("%d / %d ticks remaining", construction.TicksRemaining, construction.TicksTotal))),
-				),
-				Div(Class("meter-track"),
-					Div(Class("meter-fill"), Style(fmt.Sprintf("width:%.1f%%", fillPct))),
-					Div(Class("meter-notches"), Group(notches)),
-				),
-			),
+			TickMeter(Text(def.Name),
+				fmt.Sprintf("%d / %d ticks remaining", construction.TicksRemaining, construction.TicksTotal),
+				construction.TicksRemaining, construction.TicksTotal),
 		),
 	)
 }
@@ -434,17 +419,18 @@ func nodePips(count, max int) Node {
 	for i := range max {
 		nodes[i+1] = Span(Classes{"pip": true, "on": i < count})
 	}
-	return El("div", nodes...)
+	return Div(nodes...)
 }
 
 func nodeCount(count, max int) Node {
 	if count == 0 {
 		return P(Class("node-count"), Text(fmt.Sprintf("0 / %d", max)))
 	}
+	cls := "full"
 	if count >= max {
-		return P(Class("node-count"), Span(Class("at-max"), Text(itoa(count))), Text(" / "+itoa(max)))
+		cls = "at-max"
 	}
-	return P(Class("node-count"), Span(Class("full"), Text(itoa(count))), Text(" / "+itoa(max)))
+	return P(Class("node-count"), Span(Class(cls), Text(itoa(count))), Text(" / "+itoa(max)))
 }
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
@@ -601,7 +587,7 @@ func buildingGlyph(b game.BuildingDef, size int) Node {
 	if len(b.Name) > 0 {
 		initial = string(b.Name[0])
 	}
-	return El("span", Class("node-medallion"),
+	return Span(Class("node-medallion"),
 		Style(fmt.Sprintf("width:%dpx;height:%dpx", size, size)),
 		Span(Class("node-medallion__initial"), Text(initial)),
 	)

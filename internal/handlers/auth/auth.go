@@ -63,18 +63,16 @@ func newHandler(queries db.Querier, pool *pgxpool.Pool, sender *email.Sender, ap
 func authAlert(inner Node) Node { return AlertContainer("auth-alert", inner) }
 
 // authCrest renders the yellow shield crest (.crest.crest-lg) that sits atop
-// every auth card. glyph is the sprite symbol id shown inside the shield —
-// "crown" for the standard auth screens, "envelope" for the recovery-sent
-// state.
-func authCrest(glyph string) Node {
-	return Crest(glyph, 78, "crest-lg")
+// every auth card.
+func authCrest() Node {
+	return Crest("crown", 78, "crest-lg")
 }
 
 func invalidTokenContent() Node {
 	return Div(Class("auth-wrap"),
 		Div(Class("card"),
 			Div(Class("auth-crest"),
-				authCrest("crown"),
+				authCrest(),
 				Div(Class("auth-wordmark"), Text("Bahago")),
 			),
 			Div(Class("auth-divider")),

@@ -11,7 +11,6 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	. "maragu.dev/gomponents"
 	ds "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 
 	"bahago/internal/contextkeys"
@@ -254,7 +253,7 @@ func allocationContent(kingdom db.Kingdom, rates game.ResourceRates) Node {
 					Div(Class("alloc-total"),
 						Span(Class("alloc-total-label"), Text("Allocated")),
 						Span(
-							Classes{"alloc-total-val": true},
+							Class("alloc-total-val"),
 							ds.Class("over", "$alloc_total > 100"),
 							ds.Text("$alloc_total+'%'"),
 						),
